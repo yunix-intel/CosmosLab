@@ -22,6 +22,11 @@ ApplicationWindow {
     minimumWidth: 1024
     minimumHeight: 640
     visible: true
+    // ★ 自检模式下从第一帧就透明 —— 避免渲染窗口闪现在用户屏幕上。
+    //   见 main.cpp 的 ssHeadless 上下文属性说明。
+    //   (不能改成 visible: false: 窗口不可见时 Qt 会跳过场景图渲染,
+    //    grabWindow() 只能抓到空白。)
+    opacity: ssHeadless ? 0 : 1
     title: "太阳系模拟器 · Solar System Simulator (C++ / QML / OpenGL)"
     color: "#05070d"
 
@@ -52,6 +57,8 @@ ApplicationWindow {
     // ========================================================================
     SolarScene {
         id: scene
+        // 供 C++ 侧 findChild 定位 —— QML 的 id 不是属性, C++ 读不到。
+        objectName: "scene"
         anchors.fill: parent
         // 注意: 这里**不要**写 focusId: root.currentId ——
         // 那样会在初始化时把 C++ 侧的初始焦点 (可被 SS_FOCUS 覆盖) 顶掉。

@@ -146,6 +146,13 @@ public:
     Q_INVOKABLE QVariantList cosmosNotes() const;                // 宇宙教学要点
     Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
     Q_INVOKABLE void focusOn(const QString &id);
+
+    // ---- 测试/自检专用: 一次设定全套视角参数 ----
+    // 供 main.cpp 的批量渲染调用, 避免逐个属性设值时遗漏。
+    // 传 -1 / 空 表示"沿用当前值"。立即到位, 不走平滑动画。
+    Q_INVOKABLE void testShot(const QString &focusId,
+                              double dist, double phiDeg, double thetaDeg,
+                              int scaleLevel, double jd);
     Q_INVOKABLE void resetView();
     Q_INVOKABLE void setTimeToNow();
 

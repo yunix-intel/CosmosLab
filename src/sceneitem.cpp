@@ -588,25 +588,47 @@ void SolarScene::applyFocus()
         if (it->body && it->body->hasRings)
             want = r * (m_realScale ? 420.0 : 9.0);   // 有环的要退远些
 
-        // ★★ 只有**卫星**才需要把轨道半径纳入视距。
+        // ---- 卫星: 与其它天体用同一套"按自身半径取景" + 母星避让 ----
         //
-        //   判据必须是 body->parent != nullptr (即"母体是一颗行星"),
-        //   而**不能**用"与 parentCenter 有距离"来判断。
+        // ★★ 这里试过两种错误做法, 都记录以免重犯:
         //
-        //   因为对行星/矮行星/小行星/彗星而言, parentCenter 存的是
-        //   **太阳位置**, 于是 dParent 就是日心距 (谷神星约 20 场景单位)。
-        //   初版正是踩了这个坑: 修月球视距时写成
-        //       if (dParent > 0) want = max(want, dParent * 0.75)
-        //   结果所有日心天体聚焦时都被拉到 15 单位外 ——
-        //   谷神星本该是 1.9 单位的特写, 却渲染成了整个内太阳系的远景。
+        //   错误一: want = dParent × 0.75, 意图"把轨道框进来"。
+        //     木卫四的轨道是 57 场景单位, 相机于是退到 43 单位外,
+        //     卫星的角直径只剩 1.7° —— 屏幕上就是个点。
+        //     根因是几何上的硬约束: 卫星轨道远大于卫星自身
+        //     (木卫四轨道 / 半径 ≈ 780 倍), **"看见轨道"与"看清卫星"
+        //     不可兼得**。教学上"看清这颗卫星长什么样"优先级更高,
+        //     轨道关系可以切到全景视图看。
         //
-        //   卫星的视距取其轨道半径的 0.75 倍, 让母星与卫星能同框,
-        //   这样"卫星在绕母星转"这件事才看得见。
+        //   错误二: 判据写成 dParent > 0。
+        //     但行星/矮行星/小行星的 parentCenter 存的是**太阳位置**,
+        //     于是所有日心天体都被拉到 15 场景单位外 ——
+        //     谷神星本该是 1.9 单位的特写, 却成了整个内太阳系的远景。
+        //     正确判据是结构性的 body->parent != nullptr。
+        //
+        // ★ 正确做法: 沿用上面的 want = r × baseMul (标准取景),
+        //   只额外加一条约束 —— **相机不许进入母星内部**。
+        //   最坏情况是相机恰好落在"卫星 → 母星中心"的连线上,
+        //   此时相机到母星中心的距离 = dParent − want, 要求它
+        //   大于 1.35 倍母星显示半径。
+        //
+        //   实测: 火卫一轨道 1.98 单位、火星显示半径 0.717,
+        //   若不加约束, 0.75×1.98 = 1.49 会把相机推到距火星星心
+        //   0.50 处 —— **钻进火星内部**, 整幅画面连同星空一起变黑。
         if (it->body && it->body->parent != nullptr) {
             const float dParent = (it->center - it->parentCenter).length();
-            if (dParent > 0.0f)
-                want = qMax(want, double(dParent) * 0.75);
+            const BodyData *pb = registry::findBody(it->body->parent);
+            if (dParent > 0.0f && pb) {
+                const double parentVisR =
+                    sceneconst::displayRadius(pb->radiusKm, m_realScale);
+                const double cap = double(dParent) - parentVisR * 1.35;
+                if (cap > 0.0)
+                    want = qMin(want, cap);
+                // 相机也不能比卫星自身还近 —— 否则会穿模
+                want = qMax(want, double(r) * 1.6);
+            }
         }
+
         m_camDist = qBound(0.02, want, 2.0e6);
 
         // ---- 自动光照视角 ----
@@ -638,6 +660,55 @@ void SolarScene::applyFocus()
 
         m_snapCamera = true;
     }
+}
+
+// ---------------------------------------------------------------------------
+//  测试/自检专用: 一次设定全套视角参数
+//
+//  ★ 直接置 m_snapCamera = true 让相机**立即到位**, 不等插值动画。
+//    正常交互需要平滑过渡 (否则拖动手感很生硬), 但批量渲染时
+//    每张都等动画走完会白白多花 1-2 秒。
+// ---------------------------------------------------------------------------
+void SolarScene::testShot(const QString &focusId,
+                          double dist, double phiDeg, double thetaDeg,
+                          int scaleLevel, double jd)
+{
+    // 尺度要先切 —— applyFocus() 的行为依赖当前尺度
+    if (scaleLevel >= 0 && scaleLevel != int(m_scale)) {
+        setScale(scaleLevel);
+        m_snapCamera = true;
+    }
+
+    if (jd > 0.0) {
+        m_jd = jd;
+        emit dateTextChanged();
+    }
+
+    if (!focusId.isEmpty())
+        m_focusId = focusId;
+
+    if (dist > 0.0)
+        m_forcedDist = dist;
+    if (phiDeg >= 0.0)
+        m_camPhi = phiDeg * M_PI / 180.0;
+    if (thetaDeg >= 0.0)
+        m_camTheta = thetaDeg * M_PI / 180.0;
+
+    // 指定了视距就不要再让 applyFocus 重算
+    if (dist > 0.0) {
+        Scene s;
+        s.setJulianDate(m_jd);
+        s.update();
+        if (const SceneItem *it = s.itemById(m_focusId))
+            m_camTarget = it->center;
+        m_camDist = dist;
+        m_snapCamera = true;
+    } else {
+        applyFocus();
+        m_snapCamera = true;
+    }
+
+    update();
 }
 
 void SolarScene::focusOn(const QString &id)

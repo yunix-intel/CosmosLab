@@ -10,7 +10,15 @@
 // ============================================================================
 
 #include <QGuiApplication>
+#include <QFile>
+#include <QFileInfo>
+#include <QTextStream>
+#include <QVector>
+#include <QStringList>
+#include <functional>
+#include <memory>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QSurfaceFormat>
@@ -64,6 +72,24 @@ int main(int argc, char **argv)
 
     qInfo() << "[启动] 3 构造 QML 引擎";
     QQmlApplicationEngine engine;
+
+    // ---- ★★ 自检模式必须"从第一帧就透明" ----
+    //
+    // 踩过的坑: 初版在 QML 加载**之后**才 setOpacity(0) —— 但 QML 里
+    // 写的是 visible: true, 窗口在 engine.load() 期间就已经显示出来了。
+    // 于是每次自检渲染都会有一次肉眼可见的窗口闪现 (实测批量渲染时
+    // 连续闪 8 次, 非常干扰)。
+    //
+    // 正解: 在加载 QML **之前**注入一个上下文属性, 让 QML 在构造窗口时
+    // 就把 opacity 设为 0 —— 窗口创建的第一帧即不可见, 没有任何闪现。
+    //
+    // 注意不能改成 visible: false: 窗口不可见时 Qt 会跳过场景图渲染,
+    // grabWindow() 抓到的会是空白 (实测过 offscreen 平台也是同样问题)。
+    // opacity 0 的窗口仍然正常渲染, 只是不显示。
+    engine.rootContext()->setContextProperty(
+        QStringLiteral("ssHeadless"),
+        !qEnvironmentVariable("SS_SELFTEST").isEmpty());
+
     qInfo() << "[启动] 4 加载 QML";
     engine.load(QUrl(QStringLiteral("qrc:/SolarSystem/qml/Main.qml")));
 
@@ -163,41 +189,149 @@ int main(int argc, char **argv)
     if (outPath.isEmpty())
         return app.exec();
 
-    QTimer::singleShot(3200, &app, [&] {
-        auto *win = qobject_cast<QQuickWindow *>(root);
-        if (!win) {
-            qCritical() << "根对象不是 QQuickWindow";
-            app.exit(1);
-            return;
-        }
+    // ---- 批量渲染: 一次进程出多张图 ----
+    //
+    // 用法: SS_SELFTEST=<首张路径>  SS_SHOTS=<清单文件>
+    //   清单每行: <输出路径>|<focus>|<dist>|<phi>|<theta>|<scale>|<jd>
+    //   空字段表示沿用默认值。以 # 开头的行为注释。
+    //
+    // 只有 SS_SELFTEST 时退化为"一张的批量", 行为与原来一致。
+    struct Shot {
+        QString out, focus;
+        double dist = -1, phi = -1, theta = -1;
+        int    scale = -1;
+        double jd = -1;
+    };
+    QVector<Shot> shots;
+    {
+        Shot first;
+        first.out = outPath;
+        shots.append(first);
 
-        if (auto *ri = win->rendererInterface()) {
-            const auto api = ri->graphicsApi();
-            qInfo().noquote() << "场景图后端:"
-                              << (api == QSGRendererInterface::OpenGL ? "OpenGL"
-                                                                     : "非 OpenGL(!)");
-        }
-
-        const QImage img = win->grabWindow();
-        const bool ok = img.save(outPath);
-
-        int nz = 0, tot = 0;
-        for (int y = 0; y < img.height(); y += 11) {
-            for (int x = 0; x < img.width(); x += 11) {
-                const QColor c = img.pixelColor(x, y);
-                ++tot;
-                if (c.red() + c.green() + c.blue() > 30)
-                    ++nz;
+        const QString listPath = qEnvironmentVariable("SS_SHOTS");
+        if (!listPath.isEmpty()) {
+            shots.clear();
+            QFile f(listPath);
+            if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&f);
+                while (!in.atEnd()) {
+                    const QString line = in.readLine().trimmed();
+                    if (line.isEmpty() || line.startsWith(QLatin1Char('#')))
+                        continue;
+                    const QStringList p = line.split(QLatin1Char('|'));
+                    if (p.isEmpty() || p[0].trimmed().isEmpty())
+                        continue;
+                    Shot sh;
+                    sh.out = p[0].trimmed();
+                    auto numAt = [&](int i) -> double {
+                        return (p.size() > i && !p[i].trimmed().isEmpty())
+                                   ? p[i].trimmed().toDouble() : -1.0;
+                    };
+                    if (p.size() > 1) sh.focus = p[1].trimmed();
+                    sh.dist  = numAt(2);
+                    sh.phi   = numAt(3);
+                    sh.theta = numAt(4);
+                    sh.scale = (p.size() > 5 && !p[5].trimmed().isEmpty())
+                                   ? p[5].trimmed().toInt() : -1;
+                    sh.jd    = numAt(6);
+                    shots.append(sh);
+                }
+            } else {
+                qWarning() << "无法打开 SS_SHOTS:" << listPath;
             }
         }
+        qInfo().noquote() << QString("自检模式: 共 %1 张").arg(shots.size());
+    }
 
-        qInfo().noquote() << QString("图像 %1x%2  保存%3  非黑像素 %4%")
-                                 .arg(img.width()).arg(img.height())
-                                 .arg(ok ? QStringLiteral("成功") : QStringLiteral("失败"))
-                                 .arg(nz * 100.0 / qMax(tot, 1), 0, 'f', 1);
+    // ★ 直接调用 C++ 的 testShot(), 而不是逐个设 QML 属性。
+    //
+    //   初版写成 root->setProperty("testDist", ...) —— 那要求 QML 侧
+    //   额外定义一堆 testXxx 属性并逐个转发回 C++, 链路长且容易漏参数。
+    //   直接从 C++ 一次设完更可靠。
+    //
+    //   注意 root 是 QML 的 ApplicationWindow, scene 属性才是 SolarScene。
+    auto applyShot = [root](const Shot &sh) {
+        // ★ 注意: QML 里写的是 id: scene, 而 **id 不是属性** ——
+        //   C++ 的 root->property("scene") 取不到它 (会返回无效 QVariant)。
+        //   正确做法是在 QML 侧加 objectName: "scene", 再用 findChild 定位。
+        QObject *scene = root->findChild<QObject *>(QStringLiteral("scene"));
+        if (!scene) {
+            qWarning() << "找不到 objectName=scene 的对象, 无法应用镜头参数";
+            return;
+        }
+        QMetaObject::invokeMethod(
+            scene, "testShot",
+            Q_ARG(QString, sh.focus),
+            Q_ARG(double, sh.dist),
+            Q_ARG(double, sh.phi),
+            Q_ARG(double, sh.theta),
+            Q_ARG(int, sh.scale),
+            Q_ARG(double, sh.jd));
+    };
 
-        app.exit(ok ? 0 : 1);
-    });
+    auto idx   = std::make_shared<int>(0);
+    auto fails = std::make_shared<int>(0);
+    auto step  = std::make_shared<std::function<void()>>();
+
+    *step = [&app, root, shots, idx, fails, step, applyShot]() {
+        if (*idx >= shots.size()) {
+            qInfo().noquote() << QString("=== 自检完成: %1 张, %2 张失败 ===")
+                                     .arg(shots.size()).arg(*fails);
+            app.exit(*fails == 0 ? 0 : 1);
+            return;
+        }
+        const Shot &sh = shots[*idx];
+        applyShot(sh);
+
+        // 首张要多等: 纹理与粒子尚在初始化
+        const int waitMs = (*idx == 0) ? 3200 : 1500;
+        QTimer::singleShot(waitMs, &app,
+                           [&app, root, shots, idx, fails, step, sh]() {
+            auto *win = qobject_cast<QQuickWindow *>(root);
+            if (!win) {
+                qCritical() << "根对象不是 QQuickWindow";
+                app.exit(1);
+                return;
+            }
+            if (*idx == 0) {
+                if (auto *ri = win->rendererInterface()) {
+                    const auto api = ri->graphicsApi();
+                    qInfo().noquote() << "场景图后端:"
+                                      << (api == QSGRendererInterface::OpenGL
+                                              ? "OpenGL" : "非 OpenGL(!)");
+                }
+            }
+
+            const QImage img = win->grabWindow();
+            const bool ok = img.save(sh.out);
+
+            int nz = 0, tot = 0;
+            for (int y = 0; y < img.height(); y += 11) {
+                for (int x = 0; x < img.width(); x += 11) {
+                    const QColor c = img.pixelColor(x, y);
+                    ++tot;
+                    if (c.red() + c.green() + c.blue() > 30)
+                        ++nz;
+                }
+            }
+            const double pct = nz * 100.0 / qMax(tot, 1);
+            if (!ok || pct < 1.0)
+                ++(*fails);
+
+            qInfo().noquote() << QString("[%1/%2] %3  %4x%5  非黑 %6%  %7")
+                                     .arg(*idx + 1).arg(shots.size())
+                                     .arg(QFileInfo(sh.out).fileName())
+                                     .arg(img.width()).arg(img.height())
+                                     .arg(pct, 0, 'f', 1)
+                                     .arg(ok ? QStringLiteral("保存成功")
+                                             : QStringLiteral("保存失败"));
+
+            ++(*idx);
+            QTimer::singleShot(0, &app, [step]() { (*step)(); });
+        });
+    };
+
+    QTimer::singleShot(0, &app, [step]() { (*step)(); });
 
     return app.exec();
 }
