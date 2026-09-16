@@ -1,0 +1,4 @@
+[启动] 1 指定 OpenGL 后端
+[启动] 2 构造 QGuiApplication
+[启动] 3 构造 QML 引擎
+[启动] 4 加载 QML

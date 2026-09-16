@@ -1,0 +1,5 @@
+build/
+_shots/
+*.o
+*.obj
+*.exe
