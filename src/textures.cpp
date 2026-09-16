@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "textures.h"
+#include <QFile>
 
 #include <QCoreApplication>
 #include <QDir>
@@ -92,6 +93,83 @@ QOpenGLTexture *TextureCache::load(const QString &path)
     tex->generateMipMaps();
 
     return tex;
+}
+
+// ---------------------------------------------------------------------------
+//  NoData 检测
+//
+//  ★ 为什么不在"生成贴图资产"阶段做, 而在运行时做:
+//    贴图来源分散 (Commons / NASA / USGS / PDS), 每换一张就要重跑
+//    离线分析。放在运行时 + 缓存, 换图后自动生效。
+//
+//  ★ 判据 (实测标定):
+//      纯黑像素占比 > 3%  且  < 92%
+//    下界 3%: 放过只有零星黑边的正常贴图 (如 Callisto 边缘 1-2 像素)。
+//    上界 92%: 排除几乎整张全黑的废图 (那是该被替换的, 不是该被替换色的)。
+// ---------------------------------------------------------------------------
+bool TextureCache::hasNoData(const QString &kind, const QString &name) const
+{
+    // ★★ hasNoData 的文件名规则必须与 get() **完全一致**。
+    //
+    //   初版我图省事只试了 "albedo_<name>.jpg" —— 结果**一个文件都找不到**,
+    //   所有天体都报"未找到文件", NoData 替换完全没生效,
+    //   球面上的黑斑依旧 (实测 Ariel 仍然是"被啃掉"的样子)。
+    //
+    //   两处硬性差异:
+    //     1. 前缀由 kind 决定: albedo_ / normal_ / ring_
+    //        (kind == "misc" 时**无前缀**, 如 milkyway.jpg)
+    //     2. 扩展名要试 .jpg / .jpeg / .png 三种
+    const QString key = kind + QLatin1Char('/') + name;
+    if (m_noData.contains(key))
+        return m_noData.value(key);
+
+    const QStringList exts{QStringLiteral(".jpg"), QStringLiteral(".jpeg"),
+                           QStringLiteral(".png")};
+    QStringList names;
+    for (const QString &e : exts) {
+        if (kind == QLatin1String("misc"))
+            names << name + e;
+        else
+            names << kind + QLatin1Char('_') + name + e;
+    }
+
+    bool result = false;
+    for (const QString &dir : candidateDirs()) {
+        for (const QString &fn : names) {
+            const QString path = dir + QLatin1Char('/') + fn;
+            if (!QFileInfo::exists(path))
+                continue;
+            QImage img(path);
+            if (img.isNull())
+                continue;
+
+            // 缩到 256x128 分析即可 —— 只需要"黑区占比"这个统计量
+            img = img.convertToFormat(QImage::Format_RGB32)
+                     .scaled(256, 128, Qt::IgnoreAspectRatio,
+                             Qt::FastTransformation);
+            int black = 0, total = 0;
+            for (int y = 0; y < img.height(); ++y) {
+                const QRgb *line =
+                    reinterpret_cast<const QRgb *>(img.constScanLine(y));
+                for (int x = 0; x < img.width(); ++x) {
+                    const QRgb c = line[x];
+                    ++total;
+                    if (qRed(c) < 20 && qGreen(c) < 20 && qBlue(c) < 20)
+                        ++black;
+                }
+            }
+            if (total > 0) {
+                const double frac = double(black) / double(total);
+                result = (frac > 0.03 && frac < 0.92);
+            }
+            break;
+        }
+        if (result)
+            break;
+    }
+
+    m_noData.insert(key, result);
+    return result;
 }
 
 QOpenGLTexture *TextureCache::get(const QString &kind, const QString &name)

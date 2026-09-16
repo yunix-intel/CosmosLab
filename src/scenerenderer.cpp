@@ -531,7 +531,26 @@ void SceneRenderer::drawBodies(const ViewState &vs, const QMatrix4x4 &viewProj)
 
         m_planet->setUniformValue("uHasTexture", alb ? 1.0f : 0.0f);
         m_planet->setUniformValue("uHasNormalMap", nrm ? 1.0f : 0.0f);
+
+        // ---- NoData (未测绘区) 处理 ----
+        //
+        // ★ 部分天体的贴图是**部分覆盖**的航天器影像, 未拍摄区域在图上
+        //   是纯黑。直接采样会在球面上留下一块"被啃掉"的黑斑
+        //   (实测 Voyager 2 的天王星卫星黑区占 57~62%)。
+        //
+        // ★ 不补全的理由: 那是**编造观测数据** —— 那些区域根本没人拍过。
+        //   实测各种延拓/插值都会产生明显伪影 (纵向条纹/横向拉丝),
+        //   比黑斑更糟。
+        //
+        // ★ 做法: 在着色器里把近黑像素替换为**按实测反照率着色的底色**,
+        //   视觉上承认"此处无数据", 但球体保持完整。
+        const float hasNoData =
+            m_tex.hasNoData(QStringLiteral("albedo"), stem) ? 1.0f : 0.0f;
+        m_planet->setUniformValue("uHasNoData", hasNoData);
         m_planet->setUniformValue("uBaseColor",
+                                  QVector3D(b->color[0], b->color[1], b->color[2]));
+        // 未测绘区用天体基色 (它由实测反照率标定)
+        m_planet->setUniformValue("uNoDataColor",
                                   QVector3D(b->color[0], b->color[1], b->color[2]));
 
         if (alb) {

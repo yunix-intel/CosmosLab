@@ -158,6 +158,23 @@ uniform vec3  uCamPos;
 uniform vec3  uBaseColor;
 uniform float uHasTexture;
 
+// ★★ NoData (未测绘区) 处理
+//
+//   部分天体的贴图是**部分覆盖**的航天器影像 —— 未拍摄的区域在图上
+//   是纯黑。直接采样会在球面上留下一块"被啃掉"的黑斑, 边缘还是
+//   锯齿状 (实测 Ariel/Oberon/Miranda 等 Voyager 2 目标都是这样,
+//   黑区占 57~62%)。
+//
+//   ★ 为什么不把贴图补全:
+//     那是**编造观测数据** —— 那些区域根本没人拍过。
+//     各种"延拓/插值/平滑"的尝试实测都会产生明显伪影
+//     (纵向条纹、横向拉丝), 比黑斑更糟。
+//
+//   ★ 正确做法: 在着色器里识别 NoData, 用**按反照率着色的均匀底色**
+//     替代纯黑 —— 视觉上承认"这里没有数据", 但球体保持完整。
+uniform float uHasNoData;      // 贴图是否含 NoData 区域
+uniform vec3  uNoDataColor;    // 未测绘区的替代色 (按实测反照率)
+
 uniform float uAtmoRim;        // 临边辉光强度
 uniform vec3  uAtmoColor;
 uniform float uEmissive;       // 恒星自发光
@@ -185,6 +202,16 @@ void main() {
     float diff = smoothstep(-0.08, 0.22, NdotL);
 
     vec3 albedo = uHasTexture > 0.5 ? texture(uAlbedo, vUV).rgb : uBaseColor;
+
+    // NoData 替换: 贴图上近黑的像素 -> 用反照率底色替代
+    // 阈值 0.13 是实测标定的 —— 真实天体的暗区 (如 Iapetus 前导半球的
+    // 反照率 0.05) 转成 sRGB 后约 0.25, 不会误伤; 而 NoData 是纯 0。
+    if (uHasNoData > 0.5) {
+        float lum = max(max(albedo.r, albedo.g), albedo.b);
+        if (lum < 0.13)
+            albedo = uNoDataColor;
+    }
+
     albedo = pow(albedo, vec3(2.2));                 // sRGB -> 线性
 
     // 冷色环境光, 与暖阳形成对比

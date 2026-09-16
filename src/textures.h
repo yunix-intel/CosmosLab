@@ -25,6 +25,17 @@ public:
     // kind: "albedo" / "normal" / "ring"
     QOpenGLTexture *get(const QString &kind, const QString &name);
 
+    // ★ 贴图是否含 NoData (未测绘区, 即大片纯黑)
+    //
+    //   部分天体的贴图是部分覆盖的航天器影像, 未拍摄区域是纯黑。
+    //   着色器据此把近黑像素替换成按反照率着色的底色,
+    //   避免球面上出现"被啃掉"的黑斑。
+    //
+    //   判据: 纯黑 (RGB 全 < 20) 像素占比 > 3% 且 < 92%
+    //     * 上界 92% 是为了排除"整张图几乎全黑"的废图
+    //     * 下界 3%  是为了放过只有零星黑边的正常贴图
+    bool hasNoData(const QString &kind, const QString &name) const;
+
     // 银河背景 (单张, kind 固定)
     QOpenGLTexture *milkyWay() { return get(QStringLiteral("misc"),
                                             QStringLiteral("milkyway")); }
@@ -35,6 +46,7 @@ public:
     static void setRootDir(const QString &dir);
 
 private:
+    mutable QHash<QString, bool> m_noData;   // 贴图名 -> 是否含 NoData
     QOpenGLTexture *load(const QString &path);
 
     QHash<QString, QOpenGLTexture *> m_cache;
