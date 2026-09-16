@@ -588,19 +588,25 @@ void SolarScene::applyFocus()
         if (it->body && it->body->hasRings)
             want = r * (m_realScale ? 420.0 : 9.0);   // 有环的要退远些
 
-        // ★ 卫星的视距要留出轨道空间。
-        //   初版用\"天数体与母体距离 < 自身半径的 3 倍\"来判\"贴身卫星",
-        //   那是为旧的比例错误打的补丁 —— 当时月球离地球只有 1.37 个地球
-        //   半径, 聚焦月球会把地球整个框进画面。
+        // ★★ 只有**卫星**才需要把轨道半径纳入视距。
         //
-        //   现在卫星轨道按**真实半径倍数**定位 (月球在 60.3 个地球半径处),
-        //   旧判据不再成立。改为: 卫星的视距取其**轨道半径的一部分**,
-        //   让母星与卫星能同框 —— 这样\"卫星在绕母星转\"这件事才看得见。
-        //   取 0.75 而非 1.0 是为了让卫星占画面主体, 母星留在边缘。
-        const float dParent = (it->center - it->parentCenter).length();
-        if (dParent > 0.0f)
-            want = qMax(want, double(dParent) * 0.75);
-
+        //   判据必须是 body->parent != nullptr (即"母体是一颗行星"),
+        //   而**不能**用"与 parentCenter 有距离"来判断。
+        //
+        //   因为对行星/矮行星/小行星/彗星而言, parentCenter 存的是
+        //   **太阳位置**, 于是 dParent 就是日心距 (谷神星约 20 场景单位)。
+        //   初版正是踩了这个坑: 修月球视距时写成
+        //       if (dParent > 0) want = max(want, dParent * 0.75)
+        //   结果所有日心天体聚焦时都被拉到 15 单位外 ——
+        //   谷神星本该是 1.9 单位的特写, 却渲染成了整个内太阳系的远景。
+        //
+        //   卫星的视距取其轨道半径的 0.75 倍, 让母星与卫星能同框,
+        //   这样"卫星在绕母星转"这件事才看得见。
+        if (it->body && it->body->parent != nullptr) {
+            const float dParent = (it->center - it->parentCenter).length();
+            if (dParent > 0.0f)
+                want = qMax(want, double(dParent) * 0.75);
+        }
         m_camDist = qBound(0.02, want, 2.0e6);
 
         // ---- 自动光照视角 ----

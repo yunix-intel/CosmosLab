@@ -207,11 +207,31 @@ def commons_thumb(title: str, width: int = 2048) -> str | None:
 
 GOOD_KW = ("global", "mosaic", "basemap", "base map", "color map", "colour map",
            "map", "cylindrical", "usgs", "controlled")
-BAD_KW = ("dem", "elevation", "topograph", "geolog", "gravity", "magnetic",
-          "quadrangle", "pole", "shaded relief", "diagram", "sketch", "legend",
-          "labeled", "labelled", "artistic", "artist", "concept", "poster",
-          "villa romana", "archaeolog", "statue", "painting", "ancient",
-          "museum", "roman", "greek", "einstein")
+# ★ 这份黑名单是**血泪教训的累积** —— 每一条都对应一个实际下载到的错误文件:
+BAD_KW = (
+    # 地图/地形类 (是科学数据, 但不是"表面自然色"图)
+    "dem", "elevation", "topograph", "geolog", "gravity", "magnetic",
+    "quadrangle", "pole", "shaded relief", "mercator", "regio",
+    "annotated", "false color", "false-color", "enhanced color",
+    "elevation model", "color-coded", "colour-coded",
+    # 图例/示意类
+    "diagram", "sketch", "legend", "labeled", "labelled", "schematic",
+    "orbit", "trajectory", "timeline", "chart",
+    # 艺术创作 (不是真实影像, 用在教学里是误导)
+    "artistic", "artist", "concept", "illustration", "poster", "rendering",
+    "impression", "depiction", "painting", "drawing", "circa",
+    # 历史/文化类 (名字撞车导致: "Eros" 既是小行星也是希腊爱神)
+    "villa romana", "archaeolog", "statue", "ancient", "museum",
+    "roman", "greek", "einstein",
+    # 非全球视角 (局部特写不能当等距柱状贴图, 会严重拉伸)
+    "sky", "closeup", "close-up", "detail of", "portion", "region of",
+    "north pole", "south pole", "limb", "horizon",
+    # ★ "区域名"类: 命名地貌的局部镶嵌图, 不是全球图。
+    #   实测踩到: 木卫三的 Tashmetum(区域名)、木卫二的 Fagal Regio。
+    #   这类文件名只有专有名词, 靠关键词无法穷举 —— 故另加一条**尺寸模式**
+    #   规则: 来源若是"某区域", 其文件名常含单个生僻专名且无 map/global 等词。
+    #   见下方 pick_best() 里对 GOOD_KW 的强制要求。
+)
 
 
 def name_score(title: str, w: int, h: int) -> float:
@@ -223,6 +243,14 @@ def name_score(title: str, w: int, h: int) -> float:
     r = w / h if h else 0
     if abs(r - 2.0) > 0.15:        # 硬门禁: 等距柱状投影必须 2:1
         return -1e9
+    # ★★ 强制要求: 文件名必须含"全球图"关键词之一。
+    #    只靠黑名单不够 —— 像 "Tashmetum.png"(木卫三某区域)、
+    #    "Fagal Regio mercator.png"(木卫二某区域) 这种纯专有名词,
+    #    黑名单永远穷举不完。
+    #    改为白名单准入: 没有 map/mosaic/global/basemap 等词的一律不要。
+    if not any(k in low for k in GOOD_KW):
+        return -1e9
+
     s = 0.0
     for k in GOOD_KW:
         if k in low:
@@ -333,6 +361,62 @@ def save_state(path: str, st: dict) -> None:
         json.dump(st, f, ensure_ascii=False, indent=2)
 
 
+def pixel_ok(data: bytes) -> tuple:
+    """★ 像素级内容校验 —— 这一层是必须的。
+
+    文件名规则 (黑名单 + 白名单) 能过滤掉大部分问题, 但实测仍有漏网:
+      * `PIA21914-Ceres-...-Map...` 名字含 Map, 内容是**带图例的彩色地质图**
+      * `Europa volcanism.jpg` 名字没问题, 内容是**冰壳剖面示意图**
+
+    这些只能靠看像素判断。
+
+    判据 (实测标定):
+      * 伪彩色: 饱和度中位数 > 0.35 且显著色相桶 >= 4
+        (彩虹配色会跨越几乎所有色相; 自然表面集中在 1-2 个区间)
+      * 图例/文字栏: 纯白像素 > 12%
+        ★ **只看白色**。太空图的黑色天幕占比 60%+ 是正常的,
+          把黑一起算会把合格的全球图误判 (实测踩到)。
+
+    返回 (ok, 原因)。
+    """
+    import colorsys, io
+    try:
+        from PIL import Image
+        im = Image.open(io.BytesIO(data))
+        im.draft('RGB', (900, 450))
+        im = im.convert('RGB')
+        im.thumbnail((900, 450))
+    except Exception:
+        return (False, '无法解码')
+
+    px = list(im.getdata())
+    n = max(len(px), 1)
+    sat = []
+    hue = [0] * 12
+    white = 0
+    for (r, g, b) in px:
+        if r >= 245 and g >= 245 and b >= 245:
+            white += 1
+            continue
+        hh, ll, ss = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+        if 0.06 < ll < 0.94:
+            sat.append(ss)
+            if ss > 0.20:
+                hue[int(hh * 12) % 12] += 1
+    sat.sort()
+    med = sat[len(sat) // 2] if sat else 0.0
+    colored = sum(hue)
+    spread = sum(1 for c in hue if c > colored * 0.03) if colored else 0
+
+    if med > 0.35 and spread >= 4:
+        return (False, '伪彩色 (饱和 %.2f, 跨 %d 色相)' % (med, spread))
+    if spread >= 6:
+        return (False, '色相跨 %d 区间, 疑示意图' % spread)
+    if white / n * 100 > 12:
+        return (False, '纯白 %.0f%%, 疑含图例' % (white / n * 100))
+    return (True, '')
+
+
 def image_ok(data: bytes) -> tuple:
     """校验比例 2:1。返回 (ok, w, h)。"""
     try:
@@ -377,6 +461,10 @@ def try_commons(body: str, spec: dict, outdir: str) -> bool:
         ok, gw, gh = image_ok(data)
         if not ok:
             print(f"     弃用 {title[5:50]} ({gw}x{gh} 比例不符)")
+            continue
+        pok, why = pixel_ok(data)
+        if not pok:
+            print(f"     弃用 {title[5:50]} —— {why}")
             continue
         out = os.path.join(outdir, f"real_{body}.jpg")
         with open(out, "wb") as f:
