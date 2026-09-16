@@ -11,6 +11,7 @@
 // ============================================================================
 
 #include "scenerenderer.h"
+#include "bodyregistry.h"
 #include "celestialdata.h"
 #include "ephemeris.h"
 #include "mesh.h"
@@ -66,6 +67,12 @@ void SceneRenderer::initialize()
     // 银河系粒子模型 (只在切到银河系尺度时使用)
     m_galaxy.init(m_f);
 
+    // 小行星带 / 柯伊伯带 / 特洛伊群 (太阳系尺度)
+    m_belts.init(m_f, false);
+
+    // 彗尾 (离子尾 + 尘埃尾)
+    m_comets.init(m_f);
+
     m_ready = m_sky && m_planet && m_ring && m_orbit && m_atmo
            && m_sphere && m_quad;
 
@@ -104,8 +111,8 @@ void SceneRenderer::buildMeshes()
     m_quad   = geom::makeScreenQuad();
 
     // 环系: 每个有环行星一张独立网格 (内外径比例各不相同)
-    for (int i = 0; i < ALL_BODIES_COUNT; ++i) {
-        const BodyData &b = ALL_BODIES[i];
+    for (int i = 0; i < registry::count(); ++i) {
+        const BodyData &b = registry::allBodies()[i];
         if (!b.hasRings)
             continue;
         m_ringMeshes.insert(QString::fromUtf8(b.id),
@@ -173,8 +180,12 @@ void SceneRenderer::render(const ViewState &vs)
         m_lastRealScale = vs.realScale;
         m_orbitDirty = true;
         // 比例改变时轨道线几何必须重建 (它按坐标烘焙进了 VBO)
-        if (scaleChanged)
+        if (scaleChanged) {
             m_orbitMeshes.clear();
+            // 小行星带的半径也是按坐标烘焙的, 同样需要重建 ——
+            // 否则切到真实比例后带会留在原来的位置, 与行星轨道错开。
+            m_belts.rebuild(vs.realScale);
+        }
     }
 
     // 相机同步。
@@ -246,6 +257,38 @@ void SceneRenderer::render(const ViewState &vs)
 
     if (vs.showOrbits)
         drawOrbits(vs, viewProj);
+
+    // 彗尾: 在行星之前画 (加法混合 + 不写深度), 让行星正常遮挡它
+    if (vs.showBelts) {
+        QVector<CometTail> tails;
+        const QVector3D sunP = m_scene.sunPosition();
+        for (const SceneItem &it : m_scene.items()) {
+            if (!it.isComet || it.tailLength <= 0.0f)
+                continue;
+            CometTail ct;
+            ct.nucleus    = it.center;
+            ct.antiSun    = (it.center - sunP);
+            if (ct.antiSun.lengthSquared() < 1e-9f)
+                continue;                     // 恰好落在太阳上, 跳过
+            ct.antiSun.normalize();
+            ct.velocity   = it.velocityDir;
+            ct.length     = it.tailLength;
+            ct.brightness = it.tailBright;
+            tails.append(ct);
+        }
+        if (!tails.isEmpty())
+            m_comets.render(viewProj, m_camera.eye(), tails);
+    }
+
+    // 小行星带 / 柯伊伯带 / 特洛伊群。
+    // 画在行星之前: 它们禁用深度测试且用 alpha 混合, 随后画的行星会
+    // 正常遮挡它们 —— 这正是想要的层次关系。
+    if (vs.showBelts) {
+        const float beltHalfFov = float(vs.fov) * 0.5f * float(M_PI) / 180.0f;
+        const float beltPointScale =
+            float(m_h) * 0.5f / qMax(std::tan(beltHalfFov), 1e-4f);
+        m_belts.render(viewProj, vs.jd - J2000, beltPointScale);
+    }
 
     m_f->glEnable(GL_CULL_FACE);
     m_f->glCullFace(GL_BACK);

@@ -40,6 +40,7 @@ struct ViewState
     double exposure  = 1.0;
     bool   realScale = false;   // 真实比例 (1:1) 模式
     bool   showOrbits = true;
+    bool   showBelts  = true;   // 小行星带 / 柯伊伯带 / 特洛伊群
     bool   showRings  = true;
     bool   showAtmo   = true;
     bool   snap       = false;  // 一次性: 相机直接吸附, 不做阻尼插值

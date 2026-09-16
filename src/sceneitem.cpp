@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "sceneitem.h"
+#include "bodyregistry.h"
 #include "celestialdata.h"
 #include "ephemeris.h"
 #include "galaxydata.h"
@@ -92,6 +93,7 @@ void SolarSceneRenderer::render()
     vs.scale       = m_snapshot.scale;
     vs.realScale   = m_snapshot.realScale;
     vs.showOrbits  = m_snapshot.showOrbits;
+    vs.showBelts   = m_snapshot.showBelts;
     vs.showRings   = m_snapshot.showRings;
     vs.showAtmo    = m_snapshot.showAtmo;
     vs.snap  = m_snapshot.snap;
@@ -109,6 +111,14 @@ SolarScene::SolarScene(QQuickItem *parent)
     setFlag(QQuickItem::ItemHasContents, true);
 
     m_jd = eph::jdFromUnixSec(double(QDateTime::currentSecsSinceEpoch()));
+
+    // 测试用: SS_JD=<儒略日> 直接指定时刻。
+    // 必要性: 彗尾只在近日点附近才明显 (哈雷 2026 年在 35 AU 外的远日点,
+    // 尾巴几乎不可见 —— 那是对的物理, 但没法用来验证渲染)。
+    // 要检查彗尾必须能把时间拨到某个已知的过近日点时刻。
+    if (qEnvironmentVariableIsSet("SS_JD"))
+        m_jd = qgetenv("SS_JD").toDouble();
+
     m_lastTickMs = QDateTime::currentMSecsSinceEpoch();
 
     // 渲染分辨率自适应。
@@ -312,6 +322,15 @@ void SolarScene::setShowAtmo(bool v)
     update();
 }
 
+void SolarScene::setShowBelts(bool v)
+{
+    if (m_showBelts == v)
+        return;
+    m_showBelts = v;
+    emit showBeltsChanged();
+    update();
+}
+
 void SolarScene::setRealScale(bool v)
 {
     if (m_realScale == v)
@@ -336,7 +355,7 @@ QString SolarScene::dateText() const
 
 int SolarScene::bodyCount() const
 {
-    return ALL_BODIES_COUNT;
+    return registry::count();
 }
 
 // ---------------------------------------------------------------------------
@@ -391,15 +410,18 @@ void SolarScene::applyFocus()
         if (it->body && it->body->hasRings)
             want = r * (m_realScale ? 420.0 : 9.0);   // 有环的要退远些
 
-        // 卫星要收紧视距。
-        // 判据: 天体与母体的距离小于自身半径的 3 倍 —— 即真正的"贴身"卫星。
-        // 对行星 dParent 是 1 AU 量级 (地球 150 单位), 条件自然不成立;
-        // 对月球 dParent ≈ 1.5 单位, 成立。
-        // 不加这条时聚焦月球会把地球整个框进画面 (实测地球占了 60% 高度,
-        // 月球反倒成了配角), 因为月球离地球太近了。
+        // ★ 卫星的视距要留出轨道空间。
+        //   初版用"天数体与母体距离 < 自身半径的 3 倍"来判"贴身卫星",
+        //   那是为旧的比例错误打的补丁 —— 当时月球离地球只有 1.37 个地球
+        //   半径, 聚焦月球会把地球整个框进画面。
+        //
+        //   现在卫星轨道按**真实半径倍数**定位 (月球在 60.3 个地球半径处),
+        //   旧判据不再成立。改为: 卫星的视距取其**轨道半径的一部分**,
+        //   让母星与卫星能同框 —— 这样"卫星在绕母星转"这件事才看得见。
+        //   取 0.75 而非 1.0 是为了让卫星占画面主体, 母星留在边缘。
         const float dParent = (it->center - it->parentCenter).length();
-        if (dParent > 0.0f && dParent < float(r * 3.0))
-            want = r * (m_realScale ? 140.0 : 3.0);
+        if (dParent > 0.0f)
+            want = qMax(want, double(dParent) * 0.75);
 
         m_camDist = qBound(0.02, want, 2.0e6);
 
@@ -594,6 +616,7 @@ ViewState SolarScene::takeSnapshot() const
     s.camPhi     = m_camPhi;
     s.fov        = m_fov;
     s.showOrbits = m_showOrbits;
+    s.showBelts  = m_showBelts;
     s.showRings  = m_showRings;
     s.showAtmo   = m_showAtmo;
 
@@ -611,8 +634,8 @@ ViewState SolarScene::takeSnapshot() const
 QVariantList SolarScene::bodyList() const
 {
     QVariantList list;
-    for (int i = 0; i < ALL_BODIES_COUNT; ++i) {
-        const BodyData &b = ALL_BODIES[i];
+    for (int i = 0; i < registry::count(); ++i) {
+        const BodyData &b = registry::allBodies()[i];
 
         // 只列出太阳、行星与月球 —— 木卫/土卫太多会让列表过长
         const bool isMoon = (b.parent != nullptr);
@@ -635,7 +658,7 @@ QVariantList SolarScene::bodyList() const
 QVariantMap SolarScene::bodyInfo(const QString &id) const
 {
     QVariantMap m;
-    const BodyData *b = findBody(id.toUtf8().constData());
+    const BodyData *b = registry::findBody(id.toUtf8().constData());
     if (!b)
         return m;
 
@@ -679,7 +702,7 @@ QVariantMap SolarScene::bodyInfo(const QString &id) const
         m["distLabel"] = QStringLiteral("距银心");
         m["speedLabel"] = QStringLiteral("公转速度");
     } else if (b->parent) {
-        const BodyData *p = findBody(b->parent);
+        const BodyData *p = registry::findBody(b->parent);
         m["distLabel"] = QStringLiteral("距母星");
         m["speedLabel"] = QStringLiteral("轨道速度");
         m["parentName"] = p ? QString::fromUtf8(p->name) : QString();

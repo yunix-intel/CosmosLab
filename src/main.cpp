@@ -102,6 +102,18 @@ int main(int argc, char **argv)
             w->setOpacity(0.0);
     }
 
+    // ---- 轨道求解自检 ----
+    //
+    // 用 SS_ORBTEST=1 打开: 打印各天体的日心距与轨道速度, 用于与
+    // JPL Horizons 的实测值对照。这是验证开普勒求解器正确性的关键手段 ——
+    // 尤其是极端偏心率的目标 (哈雷 e=0.967, NEOWISE e=0.99918),
+    // 求解器若在近日点附近不收敛, 日心距会明显偏离。
+    if (qEnvironmentVariableIsSet("SS_ORBTEST")) {
+        extern void runOrbitSelfTest();
+        runOrbitSelfTest();
+        return 0;
+    }
+
     // ---- 帧率基准 ----
     //
     // ★ 这段必须放在下面 `if (outPath.isEmpty()) return app.exec();` **之前**。

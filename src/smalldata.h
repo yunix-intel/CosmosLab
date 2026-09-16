@@ -48,19 +48,25 @@ const char *typeNameCn(BodyType t);
 const char *typeNameEn(BodyType t);
 
 // ---------------------------------------------------------------------------
-//  扩展天体条目
-//
-//  复用 celestialdata.h 的 BodyData 结构 (字段完全一致), 额外记录类型。
-//  另有一组经计算得出的派生量 (见 smalldata.cpp 的 bootstrap)。
+//  扩展天体条目: 复用 celestialdata.h 的 BodyData 结构 + 类型标注
 // ---------------------------------------------------------------------------
 struct SmallBody
 {
     BodyData    data;
     BodyType    type;
-    const char *typeNote;      // 一句话说明该天体的教学要点
+    const char *typeNote;      // 该天体的教学要点
 };
 
-extern const SmallBody SMALL_BODIES[];
-extern const int       SMALL_BODIES_COUNT;
+// 扩展天体表 (定义于 smalldata.cpp)
+const SmallBody *bodies();
+int             count();
+
+// 日心小天体的轨道根数 (由 JPL 原始值经公式转换得到, 见 .cpp)
+// 注意 rL 由开普勒第三定律算出, 而非拟合值。
+const OrbitalElements *orbitalElements();
+extern const int ORBITAL_ELEMENTS_COUNT;
+
+// 按 id 查扩展天体; 找不到返回 nullptr
+const SmallBody *find(const char *id);
 
 } // namespace small

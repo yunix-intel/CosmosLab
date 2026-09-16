@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "ephemeris.h"
+#include "bodyregistry.h"
 #include "celestialdata.h"
 
 #include <QVector>
@@ -49,7 +50,21 @@ double solveKepler(double meanAnomaly, double ecc)
     // 归一到 [-pi, pi], 提升收敛性
     double M = std::fmod(meanAnomaly + M_PI, TAU) - M_PI;
 
-    double E = (ecc < 0.8) ? M + ecc * std::sin(M) : M;
+    // ★ 初值选择决定高偏心率下能否收敛。
+    //   低偏心率用经典牛顿起步 (E = M + e·sin M) 即可。
+    //   但 e → 1 时该起步点极差: 例如 e = 0.99918 (NEOWISE 彗星),
+    //   在近日点附近 M≈0 而 E 的实际解接近 0, 牛顿法却会因导数
+    //   f' = 1 - e·cos E ≈ 0 而剧烈震荡, 60 次迭代都可能不收敛。
+    //   改用 Danby 起步 (0.85·e·sign(sin M) 的偏置), 它把初值推向
+    //   解所在的一侧, 对 e 直到 0.9999 都稳定收敛。
+    double E;
+    if (ecc < 0.8) {
+        E = M + ecc * std::sin(M);
+    } else {
+        // sign(0) 取 +1, 避免 sin(M)=0 时初值停在 M 上
+        const double s = (std::sin(M) >= 0.0) ? 1.0 : -1.0;
+        E = M + 0.85 * ecc * s;
+    }
 
     for (int i = 0; i < KEPLER_MAX_ITER; ++i) {
         const double f  = E - ecc * std::sin(E) - M;
@@ -70,7 +85,7 @@ double solveKepler(double meanAnomaly, double ecc)
 
 QVector3D heliocentricPosition(const char *bodyId, double jd)
 {
-    const OrbitalElements *el = findOrbitalElements(bodyId);
+    const OrbitalElements *el = registry::findOrbit(bodyId);
     if (!el)
         return QVector3D(0.0f, 0.0f, 0.0f);
 
@@ -78,7 +93,7 @@ QVector3D heliocentricPosition(const char *bodyId, double jd)
 
     // 瞬时轨道根数
     const double a    = el->a    + el->ra    * T;
-    const double e    = qBound(0.0, el->e + el->re * T, 0.95);
+    const double e    = qBound(0.0, el->e + el->re * T, 0.99999);
     const double inc  = el->inc  + el->ri    * T;
     const double L    = el->L    + el->rL    * T;
     const double peri = el->peri + el->rperi * T;
@@ -119,7 +134,7 @@ double orbitalRadiusKm(const char *bodyId, double jd)
 
 double orbitalSpeedKms(const char *bodyId, double jd)
 {
-    const OrbitalElements *el = findOrbitalElements(bodyId);
+    const OrbitalElements *el = registry::findOrbit(bodyId);
     if (!el)
         return 0.0;
 
@@ -147,13 +162,13 @@ void sampleOrbit(const char *bodyId, double jd, int segments,
 {
     out.clear();
 
-    const OrbitalElements *el = findOrbitalElements(bodyId);
+    const OrbitalElements *el = registry::findOrbit(bodyId);
     if (!el)
         return;
 
     const double T = centuriesSinceJ2000(jd);
     const double a    = el->a    + el->ra    * T;
-    const double e    = qBound(0.0, el->e + el->re * T, 0.95);
+    const double e    = qBound(0.0, el->e + el->re * T, 0.99999);
     const double inc  = el->inc  + el->ri    * T;
     const double peri = el->peri + el->rperi * T;
     const double node = el->node + el->rnode * T;

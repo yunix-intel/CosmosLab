@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "belts.h"
+#include "comet.h"
 #include "camera.h"
 #include "galaxy.h"
 #include "postfx.h"
@@ -68,6 +70,8 @@ private:
     OrbitCamera m_camera;
 
     Galaxy m_galaxy;               // 银河系粒子模型 (只在银河系尺度使用)
+    Belts  m_belts;                // 小行星带 / 柯伊伯带 / 特洛伊群
+    CometRenderer m_comets;        // 彗尾 (离子尾 + 尘埃尾)
 
     PostFX m_postfx;               // HDR + Bloom + ACES 后处理链
 

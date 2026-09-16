@@ -67,6 +67,7 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(bool    showOrbits  READ showOrbits  WRITE setShowOrbits  NOTIFY showOrbitsChanged)
     Q_PROPERTY(bool    showRings   READ showRings   WRITE setShowRings   NOTIFY showRingsChanged)
     Q_PROPERTY(bool    showAtmo    READ showAtmo    WRITE setShowAtmo    NOTIFY showAtmoChanged)
+    Q_PROPERTY(bool    showBelts   READ showBelts   WRITE setShowBelts   NOTIFY showBeltsChanged)
     // 真实比例模式 —— 教学关键: 关闭艺术压缩, 让尺度关系如实呈现
     Q_PROPERTY(bool    realScale   READ realScale   WRITE setRealScale   NOTIFY realScaleChanged)
     Q_PROPERTY(QString dateText    READ dateText                          NOTIFY dateTextChanged)
@@ -104,6 +105,8 @@ public:
     void setShowRings(bool v);
 
     bool showAtmo() const { return m_showAtmo; }
+    bool showBelts() const { return m_showBelts; }
+    void setShowBelts(bool v);
     void setShowAtmo(bool v);
 
     bool realScale() const { return m_realScale; }
@@ -151,6 +154,7 @@ signals:
     void showOrbitsChanged();
     void showRingsChanged();
     void showAtmoChanged();
+    void showBeltsChanged();
     void realScaleChanged();
     void dateTextChanged();
     void scaleChanged();
@@ -170,6 +174,7 @@ private:
     bool    m_showOrbits = true;
     bool    m_showRings = true;
     bool    m_showAtmo = true;
+    bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;
 

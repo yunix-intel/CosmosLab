@@ -65,6 +65,12 @@ struct SceneItem
     double    speedKms = 0.0;
     bool      hasOrbit = false;    // 是否画轨道线
 
+    // ---- 彗星专用 (仅彗星有彗尾) ----
+    bool      isComet = false;
+    float     tailLength = 0.0f;   // 彗尾长度 (场景单位)
+    float     tailBright = 0.0f;   // 0..1
+    QVector3D velocityDir;         // 轨道运动方向 (单位向量)
+
     QMatrix4x4 modelMatrix() const;
 };
 
