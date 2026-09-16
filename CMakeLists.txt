@@ -38,9 +38,12 @@ qt_add_qml_module(solar_system
         src/scene.h            src/scene.cpp
         src/belts.h              src/belts.cpp
         src/comet.h              src/comet.cpp
+        src/cosmos.h             src/cosmos.cpp
+        src/cosmosdata.h         src/cosmosdata.cpp
         src/bodyregistry.h       src/bodyregistry.cpp
         src/orbtest.cpp
         src/smalldata.h          src/smalldata.cpp
+        src/galaxyarms.h        src/galaxyarms.cpp
         src/galaxydata.h
         src/galaxy.h           src/galaxy.cpp
         src/postfx.h           src/postfx.cpp

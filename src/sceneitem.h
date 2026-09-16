@@ -83,6 +83,13 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(double  sunMarkY    READ sunMarkY                          NOTIFY sunMarkChanged)
     Q_PROPERTY(bool    sunMarkOn   READ sunMarkOn                         NOTIFY sunMarkChanged)
 
+    // ---- 银河系全景标注 (旋臂 / 银心 / 标尺) ----
+    // 用 QML 覆盖层绘制: GL core profile 的线宽上限 1px 且无法画文字。
+    // 每个标注含屏幕位置 (归一化 0..1) 与名称, 由 C++ 投影得到。
+    Q_PROPERTY(QVariantList galaxyLabels READ galaxyLabels               NOTIFY galaxyLabelsChanged)
+    // 视野宽度 (光年) —— 用于显示标尺
+    Q_PROPERTY(double  galaxyViewWidthLy READ galaxyViewWidthLy          NOTIFY galaxyLabelsChanged)
+
 public:
     explicit SolarScene(QQuickItem *parent = nullptr);
 
@@ -123,6 +130,9 @@ public:
     QString scaleName() const;
 
     // 太阳标注的屏幕位置 (归一化 0..1, 原点左上)
+    QVariantList galaxyLabels() const { return m_galaxyLabels; }
+    double galaxyViewWidthLy() const { return m_galaxyViewWidthLy; }
+
     double sunMarkX() const { return m_sunMarkX; }
     double sunMarkY() const { return m_sunMarkY; }
     bool   sunMarkOn() const { return m_sunMarkOn; }
@@ -132,6 +142,9 @@ public:
     Q_INVOKABLE QVariantMap  bodyInfo(const QString &id) const; // 详情面板
     Q_INVOKABLE QVariantMap  galaxyInfo() const;                // 银河系数据面板
     Q_INVOKABLE QVariantList galaxyNotes() const;               // 银河系教学要点
+    Q_INVOKABLE QVariantMap  cosmosInfo() const;                 // 宇宙学参数
+    Q_INVOKABLE QVariantList cosmosNotes() const;                // 宇宙教学要点
+    Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
     Q_INVOKABLE void focusOn(const QString &id);
     Q_INVOKABLE void resetView();
     Q_INVOKABLE void setTimeToNow();
@@ -159,6 +172,7 @@ signals:
     void dateTextChanged();
     void scaleChanged();
     void sunMarkChanged();
+    void galaxyLabelsChanged();
 
 private slots:
     void onTick();
@@ -195,6 +209,9 @@ private:
     double m_sunMarkX = 0.5;            // 太阳标注的屏幕位置 (归一化)
     double m_sunMarkY = 0.5;
     bool   m_sunMarkOn = false;
+
+    QVariantList m_galaxyLabels;        // 银河系标注 (位置 + 名称)
+    double       m_galaxyViewWidthLy = 0.0;
 
     // 渲染分辨率缩放。默认按屏幕 DPR 自适应:
     //   dpr >= 2 (高分辨率屏) -> 0.72  (像素太多, 降一点肉眼无感)

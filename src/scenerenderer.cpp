@@ -73,6 +73,9 @@ void SceneRenderer::initialize()
     // 彗尾 (离子尾 + 尘埃尾)
     m_comets.init(m_f);
 
+    // 宇宙大尺度结构
+    m_cosmos.init(m_f);
+
     m_ready = m_sky && m_planet && m_ring && m_orbit && m_atmo
            && m_sphere && m_quad;
 
@@ -231,6 +234,28 @@ void SceneRenderer::render(const ViewState &vs)
     //  不画天空盒 (银盘自己就是星场, 再叠一层地球夜空的星星会显得脏),
     //  不画行星与轨道 —— 在这个尺度上太阳系只是一个点。
     // =======================================================================
+    // =======================================================================
+    //  宇宙尺度: 本星系群 → 星系团 → 超星系团 → 大尺度结构
+    //
+    //  与银河系视图一样, 不画天空盒 (宇宙尺度上"星座"毫无意义),
+    //  也不画行星 —— 在这个尺度上整个银河系只是一个光点。
+    // =======================================================================
+    if (vs.scale == SceneScale::Cosmos) {
+        const float halfFovC = float(vs.fov) * 0.5f * float(M_PI) / 180.0f;
+        const float pScaleC =
+            float(m_h) * 0.5f / qMax(std::tan(halfFovC), 1e-4f);
+
+        m_f->glDisable(GL_DEPTH_TEST);
+        m_f->glDisable(GL_CULL_FACE);
+        m_cosmos.render(viewProj, pScaleC);
+
+        if (!m_postfx.ready())
+            return;
+        m_postfx.renderBloom();
+        m_postfx.composite(GLuint(qtFbo), 0.5f, 0.5f, false, timeSec);
+        return;
+    }
+
     if (vs.scale == SceneScale::Galaxy) {
         // 点精灵的透视缩放系数: 视口高度 / (2·tan(fov/2))
         // 使 gl_PointSize = size · uPixelScale / w 得到正确的世界尺寸投影

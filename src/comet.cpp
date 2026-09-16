@@ -51,7 +51,7 @@ void main() {
     // ★★ 真正的 billboard —— 必须用**相机位置**算侧向量, 不能用一个
     //    固定的世界向量。初版取 side = normalize(cross(uAxis, worldY)),
     //    那是世界空间里固定的一个方向, 于是当视线恰好落在该平面内时,
-    //    整条尾巴退化成一条细线 (实测截图里看到的"扁平带子")。
+    //    整条尾巴退化成一条细线 (实测截图里看到的\"扁平带子")。
     //    正确做法: side = normalize(cross(uAxis, viewDir)),
     //    viewDir = axisPos - camPos, 这样侧向量始终垂直于视线,
     //    尾巴平面永远正对相机。
@@ -180,7 +180,7 @@ void CometRenderer::render(const QMatrix4x4 &viewProj,
 
     m_f->glEnable(GL_BLEND);
     // ★ 加法混合 —— 彗尾是发光的稀薄气体, 加法混合才能表现
-    //   "重叠处更亮"的物理特征。用普通 alpha 混合会显得像一块塑料片。
+    //   "重叠处更亮\"的物理特征。用普通 alpha 混合会显得像一块塑料片。
     m_f->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     m_f->glDepthMask(GL_FALSE);        // 不写深度, 避免尾巴互相遮挡
 

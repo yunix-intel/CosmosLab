@@ -7,6 +7,9 @@
 #include "celestialdata.h"
 #include "ephemeris.h"
 #include "galaxydata.h"
+#include "cosmos.h"
+#include "cosmosdata.h"
+#include "galaxyarms.h"
 #include "scenerenderer.h"
 #include "scene.h"
 
@@ -146,14 +149,28 @@ SolarScene::SolarScene(QQuickItem *parent)
     if (!distEnv.isEmpty())
         m_forcedDist = distEnv.toDouble();
 
-    // 测试用: SS_SCALE=1 直接进入银河系视图 (跳过 UI 交互)
+    // 测试用: SS_SCALE=<0|1|2> 直接进入指定尺度 (跳过 UI 交互)
+    //
+    // ★ 必须尊重实际数值。初版写成\"非零即银河系", 于是 SS_SCALE=2
+    //   被静默当成 1 —— 想验证宇宙视图却渲染出了银河系, 而且因为
+    //   UI 标题也跟着 scaleLevel 走, 画面上看不出任何异常, 很容易
+    //   误判为\"宇宙视图渲染失败"。
     const QByteArray scaleEnv = qgetenv("SS_SCALE");
     if (!scaleEnv.isEmpty() && scaleEnv.toInt() != 0) {
-        m_scale     = SceneScale::Galaxy;
-        m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
-        m_camDist   = 340.0;
-        m_camTheta  = 40.0 * M_PI / 180.0;
-        m_camPhi    = 62.0 * M_PI / 180.0;
+        const int sv = scaleEnv.toInt();
+        if (sv >= 2) {
+            m_scale     = SceneScale::Cosmos;
+            m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
+            m_camDist   = 300.0;
+            m_camTheta  = 35.0 * M_PI / 180.0;
+            m_camPhi    = 68.0 * M_PI / 180.0;
+        } else {
+            m_scale     = SceneScale::Galaxy;
+            m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
+            m_camDist   = 340.0;
+            m_camTheta  = 40.0 * M_PI / 180.0;
+            m_camPhi    = 62.0 * M_PI / 180.0;
+        }
         m_snapCamera = true;
     }
 
@@ -208,15 +225,93 @@ void SolarScene::onTick()
 //
 //  用与渲染侧相同的相机约定重算一遍投影。相机参数取**目标值**而非渲染
 //  侧的阻尼平滑值, 所以拖动过程中标注会略有滞后 (停止后立即吻合)。
-//  这个取舍是为了避免跨线程同步 —— 标注是"我们在哪"的指示, 轻微滞后
+//  这个取舍是为了避免跨线程同步 —— 标注是\"我们在哪\"的指示, 轻微滞后
 //  在教学上无影响, 而把渲染线程的平滑状态搬过来需要加锁, 得不偿失。
 // ---------------------------------------------------------------------------
 void SolarScene::updateSunMark()
 {
+    // ---- 宇宙尺度: 投影具名结构 ----
+    //
+    // ★ 与银河系视图的关键差别: 这里的距离跨了 6 个数量级, 场景坐标是
+    //   **对数映射**的结果。因此标注位置必须用同一个 Cosmos::distToScene
+    //   换算, 否则标注会漂到完全错误的地方。
+    if (m_scale == SceneScale::Cosmos) {
+        const double spC = std::sin(m_camPhi);
+        const QVector3D eyeC(
+            float(m_camDist * spC * std::sin(m_camTheta)),
+            float(m_camDist * std::cos(m_camPhi)),
+            float(m_camDist * spC * std::cos(m_camTheta)));
+        QVector3D upC(0.0f, 1.0f, 0.0f);
+        if (std::fabs(m_camPhi) < 1e-3 || std::fabs(m_camPhi - M_PI) < 1e-3)
+            upC = QVector3D(0.0f, 0.0f, 1.0f);
+        QMatrix4x4 vC, pC;
+        vC.lookAt(eyeC, m_camTarget, upC);
+        const double aspectC = qMax(1.0, double(width()))
+                             / qMax(1.0, double(height()));
+        pC.perspective(float(m_fov), float(aspectC), 1.0f, 10000.0f);
+        const QMatrix4x4 vpC = pC * vC;
+
+        QVariantList labels;
+        const QVector<CosmosMarker> marks = Cosmos::markers();
+        for (const CosmosMarker &mk : marks) {
+            const QVector4D clip = vpC * QVector4D(mk.pos, 1.0f);
+            if (clip.w() <= 1e-6f)
+                continue;
+            const QVector3D ndc = clip.toVector3D() / clip.w();
+            const double nx = ndc.x() * 0.5 + 0.5;
+            const double ny = 0.5 - ndc.y() * 0.5;
+            if (nx < 0.02 || nx > 0.98 || ny < 0.02 || ny > 0.98)
+                continue;
+            // kind: 0=星系 1=星系群/团 2=超星系团 3=巨壁 4=空洞
+            const char *kn = mk.kind == 4 ? "void"
+                           : mk.kind == 3 ? "wall"
+                           : mk.kind == 2 ? "supercluster"
+                           : mk.kind == 1 ? "cluster" : "galaxy";
+            labels.append(QVariantMap{
+                { "x", nx }, { "y", ny },
+                { "text", mk.nameCn },
+                { "sub",  mk.detail },
+                { "kind", QString::fromUtf8(kn) },
+            });
+        }
+
+        // 视野尺度 (百万光年) —— 反推: 场景单位 -> Mly
+        //   r = log10(1+d/d0)/log10(1+dMax/d0)·R  =>  d = d0·(K^(r/R) - 1)
+        double viewLy = 0.0;
+        {
+            const double halfFov = double(m_fov) * 0.5 * M_PI / 180.0;
+            const double hUnits = 2.0 * m_camDist * std::tan(halfFov);
+            const double den = std::log10(1.0 + 46500.0 / 0.1);
+            const double rEdge = qMin(double(Cosmos::sceneRadius()), hUnits * 0.5);
+            const double dEdge = 0.1 * (std::pow(10.0, rEdge / Cosmos::sceneRadius() * den) - 1.0);
+            viewLy = dEdge * 2.0 * aspectC;
+        }
+
+        bool dirty = !m_sunMarkOn
+                  || std::fabs(viewLy - m_galaxyViewWidthLy) > 1.0;
+        m_sunMarkOn = true;
+        m_galaxyViewWidthLy = viewLy;
+        m_galaxyLabels = labels;
+        emit galaxyLabelsChanged();
+        if (dirty)
+            emit sunMarkChanged();
+        return;
+    }
+
     if (m_scale != SceneScale::Galaxy) {
+        bool dirty = false;
         if (m_sunMarkOn) {
             m_sunMarkOn = false;
+            dirty = true;
+        }
+        if (!m_galaxyLabels.isEmpty()) {
+            m_galaxyLabels.clear();
+            m_galaxyViewWidthLy = 0.0;
+            dirty = true;
+        }
+        if (dirty) {
             emit sunMarkChanged();
+            emit galaxyLabelsChanged();
         }
         return;
     }
@@ -235,25 +330,31 @@ void SolarScene::updateSunMark()
     QMatrix4x4 view;
     view.lookAt(eye, m_camTarget, up);
 
-    // 近远面取任意合理值 —— 只关心 NDC 的 x/y, 与裁剪无关
     QMatrix4x4 proj;
     const double aspect = qMax(1.0, double(width())) / qMax(1.0, double(height()));
     proj.perspective(float(m_fov), float(aspect), 1.0f, 10000.0f);
+    const QMatrix4x4 vp = proj * view;
 
-    const QVector4D clip = (proj * view)
-                         * QVector4D(Galaxy::sunPosition(), 1.0f);
-
-    double nx = m_sunMarkX, ny = m_sunMarkY;
-    bool on = false;
-    if (clip.w() > 1e-6f) {
+    // 把世界坐标投影到归一化屏幕坐标 (0..1, 原点左上)。
+    // 返回 false 表示该点落在相机背后 (w <= 0), 此时不能投影。
+    auto project = [&](const QVector3D &world, double &nx, double &ny) {
+        const QVector4D clip = vp * QVector4D(world, 1.0f);
+        if (clip.w() <= 1e-6f)
+            return false;
         const QVector3D ndc = clip.toVector3D() / clip.w();
         nx = ndc.x() * 0.5 + 0.5;
-        ny = 0.5 - ndc.y() * 0.5;        // QML 的 y 轴向下
+        ny = 0.5 - ndc.y() * 0.5;          // QML 的 y 轴向下
+        return true;
+    };
+
+    // ---- 太阳标记 ----
+    double nx = m_sunMarkX, ny = m_sunMarkY;
+    bool on = false;
+    if (project(Galaxy::sunPosition(), nx, ny)) {
         // 留 8% 余量: 标注刚出画时仍有部分可见, 不会突兀地消失
         on = (nx > -0.08 && nx < 1.08 && ny > -0.08 && ny < 1.08);
     }
 
-    // 只在变化明显时发信号, 避免每帧都触发 QML 重绑
     const bool moved = std::fabs(nx - m_sunMarkX) > 1e-4
                     || std::fabs(ny - m_sunMarkY) > 1e-4;
     if (moved || on != m_sunMarkOn) {
@@ -262,6 +363,82 @@ void SolarScene::updateSunMark()
         m_sunMarkOn = on;
         emit sunMarkChanged();
     }
+
+    // ---- 旋臂 / 银心 / 猎户支 标注 ----
+    //
+    // ★ 这些标注是银河系视图的教学价值所在:
+    //   否则学生看到的只是\"一团有旋臂的粒子", 不知道哪条是英仙臂、
+    //   太阳在哪条臂上、银心在哪个方向。
+    //
+    //   投影在 CPU 侧完成, 与太阳标记共用同一套相机参数 ——
+    //   保证标注永远贴合几何。
+    QVariantList labels;
+
+    // 银心 (标在核球中心稍偏, 避免被最亮的粒子完全淹没)
+    {
+        double gx, gy;
+        if (project(QVector3D(0.0f, 0.0f, 0.0f), gx, gy)
+            && gx > -0.05 && gx < 1.05 && gy > -0.05 && gy < 1.05) {
+            labels.append(QVariantMap{
+                { "x", gx }, { "y", gy },
+                { "text", QStringLiteral("银心") },
+                { "sub",  QStringLiteral("人马座 A*") },
+                { "kind", QStringLiteral("core") },
+            });
+        }
+    }
+
+    // 四条主旋臂: 标在该旋臂中段的位置上
+    for (int a = 0; a < gx_armInfoCount(); ++a) {
+        const QString nm = gx_armName(a);
+        // 取旋臂长度的 55% 处作为标注锚点 (避开棒端的拥挤区)
+        const double rLy = gx::kArmStartLy
+                         + (gx::kArmEndLy - gx::kArmStartLy) * 0.55;
+        const double ang = gx_armLabelAngle(a);
+        const QVector3D wp(
+            float(rLy * std::cos(ang) / gx::kLyPerUnit),
+            0.0f,
+            float(rLy * std::sin(ang) / gx::kLyPerUnit));
+        double lx, ly;
+        if (project(wp, lx, ly) && lx > 0.02 && lx < 0.98 && ly > 0.02 && ly < 0.98) {
+            labels.append(QVariantMap{
+                { "x", lx }, { "y", ly },
+                { "text", nm },
+                { "sub",  QString() },
+                { "kind", QStringLiteral("arm") },
+            });
+        }
+    }
+
+    // 猎户支 (太阳所在) —— 教学上必须与主旋臂区分
+    {
+        const double rLy = gx::kOrionSpurDistLy;
+        const double ang = gx::kOrionSpurAngleDeg * M_PI / 180.0;
+        const QVector3D wp(
+            float(rLy * std::cos(ang) / gx::kLyPerUnit),
+            0.0f,
+            float(rLy * std::sin(ang) / gx::kLyPerUnit));
+        double lx, ly;
+        if (project(wp, lx, ly) && lx > 0.02 && lx < 0.98 && ly > 0.02 && ly < 0.98) {
+            labels.append(QVariantMap{
+                { "x", lx }, { "y", ly },
+                { "text", QStringLiteral("猎户支") },
+                { "sub",  QStringLiteral("太阳所在") },
+                { "kind", QStringLiteral("spur") },
+            });
+        }
+    }
+
+    // 视野宽度 (光年) —— 用于显示比例尺。
+    // 由相机距离与 FOV 反推: 在目标平面处, 可见高度 = 2·d·tan(fov/2)
+    {
+        const double halfFov = double(m_fov) * 0.5 * M_PI / 180.0;
+        const double hUnits = 2.0 * m_camDist * std::tan(halfFov);
+        m_galaxyViewWidthLy = hUnits * gx::kLyPerUnit * aspect;
+    }
+
+    m_galaxyLabels = labels;
+    emit galaxyLabelsChanged();
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +513,7 @@ void SolarScene::setRealScale(bool v)
     if (m_realScale == v)
         return;
     m_realScale = v;
-    // 切换比例后天体的"合理视距"完全不同 —— 艺术压缩下地球半径 0.9 单位,
+    // 切换比例后天体的\"合理视距\"完全不同 —— 艺术压缩下地球半径 0.9 单位,
     // 真实比例下只有 0.0064 单位, 按同一公式算出的距离会差 100 倍以上,
     // 不重新聚焦就会看到一片空。
     applyFocus();
@@ -364,9 +541,10 @@ int SolarScene::bodyCount() const
 
 void SolarScene::applyFocus()
 {
-    // 银河系尺度下, 太阳系的"聚焦某天体"逻辑完全不适用
+    // 银河系尺度下, 太阳系的\"聚焦某天体\"逻辑完全不适用
     // (相机距离量级差 2e10 倍), 直接跳过。
-    if (m_scale == SceneScale::Galaxy)
+    // 银河系与宇宙尺度下, "聚焦某个天体\"的逻辑都不适用
+    if (m_scale == SceneScale::Galaxy || m_scale == SceneScale::Cosmos)
         return;
 
     // overview 模式: 拉远看整个太阳系 (测试与「全景」按钮用)
@@ -402,7 +580,7 @@ void SolarScene::applyFocus()
         //   艺术压缩时地球半径 0.9 单位, ×5.5 ≈ 5 单位视距即可看清;
         //   真实比例下地球半径只有 0.0064 单位, 同样 ×5.5 得 0.035 单位,
         //   而太阳在 150 单位外 —— 取景框里空无一物, 看上去就像故障。
-        //   放大到 ×260 让天体填满合理画面, 同时保留"它确实远小于轨道"
+        //   放大到 ×260 让天体填满合理画面, 同时保留\"它确实远小于轨道"
         //   这个正确的尺度认知。
         const double r = qMax(double(it->radius), 1e-4);
         const double baseMul = m_realScale ? 260.0 : 5.5;
@@ -411,13 +589,13 @@ void SolarScene::applyFocus()
             want = r * (m_realScale ? 420.0 : 9.0);   // 有环的要退远些
 
         // ★ 卫星的视距要留出轨道空间。
-        //   初版用"天数体与母体距离 < 自身半径的 3 倍"来判"贴身卫星",
+        //   初版用\"天数体与母体距离 < 自身半径的 3 倍\"来判\"贴身卫星",
         //   那是为旧的比例错误打的补丁 —— 当时月球离地球只有 1.37 个地球
         //   半径, 聚焦月球会把地球整个框进画面。
         //
         //   现在卫星轨道按**真实半径倍数**定位 (月球在 60.3 个地球半径处),
         //   旧判据不再成立。改为: 卫星的视距取其**轨道半径的一部分**,
-        //   让母星与卫星能同框 —— 这样"卫星在绕母星转"这件事才看得见。
+        //   让母星与卫星能同框 —— 这样\"卫星在绕母星转\"这件事才看得见。
         //   取 0.75 而非 1.0 是为了让卫星占画面主体, 母星留在边缘。
         const float dParent = (it->center - it->parentCenter).length();
         if (dParent > 0.0f)
@@ -465,7 +643,13 @@ void SolarScene::resetView()
 {
     // 复位到**当前尺度**的默认视角 —— 银河系视图下复位到俯视全景,
     // 而不是跳回太阳系那套参数。
-    if (m_scale == SceneScale::Galaxy) {
+    if (m_scale == SceneScale::Cosmos) {
+        m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
+        m_camDist   = 300.0;
+        m_camTheta  = 35.0 * M_PI / 180.0;
+        m_camPhi    = 68.0 * M_PI / 180.0;
+        m_keepUserAngle = false;
+    } else if (m_scale == SceneScale::Galaxy) {
         m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
         m_camDist   = 340.0;
         m_camTheta  = 40.0 * M_PI / 180.0;
@@ -495,21 +679,33 @@ int SolarScene::scale() const
 
 QString SolarScene::scaleName() const
 {
-    return m_scale == SceneScale::Galaxy ? QStringLiteral("银河系")
-                                         : QStringLiteral("太阳系");
+    switch (m_scale) {
+    case SceneScale::Cosmos: return QStringLiteral("宇宙");
+    case SceneScale::Galaxy: return QStringLiteral("银河系");
+    default:                 return QStringLiteral("太阳系");
+    }
 }
 
 void SolarScene::setScale(int s)
 {
-    const auto ns = (s == 1) ? SceneScale::Galaxy : SceneScale::SolarSystem;
+    // 三档映射: 0=太阳系 1=银河系 2=宇宙
+    const SceneScale ns = (s == 2) ? SceneScale::Cosmos
+                        : (s == 1) ? SceneScale::Galaxy
+                                   : SceneScale::SolarSystem;
     if (m_scale == ns)
         return;
     m_scale = ns;
 
     // 切换尺度时相机的可达范围与默认位姿都要整套换掉。
-    // 太阳系的"距地球 5 倍半径"在银河系尺度下毫无意义, 反之亦然。
+    // 太阳系的\"距地球 5 倍半径\"在银河系尺度下毫无意义, 反之亦然。
     m_keepUserAngle = false;
-    if (m_scale == SceneScale::Galaxy) {
+    if (m_scale == SceneScale::Cosmos) {
+        // 宇宙尺度: 视距覆盖整个对数映射后的场景 (半径 100 单位)
+        m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
+        m_camDist   = 300.0;
+        m_camTheta  = 35.0 * M_PI / 180.0;
+        m_camPhi    = 68.0 * M_PI / 180.0;
+    } else if (m_scale == SceneScale::Galaxy) {
         // 俯视 62° —— 稍微倾斜的俯视最能同时展现棒的走向与旋臂的展开
         m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
         m_camDist   = 340.0;
@@ -525,6 +721,95 @@ void SolarScene::setScale(int s)
     update();
 }
 
+// ---------------------------------------------------------------------------
+//  宇宙尺度信息
+//
+//  ★ 数值全部取自 Planck 2018 —— 当代宇宙学的定量基础, 教学上不能给
+//    模糊值或旧值。暗能量占 68.5%、暗物质+重子 31.5% 这个比例是
+//    "标准宇宙学模型 (ΛCDM)" 最核心的一组数字。
+// ---------------------------------------------------------------------------
+QVariantMap SolarScene::cosmosInfo() const
+{
+    QVariantMap m;
+
+    // 标题
+    m["title"]       = QStringLiteral("\u5b87\u5b99\u5927\u5c3a\u5ea6\u7ed3\u6784");
+    m["titleEn"]     = QStringLiteral("Large-Scale Structure");
+
+    // 宇宙学参数 (Planck 2018) —— 当代宇宙学的定量基础
+    m["age"]         = QStringLiteral("%1 \u4ebf\u5e74")
+                           .arg(cosmo::kAgeGyr * 10.0, 0, 'f', 1);
+    m["h0"]          = QStringLiteral("%1 km/s/Mpc").arg(cosmo::kH0, 0, 'f', 1);
+    m["omegaM"]      = QStringLiteral("%1 %").arg(cosmo::kOmegaM * 100.0, 0, 'f', 1);
+    m["omegaLambda"] = QStringLiteral("%1 %").arg(cosmo::kOmegaLambda * 100.0, 0, 'f', 1);
+    m["omegaB"]      = QStringLiteral("%1 %").arg(cosmo::kOmegaB * 100.0, 0, 'f', 1);
+    m["cmb"]         = QStringLiteral("%1 K").arg(cosmo::kCMBTempK, 0, 'f', 4);
+    m["cmbZ"]        = QStringLiteral("z = %1").arg(cosmo::kCMBRedshift, 0, 'f', 0);
+    m["obsRadius"]   = QStringLiteral("465 \u4ebf\u5149\u5e74");
+    m["obsDia"]      = QStringLiteral("930 \u4ebf\u5149\u5e74");
+    m["recombT"]     = QStringLiteral("\u5927\u7206\u70b8\u540e 38 \u4e07\u5e74");
+    m["galaxies"]    = QStringLiteral("\u7ea6 2 \u4e07\u4ebf\u4e2a");
+
+    // 结构层级 —— 逐级放大, 教学上最直观的切入方式
+    m["hierarchy"] = QVariantList{
+        QVariantMap{{"lvl", QStringLiteral("\u884c\u661f\u7cfb")},
+                    {"size", QStringLiteral("~10^-4 \u5149\u5e74")}},
+        QVariantMap{{"lvl", QStringLiteral("\u6052\u661f\u7cfb")},
+                    {"size", QStringLiteral("~1 \u5149\u5e74")}},
+        QVariantMap{{"lvl", QStringLiteral("\u661f\u7cfb")},
+                    {"size", QStringLiteral("10 \u4e07\u5149\u5e74")}},
+        QVariantMap{{"lvl", QStringLiteral("\u661f\u7cfb\u7fa4/\u56e2")},
+                    {"size", QStringLiteral("1000 \u4e07\u5149\u5e74")}},
+        QVariantMap{{"lvl", QStringLiteral("\u8d85\u661f\u7cfb\u56e2")},
+                    {"size", QStringLiteral("5 \u4ebf\u5149\u5e74")}},
+        QVariantMap{{"lvl", QStringLiteral("\u5b87\u5b99\u7f51")},
+                    {"size", QStringLiteral("> 100 \u4ebf\u5149\u5e74")}},
+    };
+    return m;
+}
+
+QVariantList SolarScene::cosmosNotes() const
+{
+    QVariantList out;
+    const char *notes[] = {
+        "\u2605 \u8ddd\u79bb\u4e3a\u5bf9\u6570\u6620\u5c04: \u8fdc\u5904\u7684\u95f4\u9694\u88ab\u538b\u7f29\u4e86, \u6807\u6ce8\u4e2d\u7684\u6570\u5b57\u624d\u662f\u771f\u5b9e\u8ddd\u79bb\u3002\u8fd9\u662f\u4e3a\u4e86\u628a 6 \u4e2a\u6570\u91cf\u7ea7\u7684\u5c3a\u5ea6\u653e\u8fdb\u540c\u4e00\u753b\u9762\u5fc5\u987b\u4ed8\u51fa\u7684\u4ee3\u4ef7\u3002",
+        "\u5b87\u5b99\u5728\u5927\u4e8e\u7ea6 3 \u4ebf\u5149\u5e74\u7684\u5c3a\u5ea6\u4e0a\u624d\u8868\u73b0\u51fa\u5747\u5300\u6027, \u8fd9\u5c31\u662f\u5b87\u5b99\u5b66\u539f\u7406\u3002\u66f4\u5c0f\u7684\u5c3a\u5ea6\u4e0a, \u661f\u7cfb\u5448\u7ea4\u7ef4\u72b6\u6210\u56e2\u5206\u5e03, \u4e2d\u95f4\u662f\u5de8\u5927\u7684\u7a7a\u6d1e\u3002",
+        "\u2605 \u6697\u80fd\u91cf\u5360 68.5%, \u6697\u7269\u8d28\u4e0e\u666e\u901a\u7269\u8d28\u5408\u8ba1\u4ec5 31.5%\u3002\u6211\u4eec\u719f\u6089\u7684\u7269\u8d28\u53ea\u5360\u5b87\u5b99\u7684\u4e0d\u5230 5% \u2014\u2014 \u8fd9\u662f\u5f53\u4ee3\u5b87\u5b99\u5b66\u6700\u53cd\u76f4\u89c9\u7684\u7ed3\u8bba\u3002",
+        "\u65af\u9686\u5de8\u58c1\u957f\u7ea6 13.8 \u4ebf\u5149\u5e74, \u5149\u7a7f\u8d8a\u5b83\u9700\u8981 13.8 \u4ebf\u5e74 \u2014\u2014 \u7ea6\u4e3a\u5b87\u5b99\u5e74\u9f84 (137.97 \u4ebf\u5e74) \u7684\u5341\u5206\u4e4b\u4e00\u3002",
+        "\u5b87\u5b99\u5fae\u6ce2\u80cc\u666f (CMB) \u662f\u5927\u7206\u70b8\u540e 38 \u4e07\u5e74\u7684\u5149, \u6e29\u5ea6 2.7255 K, \u7ea2\u79fb z \u7ea6 1090\u3002\u5b83\u662f\u6211\u4eec\u80fd\u770b\u5230\u7684\u5b87\u5b99\u6700\u53e4\u8001\u7684\u7167\u7247\u3002",
+        "\u672c\u661f\u7cfb\u7fa4\u6b63\u4ee5\u7ea6 185 km/s \u671d\u5ba4\u5973\u5ea7\u661f\u7cfb\u56e2\u5760\u843d; \u800c\u66f4\u5927\u7684\u5c3a\u5ea6\u4e0a, \u6574\u4e2a\u62c9\u5c3c\u4e9a\u51ef\u4e9a\u8d85\u661f\u7cfb\u56e2\u90fd\u671d\u5de8\u5f15\u6e90\u6d41\u52a8 \u2014\u2014 \u8bf4\u660e\u8fd0\u52a8\u662f\u5206\u5c42\u7684\u3002",
+    };
+    for (const char *n : notes)
+        out.append(QString::fromUtf8(n));
+    return out;
+}
+
+QVariantList SolarScene::cosmosStructures() const
+{
+    QVariantList out;
+    for (int i = 0; i < LARGE_STRUCTURES_COUNT; ++i) {
+        const LargeStructure &s = LARGE_STRUCTURES[i];
+        QVariantMap m;
+        m["name"] = QString::fromUtf8(s.nameCn);
+        m["en"]   = QString::fromUtf8(s.nameEn);
+        m["dist"] = s.distanceFromEarthMly < 1.0
+                    ? QStringLiteral("\u672c\u661f\u7cfb\u7fa4")
+                    : (s.distanceFromEarthMly >= 1000.0
+                       ? QStringLiteral("%1 \u4ebf\u5149\u5e74")
+                             .arg(s.distanceFromEarthMly / 100.0, 0, 'f', 0)
+                       : QStringLiteral("%1 \u767e\u4e07\u5149\u5e74")
+                             .arg(s.distanceFromEarthMly, 0, 'f', 0));
+        m["size"] = s.sizeMly >= 1000.0
+                    ? QStringLiteral("%1 \u4ebf\u5149\u5e74")
+                          .arg(s.sizeMly / 100.0, 0, 'f', 0)
+                    : QStringLiteral("%1 \u767e\u4e07\u5149\u5e74")
+                          .arg(s.sizeMly, 0, 'f', 0);
+        m["kind"] = s.kind;
+        m["desc"] = QString::fromUtf8(s.desc);
+        out.append(m);
+    }
+    return out;
+}
 QVariantMap SolarScene::galaxyInfo() const
 {
     QVariantMap m;

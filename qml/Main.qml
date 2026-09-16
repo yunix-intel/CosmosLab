@@ -431,7 +431,9 @@ ApplicationWindow {
             ColumnLayout {
                 spacing: -1
                 Text {
-                    text: scene.scaleLevel === 1 ? "银河系模拟器" : "太阳系模拟器"
+                    text: scene.scaleLevel === 2 ? "宇宙大尺度结构"
+                    : scene.scaleLevel === 1 ? "银河系模拟器"
+                    : "太阳系模拟器"
                     color: root.cText
                     font.pixelSize: 14
                     font.bold: true
@@ -469,7 +471,8 @@ ApplicationWindow {
                 Repeater {
                     model: [
                         { t: "太阳系", v: 0 },
-                        { t: "银河系", v: 1 }
+                        { t: "银河系", v: 1 },
+                        { t: "宇宙",   v: 2 }
                     ]
 
                     Rectangle {
@@ -647,6 +650,237 @@ ApplicationWindow {
         }
     }
 
+    // ========================================================================
+    //  宇宙尺度 · 结构与尺度面板
+    //
+    //  ★ 这里的核心教学任务是**建立尺度感**。宇宙视图的距离用对数映射,
+    //    所以面板必须给出真实数字, 否则学生会以为"远处的星系挨得更近"。
+    //    结构层级表 (行星系 → 宇宙网) 是逐级放大的锚点。
+    // ========================================================================
+    GlassPanel {
+        id: cosmosStructPanel
+        x: 18; y: 74
+        width: 288
+        height: parent.height - 74 - 46
+        visible: scene.scaleLevel === 2
+
+        // ★ 用属性初始化式绑定, 而不是 Component.onCompleted 赋值。
+        //   onCompleted 在**首次绑定求值之后**才跑, 于是 Repeater 的
+        //   model 数组首次求值时数据还是空的, 会刷一屏
+        //   "Unable to assign [undefined] to QString" 警告。
+        //   写成 property var x: scene.xxx() 就没有这个时间差。
+        property var info: scene.cosmosInfo()
+        property var structs: scene.cosmosStructures()
+
+        Flickable {
+            anchors.fill: parent
+            anchors.margins: 14
+            contentHeight: cosCol.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            ColumnLayout {
+                id: cosCol
+                width: parent.width - 4
+                spacing: 9
+
+                Text {
+                    text: "宇宙学参数"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1
+                }
+
+                Repeater {
+                    model: [
+                        { k: "宇宙年龄",     v: cosmosStructPanel.info.age },
+                        { k: "哈勃常数",     v: cosmosStructPanel.info.h0 },
+                        { k: "暗能量占比",   v: cosmosStructPanel.info.omegaLambda, hot: true },
+                        { k: "物质总占比",   v: cosmosStructPanel.info.omegaM },
+                        { k: "重子物质占比", v: cosmosStructPanel.info.omegaB },
+                        { k: "CMB 温度",     v: cosmosStructPanel.info.cmb },
+                        { k: "CMB 红移",     v: cosmosStructPanel.info.cmbZ },
+                        { k: "复合时期",     v: cosmosStructPanel.info.recombT },
+                        { k: "可观测半径",   v: cosmosStructPanel.info.obsRadius },
+                        { k: "可观测直径",   v: cosmosStructPanel.info.obsDia },
+                        { k: "星系总数",     v: cosmosStructPanel.info.galaxies }
+                    ]
+
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.k
+                            color: root.cTextDim
+                            font.pixelSize: 10
+                        }
+                        Text {
+                            text: modelData.v ? String(modelData.v) : "—"
+                            color: modelData.hot ? "#ffb4a2" : root.cText
+                            font.pixelSize: 10
+                            font.family: "Consolas, Menlo, monospace"
+                        }
+                    }
+                }
+
+                // ---- 结构层级 ----
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    height: 1
+                    color: Qt.rgba(0.35, 0.42, 0.55, 0.35)
+                }
+
+                Text {
+                    text: "结构层级"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1
+                }
+
+                Repeater {
+                    model: cosmosStructPanel.info.hierarchy
+
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: modelData.lvl
+                            color: root.cText
+                            font.pixelSize: 10
+                        }
+                        Text {
+                            text: modelData.size
+                            color: root.cTextDim
+                            font.pixelSize: 10
+                            font.family: "Consolas, Menlo, monospace"
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    height: 1
+                    color: Qt.rgba(0.35, 0.42, 0.55, 0.35)
+                }
+
+                Text {
+                    text: "大尺度结构"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1
+                }
+
+                Repeater {
+                    model: cosmosStructPanel.structs
+
+                    delegate: ColumnLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 1
+
+                        Text {
+                            text: modelData.name
+                            color: modelData.kind === 2 ? "#a8bcd8"
+                                 : modelData.kind === 0 ? "#d4a5ff"
+                                 : "#ffb4a2"
+                            font.pixelSize: 10
+                            font.bold: true
+                        }
+                        Text {
+                            text: modelData.dist + "  ·  " + modelData.size
+                            color: root.cTextDim
+                            font.pixelSize: 9
+                            font.family: "Consolas, Menlo, monospace"
+                        }
+                    }
+                }
+
+                // ---- 对数映射说明 (必须明说, 否则学生会误读) ----
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    Layout.preferredHeight: noteTxt.implicitHeight + 16
+                    radius: 5
+                    color: Qt.rgba(0.55, 0.38, 0.15, 0.22)
+                    border.width: 1
+                    border.color: Qt.rgba(1.0, 0.72, 0.35, 0.35)
+
+                    Text {
+                        id: noteTxt
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        text: "★ 距离为对数映射：远处间隔被压缩，" +
+                              "标注中的数字才是真实距离。"
+                        color: Qt.rgba(1.0, 0.82, 0.50, 0.95)
+                        font.pixelSize: 10
+                        wrapMode: Text.WordWrap
+                        lineHeight: 1.3
+                    }
+                }
+            }
+        }
+    }
+
+    // 右侧: 宇宙教学要点
+    GlassPanel {
+        id: cosmosNotePanel
+        width: 330
+        height: cosNoteCol.implicitHeight + 28
+        x: parent.width - width - 18
+        y: parent.height - height - 46
+        visible: scene.scaleLevel === 2
+
+        property var notes: scene.cosmosNotes()
+
+        ColumnLayout {
+            id: cosNoteCol
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 7
+
+            RowLayout {
+                spacing: 8
+                Rectangle {
+                    width: 9; height: 9; radius: 4.5
+                    color: "#ffb4a2"
+                }
+                Text {
+                    text: "宇宙大尺度结构"
+                    color: root.cText
+                    font.pixelSize: 13
+                    font.bold: true
+                }
+                Text {
+                    text: "Large-Scale Structure"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                }
+            }
+
+            Repeater {
+                model: cosmosNotePanel.notes
+
+                delegate: Text {
+                    required property string modelData
+                    Layout.fillWidth: true
+                    text: "· " + modelData
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    wrapMode: Text.WordWrap
+                    lineHeight: 1.35
+                }
+            }
+        }
+    }
+
     // 右侧: 教学要点
     GlassPanel {
         id: galaxyNotePanel
@@ -802,6 +1036,168 @@ ApplicationWindow {
     }
 
     // ========================================================================
+    //  银河系 · 旋臂 / 银心 / 猎户支 标注
+    //
+    //  ★ 这些标注是银河系视图的教学价值所在。没有它们, 学生看到的只是
+    //    "一团有旋臂的粒子", 不知道哪条是英仙臂、太阳在哪条臂上。
+    //
+    //  ★ "猎户支" 特意用不同样式 (虚框/青色) 与主旋臂区分 ——
+    //    太阳所在的猎户支严格说不是主旋臂, 而是一条次级结构。
+    //    把它标成主旋臂是常见的科普错误。
+    // ========================================================================
+    Item {
+        id: galaxyLabelLayer
+        anchors.fill: parent
+        // ★ 银河系 (1) 与宇宙 (2) 都要显示标注层。
+        //   初版只写了 === 1, 于是宇宙视图里所有标注都不出现 ——
+        //   而画面本身是正常的, 很容易误判成"投影算错了"。
+        visible: scene.scaleLevel >= 1
+        z: 5
+
+        Repeater {
+            model: scene.galaxyLabels
+
+            delegate: Item {
+                required property var modelData
+                x: modelData.x * root.width
+                y: modelData.y * root.height
+                visible: x > 30 && x < root.width - 30
+                         && y > 30 && y < root.height - 30
+
+                // 标注锚点小十字
+                Rectangle {
+                    width: 5; height: 5; radius: 2.5
+                    x: -2.5; y: -2.5
+                    color: modelData.kind === "core" ? "#ffd166"
+                         : modelData.kind === "spur" ? "#7fd8e8"
+                         : modelData.kind === "supercluster" ? "#ffb4a2"
+                         : modelData.kind === "void" ? "#8fa8c8"
+                         : modelData.kind === "wall" ? "#d4a5ff"
+                         : "#c9d4e4"
+                    border.width: 1
+                    border.color: Qt.rgba(0, 0, 0, 0.8)
+                }
+
+                Column {
+                    x: 9
+                    y: -9
+                    spacing: 1
+
+                    Rectangle {
+                        width: labelRow.width + 12
+                        height: 18
+                        radius: 4
+                        color: Qt.rgba(0.05, 0.06, 0.09, 0.82)
+                        border.width: 1
+                        border.color: modelData.kind === "core"
+                                      ? Qt.rgba(1.0, 0.82, 0.40, 0.75)
+                                      : modelData.kind === "spur"
+                                        ? Qt.rgba(0.50, 0.85, 0.91, 0.75)
+                                        : Qt.rgba(0.72, 0.79, 0.88, 0.55)
+
+                        Row {
+                            id: labelRow
+                            anchors.centerIn: parent
+                            spacing: 5
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.text
+                                color: modelData.kind === "core" ? "#ffd166"
+                                     : modelData.kind === "spur" ? "#7fd8e8"
+                                     : modelData.kind === "supercluster" ? "#ffb4a2"
+                                     : modelData.kind === "void" ? "#a8bcd8"
+                                     : modelData.kind === "wall" ? "#d4a5ff"
+                                     : "#dce4f0"
+                                font.pixelSize: 11
+                                font.bold: modelData.kind === "core"
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: modelData.sub !== ""
+                                text: modelData.sub
+                                color: Qt.rgba(0.62, 0.68, 0.78, 0.9)
+                                font.pixelSize: 9
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- 光年比例尺 (底部居中) ----
+        // 教学上很关键: 让"这个视野有多大"变成可读的数字, 而不是
+        // 只能靠"看起来很大"来判断。
+        Item {
+            id: scaleBar
+            // 阈值同样按尺度分派: 宇宙视图的数值天然大得多
+            visible: scene.scaleLevel === 2
+                     ? scene.galaxyViewWidthLy > 0.5
+                     : scene.galaxyViewWidthLy > 100
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 52
+
+            // 选一个"好看"的整数刻度: 把视野宽度折到 1/4 再取整
+            readonly property real barLy: {
+                var target = scene.galaxyViewWidthLy * 0.25;
+                var mag = Math.pow(10, Math.floor(Math.log(target) / Math.LN10));
+                var n = target / mag;
+                if (n >= 5) n = 5; else if (n >= 2) n = 2; else n = 1;
+                return n * mag;
+            }
+            readonly property real barPx:
+                scene.galaxyViewWidthLy > 0
+                ? barLy / scene.galaxyViewWidthLy * root.width : 0
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: barRect.top
+                anchors.bottomMargin: 4
+                text: {
+                    var ly = scaleBar.barLy;
+                    // ★★ 单位必须按尺度分派 —— 两套差距 6 个数量级:
+                    //   银河系视图: galaxyViewWidthLy 单位是**光年**
+                    //   宇宙视图:   galaxyViewWidthLy 单位是**百万光年**
+                    //   (后者由 C++ 的 Cosmos::distToScene 对数映射反推得到)
+                    //
+                    //   初版把宇宙尺度也当成光年处理, 于是 200 亿光年被显示成
+                    //   "20000 光年" —— 差了 6 个数量级, 这是致命的读数错误。
+                    if (scene.scaleLevel === 2) {
+                        // ly 的单位是 Mly (百万光年)
+                        // 1 Mly = 100 万光年 = 0.01 亿光年
+                        if (ly >= 100) return (ly / 100).toFixed(0) + " 亿光年";
+                        return ly.toFixed(0) + " 百万光年";
+                    }
+                    if (ly >= 1000)
+                        return (ly / 1000).toFixed(ly % 1000 === 0 ? 0 : 1) + " 千光年";
+                    return ly.toFixed(0) + " 光年";
+                }
+                color: Qt.rgba(0.78, 0.83, 0.90, 0.95)
+                font.pixelSize: 11
+            }
+
+            Rectangle {
+                id: barRect
+                width: Math.max(20, scaleBar.barPx)
+                height: 2
+                color: Qt.rgba(0.78, 0.83, 0.90, 0.9)
+                // 两端刻度竖线
+                Rectangle {
+                    width: 1; height: 7; y: -2.5
+                    anchors.left: parent.left
+                    color: Qt.rgba(0.78, 0.83, 0.90, 0.9)
+                }
+                Rectangle {
+                    width: 1; height: 7; y: -2.5
+                    anchors.right: parent.right
+                    color: Qt.rgba(0.78, 0.83, 0.90, 0.9)
+                }
+            }
+        }
+    }
+
+    // ========================================================================
     //  底栏
     // ========================================================================
     Text {
@@ -809,9 +1205,11 @@ ApplicationWindow {
         anchors.bottom: parent.bottom
         anchors.leftMargin: 20
         anchors.bottomMargin: 16
-        text: scene.scaleLevel === 1
-              ? "拖动旋转 · 右键拖动平移 · 滚轮缩放 (可拉远观察整个星系)"
-              : "拖动旋转 · 右键拖动平移 · 滚轮缩放"
+        text: scene.scaleLevel === 2
+              ? "拖动旋转 · 滚轮缩放 (距离为对数映射, 标注给出真实距离)"
+              : scene.scaleLevel === 1
+                ? "拖动旋转 · 右键拖动平移 · 滚轮缩放 (可拉远观察整个星系)"
+                : "拖动旋转 · 右键拖动平移 · 滚轮缩放"
         color: Qt.rgba(0.45, 0.52, 0.62, 0.85)
         font.pixelSize: 10
     }
