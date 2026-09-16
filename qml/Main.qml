@@ -30,6 +30,45 @@ ApplicationWindow {
     title: "太阳系模拟器 · Solar System Simulator (C++ / QML / OpenGL)"
     color: "#05070d"
 
+
+    // ---- 字体规范 ----
+    //
+    // ★ 统一原则 (此前是散落各处的硬编码, 导致中文被等宽字体渲染、
+    //   字距松散, 且各面板风格不一致):
+    //     monoFont  -> 数值/日期/代号 (等宽才能对齐)
+    //     sansFont  -> 中文文本、名称、标签 (CJK 字形完整、字距正常)
+    //
+    //   Qt 会按逗号列表依次尝试, 取第一个可用的。
+    readonly property string monoFont: "Consolas, Cascadia Mono, Menlo, monospace"
+
+    // ★★ 中文字体只用**一个**确定的字体, 不写回退链。
+    //
+    //   实测踩到: 写成 "Microsoft YaHei UI, Microsoft YaHei, ..." 时,
+    //   中文出现**重影/发虚** —— 字形边缘叠了一层暗色描边, 像渲染两次。
+    //   原因是回退链里多个字体的度量不同, Qt 在同一段文本里混用了
+    //   不同字体的字形 (某些字号下 Windows 的字体链接会这样)。
+    //
+    //   本机可用: msyh.ttc (微软雅黑) / Deng.ttf (等线) / simhei.ttf (黑体)
+    //   微软雅黑最普适, 只写它本身。
+    readonly property string sansFont: "Microsoft YaHei"
+
+    // ★★ 按内容自动选字体。
+    //
+    //   问题: 有些字段的值**既有数字又有中文** ——
+    //     银河系面板的 "105,700 光年"、宇宙面板的 "13.8 亿光年"。
+    //   这些如果套 monoFont (Consolas), Consolas 没有中文字形,
+    //   Qt 会回退到某个衬线 CJK 字体, 结果同一面板里
+    //   数字是无衬线、中文是衬线, 风格割裂 (实测就是这样)。
+    //
+    //   规则: 只要含 CJK 字符就用无衬线, 纯 ASCII 才用等宽。
+    //   这样数字列仍然对齐 (同类字段格式一致), 中文也不会串字体。
+    function fitFont(t) {
+        if (t === undefined || t === null)
+            return sansFont
+        return /[一-鿿　-〿＀-￯]/.test(String(t))
+               ? sansFont : monoFont
+    }
+
     // ---- 配色 (玻璃拟态) ----
     readonly property color cPanel:      Qt.rgba(0.055, 0.078, 0.125, 0.72)
     readonly property color cPanelSolid: Qt.rgba(0.055, 0.078, 0.125, 0.96)
@@ -292,23 +331,34 @@ ApplicationWindow {
                             border.color: Qt.rgba(1, 1, 1, 0.25)
                         }
 
+                        // ★ 中英文名: 两行都**左对齐**, 左边缘严格对齐。
+                        //   之前中英文各自居中, 加上中文用等宽字体带字距补偿,
+                        //   两行的左边缘是错开的, 视觉上很乱。
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 0
+                            spacing: 1
 
                             Text {
                                 text: modelData.name
                                 color: root.cText
                                 font.pixelSize: 13
+                                font.family: root.sansFont
                                 font.bold: modelData.id === root.currentId
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
                             }
                             Text {
                                 text: modelData.en
                                 color: root.cTextDim
                                 font.pixelSize: 10
+                                font.family: root.sansFont
+                                horizontalAlignment: Text.AlignLeft
+                                Layout.fillWidth: true
                             }
                         }
 
+                        // ★ 分类标签: **固定宽度 + 右对齐**, 让所有行的标签
+                        //   形成整齐的一列 (之前宽度随中文名浮动, 参差不齐)
                         Text {
                             text: {
                                 const k = modelData.kind
@@ -318,6 +368,9 @@ ApplicationWindow {
                             }
                             color: Qt.rgba(0.56, 0.64, 0.75, 0.75)
                             font.pixelSize: 10
+                            font.family: root.sansFont
+                            Layout.preferredWidth: 34
+                            horizontalAlignment: Text.AlignRight
                         }
                     }
 
@@ -413,7 +466,7 @@ ApplicationWindow {
                               ? root.current[modelData.v] : "—"
                         color: root.cText
                         font.pixelSize: 11
-                        font.family: "Consolas, Menlo, monospace"
+                        font.family: root.fitFont(root.current[modelData.v])
                     }
                 }
             }
@@ -458,7 +511,7 @@ ApplicationWindow {
                 text: scene.dateText
                 color: root.cAccent
                 font.pixelSize: 14
-                font.family: "Consolas, Menlo, monospace"
+                font.family: root.fitFont(scene.dateText)
             }
 
             // ---------------- 尺度切换 ----------------
@@ -565,7 +618,7 @@ ApplicationWindow {
                             text: galaxyStructPanel.g[modelData.v] || "—"
                             color: root.cText
                             font.pixelSize: 11
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(galaxyStructPanel.g[modelData.v] || "—")
                         }
                     }
                 }
@@ -600,7 +653,7 @@ ApplicationWindow {
                             text: galaxyStructPanel.g[modelData.v] || "—"
                             color: "#ffdd88"
                             font.pixelSize: 11
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(galaxyStructPanel.g[modelData.v] || "—")
                         }
                     }
                 }
@@ -634,7 +687,7 @@ ApplicationWindow {
                             text: galaxyStructPanel.g[modelData.v] || "—"
                             color: root.cText
                             font.pixelSize: 11
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(galaxyStructPanel.g[modelData.v] || "—")
                         }
                     }
                 }
@@ -728,7 +781,7 @@ ApplicationWindow {
                             text: modelData.v ? String(modelData.v) : "—"
                             color: modelData.hot ? "#ffb4a2" : root.cText
                             font.pixelSize: 10
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(modelData.v ? String(modelData.v) : "—")
                         }
                     }
                 }
@@ -766,7 +819,7 @@ ApplicationWindow {
                             text: modelData.size
                             color: root.cTextDim
                             font.pixelSize: 10
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(modelData.size)
                         }
                     }
                 }
@@ -805,7 +858,7 @@ ApplicationWindow {
                             text: modelData.dist + "  ·  " + modelData.size
                             color: root.cTextDim
                             font.pixelSize: 9
-                            font.family: "Consolas, Menlo, monospace"
+                            font.family: root.fitFont(modelData.dist + "  ·  " + modelData.size)
                         }
                     }
                 }

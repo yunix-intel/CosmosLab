@@ -10,6 +10,7 @@
 // ============================================================================
 
 #include <QGuiApplication>
+#include <QFont>
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>
@@ -54,7 +55,23 @@ int main(int argc, char **argv)
     QSurfaceFormat::setDefaultFormat(fmt);
 
     qInfo() << "[启动] 2 构造 QGuiApplication";
+    // ★ 中文小字号清晰度: 强制全 hinting + 整数度量。
+    //
+    //   默认策略下, 10-11px 的中文会出现笔画粘连/发虚 —— 因为
+    //   Qt 用的是系统的字体渲染提示, 在 96 DPI 下对小字号 CJK 不够。
+    //   PreferFullHinting 会把字形吸附到像素网格, 小字明显更锐利。
+    //
+    //   (开发机有双显示器且缩放不同, 窗口落在哪块屏 DPR 就不同,
+    //    自检图分辨率也会变; 这属于环境差异, 无法从代码统一,
+    //    但 hinting 能保证**任何** DPR 下中文都不糊。)
+    QFont::insertSubstitution(QStringLiteral("Microsoft YaHei"),
+                              QStringLiteral("Microsoft YaHei"));
     QGuiApplication app(argc, argv);
+    {
+        QFont f = app.font();
+        f.setHintingPreference(QFont::PreferFullHinting);
+        app.setFont(f);
+    }
     app.setApplicationName(QStringLiteral("太阳系模拟器"));
     app.setApplicationVersion(QStringLiteral("2.0.0"));
     app.setOrganizationName(QStringLiteral("SolarSystem"));
@@ -90,6 +107,7 @@ int main(int argc, char **argv)
         QStringLiteral("ssHeadless"),
         !qEnvironmentVariable("SS_SELFTEST").isEmpty());
 
+
     qInfo() << "[启动] 4 加载 QML";
     engine.load(QUrl(QStringLiteral("qrc:/SolarSystem/qml/Main.qml")));
 
@@ -100,6 +118,7 @@ int main(int argc, char **argv)
 
     QObject *root = engine.rootObjects().first();
     qInfo() << "[启动] 5 QML 加载完成";
+
     qInfo().noquote() << "太阳系模拟器启动 (C++ / QML / OpenGL)"
                       << "根对象:" << root->metaObject()->className();
 
