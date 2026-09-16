@@ -9,7 +9,7 @@
 
 #include <QString>
 
-// 旋臂数量 (与 galaxydata.h 的 kArms 一致)
+// 结构段数量 (含 4 条主臂 + 外臂 + 猎户支), 与 kArmSpiral 一致
 int gx_armInfoCount();
 
 // 第 i 条旋臂的中文名 (越界返回空串)
@@ -27,6 +27,9 @@ QString gx_armNameEn(int i);
 //   而那里粒子最密, 标签会被淹没。
 //   本函数按锚点半径算出实际方位角, 让标签落在旋臂中段的实体上。
 double gx_armLabelAngle(int i);
+
+// 第 i 条臂的标注锚点半径 (ly), 与粒子生成同一公式
+double gx_armLabelRadiusLy(int i);
 
 // 第 i 条旋臂是否为"主旋臂" (猎户支等次级结构返回 false)
 bool gx_armIsMajor(int i);

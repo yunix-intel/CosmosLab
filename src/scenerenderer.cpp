@@ -42,6 +42,68 @@ SceneRenderer::~SceneRenderer()
 //  初始化
 // ---------------------------------------------------------------------------
 
+static QOpenGLShaderProgram *makeProgram(const char *vs, const char *fs,
+                                         const char *name)
+{
+    auto *p = new QOpenGLShaderProgram;
+    const bool ok = p->addShaderFromSourceCode(QOpenGLShader::Vertex, vs)
+                 && p->addShaderFromSourceCode(QOpenGLShader::Fragment, fs)
+                 && p->link();
+    if (!ok) {
+        qWarning() << "[渲染器] 着色器" << name << "失败:" << p->log();
+        delete p;
+        return nullptr;
+    }
+    return p;
+}
+
+// ---------------------------------------------------------------------------
+//  银河系参考底图 —— 半透明叠加层
+//
+//  ★ 画的是一张朝向相机的四边形, 放在银道面 (y=0) 上。
+//    不用固定平面是因为: 侧视时平面退化成一条线; 用 billboard 则
+//    任何视角都能看到完整结构。折中办法是按相机俯角淡出 ——
+//    接近侧视时本来也看不清盘面, 淡出最自然。
+//
+//  ★ 透明度用**图像亮度**调制: 暗处全透明。这样不会在银盘外围
+//    留下一块方形的暗斑。
+//
+//  ★ 数据来源: NASA/JPL-Caltech/ESO/R. Hurt 的银河系结构科学插画,
+//    不是照片 (我们身处银盘内部, 外部全景物理上无法拍到)。
+//    UI 必须标明这一点。
+// ---------------------------------------------------------------------------
+inline const char *kGalOverlayVert = R"(
+#version 330 core
+layout(location = 0) in vec2 aPlane;
+uniform mat4  uViewProj;
+uniform float uHalfSize;
+out vec2 vUV;
+void main() {
+    vUV = aPlane * 0.5 + 0.5;
+    // 图像 +y (向下) 对应场景 +z
+    // ★★ 必须在**世界空间**缩放, 不能在裁剪空间乘。
+    //   踩过的坑: 写成 `uViewProj * vec4(...) * uHalfSize` 时,
+    //   因为裁剪空间的 x/y/z/w 被同比例放大, 透视除法 (xyz/w) 后
+    //   缩放被**完全抵消** —— 四边形实际只有 1 个世界单位大,
+    //   在 200 单位宽的银盘里小到看不见, 表现为"叠加层没出现"。
+    vec3 wp = vec3(aPlane.x, 0.0, -aPlane.y) * uHalfSize;
+    gl_Position = uViewProj * vec4(wp, 1.0);
+}
+)";
+
+inline const char *kGalOverlayFrag = R"(
+#version 330 core
+in vec2 vUV;
+uniform sampler2D uTex;
+uniform float uAlpha;
+out vec4 FragColor;
+void main() {
+    vec3 c = texture(uTex, vUV).rgb;
+    float lum = max(max(c.r, c.g), c.b);
+    float a = uAlpha * smoothstep(0.02, 0.35, lum);
+    FragColor = vec4(c, a);
+}
+)";
 void SceneRenderer::initialize()
 {
     if (m_ready)
@@ -67,6 +129,39 @@ void SceneRenderer::initialize()
     // 银河系粒子模型 (只在切到银河系尺度时使用)
     m_galaxy.init(m_f);
 
+    // ---- 银河系参考底图 (NASA/JPL 官方插画, 半透明叠加) ----
+    //
+    //  ★ 贴图是 tools/build_overlay.py 处理过的: 已抹掉白色文字与
+    //    网格线, 保留彩色。文件名 galaxy_overlay.jpg。
+    //  ★ 四边形是 -1..1 的 plane, 顶点在着色器里乘 uHalfSize,
+    //    故 VBO 只需两个 float。
+    {
+        m_galOverlayProg = makeProgram(kGalOverlayVert, kGalOverlayFrag,
+                                       "galaxyOverlay");
+        if (m_galOverlayProg) {
+            static const float kPlane[8] = {
+                -1.0f, -1.0f,   1.0f, -1.0f,
+                -1.0f,  1.0f,   1.0f,  1.0f,
+            };
+            m_galOverlayVao.create();
+            m_galOverlayVao.bind();
+            m_galOverlayVbo.create();
+            m_galOverlayVbo.bind();
+            m_galOverlayVbo.allocate(kPlane, sizeof(kPlane));
+            m_galOverlayProg->enableAttributeArray(0);
+            m_galOverlayProg->setAttributeBuffer(
+                0, GL_FLOAT, 0, 2, 2 * sizeof(float));
+            m_galOverlayVao.release();
+            m_galOverlayVbo.release();
+        }
+
+        // 贴图: 走 TextureCache 的 misc 规则 (无前缀, 文件名即 galaxy_overlay.jpg)
+        m_galOverlayTex = m_tex.get(QStringLiteral("misc"),
+                                    QStringLiteral("galaxy_overlay"));
+        if (!m_galOverlayTex)
+            qWarning() << "[渲染器] 银河系底图 galaxy_overlay.jpg 未找到";
+    }
+
     // 小行星带 / 柯伊伯带 / 特洛伊群 (太阳系尺度)
     m_belts.init(m_f, false);
 
@@ -83,20 +178,6 @@ void SceneRenderer::initialize()
             << " 天体数:" << m_scene.bodyCount();
 }
 
-static QOpenGLShaderProgram *makeProgram(const char *vs, const char *fs,
-                                         const char *name)
-{
-    auto *p = new QOpenGLShaderProgram;
-    const bool ok = p->addShaderFromSourceCode(QOpenGLShader::Vertex, vs)
-                 && p->addShaderFromSourceCode(QOpenGLShader::Fragment, fs)
-                 && p->link();
-    if (!ok) {
-        qWarning() << "[渲染器] 着色器" << name << "失败:" << p->log();
-        delete p;
-        return nullptr;
-    }
-    return p;
-}
 
 void SceneRenderer::buildPrograms()
 {
@@ -265,6 +346,9 @@ void SceneRenderer::render(const ViewState &vs)
 
         m_f->glDisable(GL_DEPTH_TEST);
         m_f->glDisable(GL_CULL_FACE);
+
+        // ★ 先画参考底图 (半透明), 再画粒子 —— 粒子在上层, 保住体积感。
+        drawGalaxyOverlay(viewProj, vs);
         m_galaxy.render(viewProj, pointScale);
 
         if (!m_postfx.ready())
@@ -342,6 +426,55 @@ void SceneRenderer::render(const ViewState &vs)
 // ---------------------------------------------------------------------------
 //  星空
 // ---------------------------------------------------------------------------
+
+
+
+
+// ---------------------------------------------------------------------------
+//  画出银河系参考底图 (半透明)
+//
+//  ★ 尺寸: 图像 2000x2000 px, 68 ly/px, 故覆盖 ±68,000 ly。
+//    场景单位换算 528.5 ly/单位 -> 半宽约 128.7 单位。
+//  ★ 透明度按相机俯角调: 俯视时 0.42, 侧视时归零。
+//    (侧视时盘面退化成线, 底图没有意义, 留着反而像一块贴纸)
+// ---------------------------------------------------------------------------
+void SceneRenderer::drawGalaxyOverlay(const QMatrix4x4 &viewProj,
+                                      const ViewState &vs)
+{
+    if (!m_galOverlayProg || !m_galOverlayTex)
+        return;
+
+    // ★ 相机俯角由 ViewState::camPhi 直接给出 —— 它本身就是
+    //   "自 +Y 起算的极角", 俯视时为 0, 平视时为 π/2。
+    //   底图在俯视时最有用 (能看全盘面结构), 平视时盘面退化成线,
+    //   此时淡出, 否则会像一块贴在侧面的纸片。
+    const double phi = vs.camPhi;                       // 0=俯视, π/2=平视
+    const double t = 1.0 - qBound(0.0, (phi - 0.22) / 0.55, 1.0);
+    const float alpha = float(0.42 * t);
+
+    // 半宽: 2000px * 68 ly/px / 2 = 68000 ly, 再换场景单位
+    const float halfSize = float(68000.0 / 528.5);
+    if (alpha < 0.005f)
+        return;
+
+    m_f->glEnable(GL_BLEND);
+    m_f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    m_f->glDisable(GL_DEPTH_TEST);
+
+    m_galOverlayProg->bind();
+    m_galOverlayProg->setUniformValue("uViewProj", viewProj);
+    m_galOverlayProg->setUniformValue("uHalfSize", halfSize);
+    m_galOverlayProg->setUniformValue("uAlpha", alpha);
+
+    m_f->glActiveTexture(GL_TEXTURE0);
+    m_galOverlayTex->bind();
+    m_galOverlayProg->setUniformValue("uTex", 0);
+
+    m_galOverlayVao.bind();
+    m_f->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    m_galOverlayVao.release();
+    m_galOverlayProg->release();
+}
 
 void SceneRenderer::drawSkybox(const ViewState &vs)
 {

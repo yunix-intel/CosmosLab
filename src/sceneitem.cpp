@@ -388,12 +388,12 @@ void SolarScene::updateSunMark()
         }
     }
 
-    // 四条主旋臂: 标在该旋臂中段的位置上
+    // 旋臂标注: 锚点取该臂 β 区间中点, 用与粒子生成**同一套公式**算得的
+    // 半径与方位角 —— 这样标签必然贴在臂的实体上。
+    // (旧实现按"统一螺距角 + 固定起止半径"估算, 旋臂改参数后标签会飘出臂外)
     for (int a = 0; a < gx_armInfoCount(); ++a) {
         const QString nm = gx_armName(a);
-        // 取旋臂长度的 55% 处作为标注锚点 (避开棒端的拥挤区)
-        const double rLy = gx::kArmStartLy
-                         + (gx::kArmEndLy - gx::kArmStartLy) * 0.55;
+        const double rLy = gx_armLabelRadiusLy(a);
         const double ang = gx_armLabelAngle(a);
         const QVector3D wp(
             float(rLy * std::cos(ang) / gx::kLyPerUnit),
@@ -897,13 +897,19 @@ QVariantMap SolarScene::galaxyInfo() const
     m["diskThickness"] = QStringLiteral("1,000 光年");
     m["bulgeRadius"]   = QStringLiteral("5,000 光年");
     m["barLength"]     = QStringLiteral("27,000 光年");
-    m["sunDistance"]   = QStringLiteral("26,000 光年");
-    m["sunSpeed"]      = QStringLiteral("230 km/s");
+    // ★ 数值统一采用 Reid et al. 2019 (ApJ 885, 131) 的实测值。
+    //   该论文基于 BeSSeL 巡天 (VLBA) + VERA 约 200 个大质量恒星形成区
+    //   脉泽的**三角视差**直接测距, 是当前银臂结构最可靠的约束。
+    m["sunDistance"]   = QStringLiteral("26,582 光年 (8.15 kpc)");
+    m["sunSpeed"]      = QStringLiteral("236 km/s");
     m["galacticYear"]  = QStringLiteral("2.25 亿年");
     m["starCount"]     = QStringLiteral("1000–4000 亿");
     m["mass"]          = QStringLiteral("1.5 万亿太阳质量");
     m["blackHole"]     = QStringLiteral("430 万太阳质量");
-    m["arms"]          = QStringLiteral("4 条主旋臂 (俯仰角 12°)");
+    // ★ 不再写"俯仰角 12°" —— 实测每条臂的螺距角各不相同 (8.7°~19.5°),
+    //   且多数臂带折点。用统一值会传递错误印象。
+    m["arms"]          = QStringLiteral("4 条主臂 + 外臂 + 猎户支 (螺距角 8.7°–19.5°)");
+    m["armRef"]        = QStringLiteral("Reid et al. 2019, ApJ 885, 131 (BeSSeL/VLBA 脉泽视差)");
     m["sunOrbits"]     = QStringLiteral("约 20 圈");
     return m;
 }

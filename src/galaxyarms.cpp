@@ -1,5 +1,15 @@
 // ============================================================================
 //  galaxyarms.cpp —— 旋臂名称与标注几何
+//
+//  ★ 标注锚点必须与**粒子生成用同一套公式**, 否则标签会飘到臂外。
+//    粒子侧 (galaxy.cpp) 的公式是:
+//        R(β) = Rk · exp(-(β - βk) · tan(ψ))
+//        φ    = φ_sun + β
+//    这里照搬同一式子, 锚点落在臂的实体上。
+//
+//  ★ 锚点取该臂 β 区间的**中点**。取起点会让标签挤在靠近银心的一端
+//    (粒子最密处, 文字被淹没); 取终点则可能落在臂的稀疏末端。
+//    中点兼顾"在臂上"与"看得清"。
 // ============================================================================
 
 #include "galaxyarms.h"
@@ -9,49 +19,50 @@
 
 int gx_armInfoCount()
 {
-    return gx::kArmInfoCount;
+    return gx::kArmSpiralCount;
 }
 
 QString gx_armName(int i)
 {
-    if (i < 0 || i >= gx::kArmInfoCount)
+    if (i < 0 || i >= gx::kArmSpiralCount)
         return QString();
-    return QString::fromUtf8(gx::kArms[i].nameCn);
+    return QString::fromUtf8(gx::kArmSpiral[i].nameCn);
 }
 
 QString gx_armNameEn(int i)
 {
-    if (i < 0 || i >= gx::kArmInfoCount)
+    if (i < 0 || i >= gx::kArmSpiralCount)
         return QString();
-    return QString::fromUtf8(gx::kArms[i].nameEn);
+    return QString::fromUtf8(gx::kArmSpiral[i].nameEn);
 }
 
 bool gx_armIsMajor(int i)
 {
-    if (i < 0 || i >= gx::kArmInfoCount)
+    if (i < 0 || i >= gx::kArmSpiralCount)
         return false;
-    return gx::kArms[i].isMajor;
+    return gx::kArmSpiral[i].isMajor;
+}
+
+double gx_armLabelRadiusLy(int i)
+{
+    if (i < 0 || i >= gx::kArmSpiralCount)
+        return 0.0;
+    const gx::ArmSpiral &A = gx::kArmSpiral[i];
+    const double beta = 0.5 * (A.betaBeginDeg + A.betaEndDeg);
+    // ★ 同 galaxy.cpp: Δβ 必须用弧度 (用度会让半径指数爆炸)
+    const double dbetaRad = (beta - A.betaKinkDeg) * M_PI / 180.0;
+    const double tk = (dbetaRad >= 0.0)
+                          ? std::tan(A.pitchPostDeg * M_PI / 180.0)
+                          : std::tan(A.pitchPreDeg * M_PI / 180.0);
+    return A.rKinkLy * std::exp(-dbetaRad * tk);
 }
 
 double gx_armLabelAngle(int i)
 {
-    if (i < 0 || i >= gx::kArmInfoCount)
+    if (i < 0 || i >= gx::kArmSpiralCount)
         return 0.0;
-
-    // 标注锚点半径取旋臂中段 (与 sceneitem.cpp 中的取值保持一致)
-    const double r = gx::kArmStartLy
-                   + (gx::kArmEndLy - gx::kArmStartLy) * 0.55;
-
-    // ★ 对数螺旋的实际方位角:
-    //     r(θ) = r0 · e^(b·θ),  b = tan(pitch)
-    //   => θ(r) = ln(r / r0) / b
-    //
-    //   这正是旋臂粒子生成时用的关系, 因此标注能精确落在旋臂实体上。
-    //   若偷懒直接用 startAngleDeg, 标签会偏到旋臂起点 (靠近棒端),
-    //   那里粒子最密, 文字会被淹没 —— 而且视觉上明显"没贴在臂上"。
-    const double b = std::tan(gx::kArmPitchDeg * M_PI / 180.0);
-    const double dTheta = std::log(r / gx::kArmStartLy) / b;
-
-    const double startRad = gx::kArms[i].startAngleDeg * M_PI / 180.0;
-    return startRad + dTheta;
+    const gx::ArmSpiral &A = gx::kArmSpiral[i];
+    const double beta = 0.5 * (A.betaBeginDeg + A.betaEndDeg);
+    const double phiSun = gx::kOrionSpurAngleDeg * M_PI / 180.0;
+    return phiSun + beta * M_PI / 180.0;
 }

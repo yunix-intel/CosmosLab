@@ -44,6 +44,7 @@ private:
     void buildPrograms();
     void buildMeshes();
     void drawSkybox(const ViewState &vs);
+    void drawGalaxyOverlay(const QMatrix4x4 &viewProj, const ViewState &vs);
     void drawOrbits(const ViewState &vs, const QMatrix4x4 &viewProj);
     void drawBodies(const ViewState &vs, const QMatrix4x4 &viewProj);
     void drawRings(const ViewState &vs, const QMatrix4x4 &viewProj);
@@ -71,6 +72,12 @@ private:
     OrbitCamera m_camera;
 
     Galaxy m_galaxy;               // 银河系粒子模型 (只在银河系尺度使用)
+
+    // 银河系参考底图 (NASA/JPL 官方插画, 半透明叠加)
+    QOpenGLShaderProgram *m_galOverlayProg = nullptr;
+    QOpenGLVertexArrayObject m_galOverlayVao;
+    QOpenGLBuffer m_galOverlayVbo{QOpenGLBuffer::VertexBuffer};
+    QOpenGLTexture *m_galOverlayTex = nullptr;
     Belts  m_belts;                // 小行星带 / 柯伊伯带 / 特洛伊群
     CometRenderer m_comets;        // 彗尾 (离子尾 + 尘埃尾)
     Cosmos        m_cosmos;        // 宇宙大尺度结构

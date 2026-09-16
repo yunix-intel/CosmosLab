@@ -150,11 +150,7 @@ void Galaxy::buildStars(QVector<float> &out)
     const float rBulge  = float(gx::kBulgeRadiusLy  * ly2u);       // 9.46
     const float barHalf = float(gx::kBarHalfLenLy   * ly2u);       // 25.5
     const float diskTh  = float(gx::kThinDiskLy     * ly2u);       // 1.89
-    const float rArm0   = float(gx::kArmStartLy     * ly2u);       // 47.3
-    const float rArm1   = float(gx::kArmEndLy       * ly2u);       // 94.6
 
-    const float pitch   = float(gx::kArmPitchDeg * M_PI / 180.0);
-    const float bCoef   = std::tan(pitch);
 
     auto put = [&out](float x, float y, float z,
                       float r, float g, float bl, float size, float bright) {
@@ -217,42 +213,61 @@ void Galaxy::buildStars(QVector<float> &out)
         }
     }
 
-    // ==== 3. 旋臂 (4 条对数螺旋) ====
+    // ==== 3. 旋臂 —— 参数取自 Reid et al. 2019 Table 2 ====
     //
-    // r = r0 · e^(b·θ), 反解得 θ = ln(r/r0)/b。
-    // 沿 r 用对数分布采样 —— 保证每条臂在视觉上的粒子密度均匀
-    // (若按 r 均匀采样, 内侧会挤成一团)。
+    //  ★ 每条臂有自己的**螺距角**与**折点 (kink)**, 不再用统一螺距。
+    //    实测螺距角范围 8.7°~19.5°, 差异显著 —— 用统一值会丢失
+    //    "矩尺臂陡、英仙臂缓"这一真实特征。
+    //
+    //  R(β) = Rk · exp(-(β - βk) · tan(ψ)),  ψ 按 β 是否越过 βk 选取
+    //  场景方位角 φ = φ_sun + β   (两者都是从北银极看的顺时针方位)
     {
-        const int perArm = 15000;
-        for (int arm = 0; arm < gx::kArmCount; ++arm) {
-            const float baseAng = float(arm) * (2.0f * float(M_PI) / gx::kArmCount);
+        const float phiSun = float(gx::kOrionSpurAngleDeg * M_PI / 180.0);
+        const int perArm = 11000;          // × 6 段 ≈ 66000 颗
+
+        for (int ai = 0; ai < gx::kArmSpiralCount; ++ai) {
+            const gx::ArmSpiral &A = gx::kArmSpiral[ai];
+            const double bk = A.betaKinkDeg;
+            const double tkPre  = std::tan(A.pitchPreDeg  * M_PI / 180.0);
+            const double tkPost = std::tan(A.pitchPostDeg * M_PI / 180.0);
 
             for (int i = 0; i < perArm; ++i) {
-                // 对数插值采样半径 (前密后疏更贴近实际)
-                const float t  = std::pow(uni(rng), 0.75f);
-                const float rr = rArm0 * std::pow(rArm1 / rArm0, t);
+                // 沿 β 采样。用 pow 让内侧略密 (内臂更亮更紧致)
+                const float t  = std::pow(uni(rng), 0.85f);
+                const double beta = A.betaBeginDeg
+                                  + (A.betaEndDeg - A.betaBeginDeg) * double(t);
+                // ★★ 单位陷阱: Δβ 必须用**弧度**代入指数。
+                //
+                //   实测踩到: 误用度代入时, exp(-Δβ·tanψ) 的指数差了
+                //   57.3 倍 —— 英仙臂 β=0 处的半径算成 12,732 kpc
+                //   (正确值 10.07 kpc), 粒子被抛到盘外,
+                //   渲染出来是**放射状条纹**而不是螺旋臂。
+                const double dbetaRad = (beta - bk) * M_PI / 180.0;
+                const double tk = dbetaRad >= 0.0 ? tkPost : tkPre;
+                const double R  = A.rKinkLy * std::exp(-dbetaRad * tk);   // ly
 
-                const float theta = std::log(rr / rArm0) / bCoef;
-                const float ang   = baseAng + theta;
+                const float rr = float(R / gx::kLyPerUnit);            // 场景单位
 
-                // 旋臂有宽度, 且越靠外越松散 (真实旋臂的形态)。
-                // ★ 实测宽度给到 7 单位时旋臂会连成实心白带 —— 真实旋臂
-                //   是"恒星密集带"而非实心块, 必须留出臂间的暗区。
-                const float width = 1.1f + 2.9f * (rr / rDisk);
-                const float dRad  = gauss(rng) * width * 0.35f;
-                const float dAng  = gauss(rng) * width / qMax(rr, 4.0f);
+                // 臂的径向宽度: 表值为含 90% 示踪物的全宽, 取一半作 σ
+                const float sigR = float(A.widthLy / gx::kLyPerUnit) * 0.5f;
+
+                // ★ 臂宽随半径略微展开 (真实旋臂外侧更松散),
+                //   但不能太大, 否则相邻臂会连成一片白带。
+                const float sig = sigR * (0.75f + 0.85f * (rr / rDisk));
+
+                const float dRad = gauss(rng) * sig;
+                const float dAng = gauss(rng) * sig / qMax(rr, 4.0f);
 
                 const float r2 = qMax(0.5f, rr + dRad);
-                const float a2 = ang + dAng;
+                const float a2 = phiSun + float(beta * M_PI / 180.0) + dAng;
 
                 const float x = r2 * std::cos(a2);
                 const float z = r2 * std::sin(a2);
-                // 垂直方向: 薄盘, 向外略增厚但整体很薄
                 const float y = gauss(rng) * diskTh * (0.55f + 0.5f * (rr / rDisk));
 
-                // 旋臂以年轻蓝白星为主; 少数 HII 区呈粉红
+                // 年轻蓝白星为主; 少量 HII 区呈粉红
                 float cr = 0.70f, cg = 0.82f, cb = 1.00f;
-                if (uni(rng) < 0.045f) {           // 约 4.5% 的 HII 区
+                if (uni(rng) < 0.045f) {
                     cr = 1.00f; cg = 0.62f; cb = 0.72f;
                 } else {
                     const float v = uni(rng) * 0.22f;
@@ -378,13 +393,37 @@ void Galaxy::build()
 
 QVector3D Galaxy::sunPosition()
 {
-    // 太阳距银心 26000 ly, 位于银道面附近
+    // ★ 太阳位置 —— 按天文观测确定, 不是"为了好看"随便放的。
+    //
+    //  ★★ 这里修正了一个**科学错误**:
+    //     旧代码写的是 `const float ang = 1.15f;` 并注明
+    //     "方位角取一条旋臂附近, 视觉上'落在臂上'更有说服力"。
+    //     这是错的 —— 太阳**不在任何主旋臂上**, 而在人马臂与英仙臂
+    //     之间的**猎户支 (Orion Spur / Local Arm)**, 属次级结构。
+    //
+    //     两重证据:
+    //       1. NASA/JPL 官方图 (R. Hurt) 把 Sun 圆圈明确画在两臂之间的
+    //          低亮度区, 标注为 "Orion Spur"
+    //       2. 对 NASA 图做径向亮度剖面: 从太阳指向银心方向亮度单调上升
+    //          (147→246), 背离银心方向单调下降 (147→42) —— 正是"身处
+    //          臂间低密度区"的特征
+    //
+    //  ★ 方位角由 NASA/JPL 官方图标定:
+    //     图上银心在 (1000,1000), 太阳圈在 (985,1372) 像素
+    //     => 太阳位于银心的**下方**, 即图像方位角 ≈ 90°。
+    //     场景方位角 φ = atan2(z, x) 与图像方位角一一对应
+    //     (图像 +y 向下 ↔ 场景 +z; 均为从北银极看的顺时针),
+    //     故太阳场景方位角取 90°。
+    //
+    //  ★ 距离取 Reid et al. 2019 的 R0 = 8.15 kpc = 26,582 ly
+    //     (GRAVITY 合作组 2019 用 VLTI 测 Sgr A* 视差得 8.178 kpc,
+    //      两者在误差内一致; 本项目采用结构研究的常用值 8.15 kpc)
     const float d = float(gx::kSunDistFromCenterLy / gx::kLyPerUnit);
     const float h = float(gx::kSunHeightFromDiskLy / gx::kLyPerUnit);
-    // 方位角取一条旋臂附近, 视觉上"落在臂上"更有说服力
-    const float ang = 1.15f;
+    const float ang = float(gx::kOrionSpurAngleDeg * M_PI / 180.0);
     return QVector3D(d * std::cos(ang), h, d * std::sin(ang));
 }
+
 
 void Galaxy::render(const QMatrix4x4 &viewProj, float pointScale)
 {

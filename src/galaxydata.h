@@ -38,63 +38,95 @@ inline constexpr double kHaloRadiusLy   = 150000.0;  // 银晕半径 (远超银�
 // ---------------------------------------------------------------------------
 //  太阳的位置与运动
 // ---------------------------------------------------------------------------
-inline constexpr double kSunDistFromCenterLy = 26000.0;  // 距银心 2.6 万光年
-inline constexpr double kSunOrbitSpeedKms    = 230.0;    // 绕银心速度 km/s
+inline constexpr double kSunDistFromCenterLy = 26582.0;  // Reid 2019: R0 = 8.15 kpc
+inline constexpr double kSunOrbitSpeedKms    = 236.0;    // Reid 2019: Θ0 = 236±7 km/s
 inline constexpr double kGalacticYearMyr     = 225.0;    // 银河年 2.25 亿年
-inline constexpr double kSunHeightFromDiskLy = 55.0;     // 距银道面高度
+inline constexpr double kSunHeightFromDiskLy = 18.0;     // Reid 2019: 偏北银极约 5.5 pc
+                                                          // (旧值 55 ly 无依据)
 
 // ---------------------------------------------------------------------------
-//  旋臂几何
+//  旋臂几何 —— 参数取自 Reid et al. 2019 (ApJ 885, 131) Table 2
 //
-//  银盘旋臂用对数螺旋描述: r = r0 · e^(b·θ), b = tan(俯仰角)。
-//  银河系 4 条主旋臂的俯仰角约 12°, 缠绕约 1 圈。
+//  ★ 该论文用 BeSSeL 巡天 (VLBA) 与日本 VERA 测得约 200 个大质量恒星
+//    形成区脉泽的**三角视差**直接测距 (精度典型 ±0.02 mas, 距离误差 <10%),
+//    是当前银臂结构最可靠的实测约束。原文结论:
+//      "strongly suggest that the Milky Way is a four-arm spiral,
+//       with some extra arm segments and spurs"
 //
-//  ★ 旋臂起点必须落在**棒的末端** —— 这是棒旋星系的定义特征:
-//    旋臂从中央棒的两端延伸出去, 而不是从核球外围凭空开始。
-//    早期误取 25000 ly, 于是在棒端 (13500 ly) 与旋臂起点之间留下一圈
-//    密度空洞, 画面上表现为银心旁一个明显的黑椭圆。
+//  ★ 关键点: **每条臂的螺距角不同** (9°~19°), 且多数臂有**折点 (kink)** ——
+//    折点两侧螺距角不同。用"统一螺距角"是常见的过度简化, 会传递错误印象。
+//
+//  ★ 对数螺旋 + 折点:
+//      ln(R / Rk) = -(β - βk) · tan(ψ)
+//    即 R(β) = Rk · exp(-(β - βk) · tan(ψ))
+//    β 为银心方位角, 以**太阳方向为 0°**, 从北银极看顺时针增大。
+//    β < βk 用 ψ前, β > βk 用 ψ后。
+//
+//  ★ 星系的缠绕方向: 银河系是**后随螺旋 (trailing)** ——
+//    从北银极看顺时针, 半径递减。代入 Reid 参数可验证:
+//      英仙臂 β=0 时 R≈10.1 kpc (在太阳外侧 ✓)
+//      人马臂 β=0 时 R≈6.9 kpc  (在太阳内侧 ✓)
 // ---------------------------------------------------------------------------
-inline constexpr double kArmPitchDeg  = 12.0;
-inline constexpr int    kArmCount     = 4;
-inline constexpr double kArmStartLy   = 13500.0;   // = 棒半长, 从棒端伸出
-inline constexpr double kArmEndLy     = 50000.0;   // 旋臂终点 (接近盘缘)
+struct ArmSpiral
+{
+    const char *nameCn;
+    const char *nameEn;
+    double betaBeginDeg;   // 该段臂的 β 起点
+    double betaEndDeg;     // β 终点
+    double betaKinkDeg;    // 折点处的 β
+    double rKinkLy;        // 折点处的银心距
+    double pitchPreDeg;    // 折点内侧螺距角
+    double pitchPostDeg;   // 折点外侧螺距角
+    double widthLy;        // 臂的径向宽度 (含约 90% 的示踪物)
+    bool   isMajor;        // 是否为主臂
+    const char *note;      // 教学要点
+};
 
-// ---------------------------------------------------------------------------
-//  旋臂名称 —— 教学上必须标注, 否则"4 条旋臂"只是抽象数字
-//
-//  ★ 太阳所在的猎户臂严格说不是主旋臂, 而是**猎户支 (Orion Spur)**:
-//    它位于人马臂与英仙臂之间, 是一条较短的次级结构 (长约 3500 pc 的
-//    一段, 而非环绕银心)。地球上肉眼可见的亮星大多属于它。
-//    把它标注成"主旋臂"是常见的科普错误, 这里必须准确区分。
-//
-//  ★ 各旋臂的起始相位角 (度) 由实测的旋臂位置拟合而来。
-//    +60° 的间隔是 4 臂结构的自然结果。
-// ---------------------------------------------------------------------------
+//                中文名        英文名                     β起    β终   βk     Rk(ly)  ψ前    ψ后   宽(ly) 主臂
+inline const ArmSpiral kArmSpiral[] = {
+  { "矩尺臂",     "Norma Arm",                 5.0,  54.0, 18.0,  14547.0, 19.5, 19.5,  1600.0, true,
+    "紧贴中央棒的主臂, 靠近银心处有强烈的恒星形成区。它向外延伸后成为外臂 (Outer Arm)。" },
+
+  { "盾牌-半人马臂", "Scutum-Centaurus Arm",    0.0, 104.0, 23.0,  16014.0, 14.1, 12.1,  1800.0, true,
+    "银河系两条最长的旋臂之一, 从中央棒一端几乎延伸到盘缘。Spitzer 红外巡天中它最为显著。" },
+
+  { "人马-船底臂", "Sagittarius-Carina Arm",   2.0,  97.0, 24.0,  19700.0, 17.1, 17.1,  1900.0, true,
+    "位于太阳轨道内侧。银心方向上最显眼的旋臂, 那里是银河系恒星最密集的区域。" },
+
+  { "英仙臂",     "Perseus Arm",            -23.0, 115.0, 40.0,  28930.0, 10.3,  8.7,  1100.0, true,
+    "位于太阳轨道外侧的两大主臂之一, 恒星形成活动活跃。Reid 2019 测得其折点最为显著。" },
+
+  { "外臂",       "Outer Arm",             -16.0,  71.0, 18.0,  39921.0,  9.4,  9.4,  1700.0, false,
+    "银盘最外侧的一条臂, 与矩尺臂相连。距银心约 4 万光年。" },
+
+  { "猎户支",     "Local Arm (Orion Spur)", -8.0,  34.0,  9.0,  26941.0, 11.4, 11.4,   900.0, false,
+    "★ 太阳所在。它是一条**次级结构 (支/spur)**, 不是主旋臂 —— "
+    "位于人马臂与英仙臂之间, 长度远短于主臂。把它标成主旋臂是常见科普错误。" },
+};
+inline constexpr int kArmSpiralCount = int(sizeof(kArmSpiral) / sizeof(kArmSpiral[0]));
+
+// 保留旧的名称表 (供 UI 标注使用)
 struct ArmInfo
 {
     const char *nameCn;
     const char *nameEn;
-    double      startAngleDeg;   // 该旋臂在极坐标中的起始相位
-    bool        isMajor;         // 主旋臂 / 次级结构 (支)
-    const char *note;            // 教学要点
+    double      startAngleDeg;
+    bool        isMajor;
+    const char *note;
 };
-
 inline const ArmInfo kArms[] = {
-    { "英仙臂",   "Perseus Arm",      0.0,   true,
-      "两条主要旋臂之一, 位于太阳轨道外侧。天文观测中这里的恒星形成活动很活跃。" },
-    { "人马臂",   "Sagittarius Arm", 90.0,  true,
-      "位于太阳轨道内侧。银心方向上最显眼的旋臂, 那里是银河系恒星最密集的区域。" },
-    { "盾牌-半人马臂", "Scutum-Centaurus Arm", 180.0, true,
-      "银河系两条最长的旋臂之一, 从中央棒一端几乎延伸到盘缘。" },
-    { "矩尺臂",   "Norma Arm",      270.0,  true,
-      "紧贴中央棒的另一条主旋臂, 靠近银心处有强烈的恒星形成区。" },
+    { "英仙臂",   "Perseus Arm",      0.0,   true,  "太阳轨道外侧的主臂, 螺距角约 10°" },
+    { "矩尺臂",   "Norma Arm",      270.0,  true,  "紧贴中央棒, 螺距角约 19.5° (最陡)" },
+    { "盾牌-半人马臂", "Scutum-Centaurus Arm", 180.0, true, "最长的主臂之一, 螺距角约 14°" },
+    { "人马-船底臂", "Sagittarius-Carina Arm", 90.0, true, "太阳轨道内侧, 螺距角约 17°" },
 };
 inline constexpr int kArmInfoCount = int(sizeof(kArms) / sizeof(kArms[0]));
 
-// 猎户支 (太阳所在)
-inline constexpr double kOrionSpurDistLy   = 26000.0;   // 与银心距离
-inline constexpr double kOrionSpurLengthLy = 3500.0;    // 长度 (次级结构, 短得多)
-inline constexpr double kOrionSpurAngleDeg = 45.0;      // 在极坐标中的方位
+// 太阳所在的猎户支 (Local Arm)
+// ★ Reid 2019: R0 = 8.15 kpc = 26,582 ly; 太阳在银道面北侧约 5.5 pc
+inline constexpr double kOrionSpurDistLy   = 26582.0;
+inline constexpr double kOrionSpurLengthLy = 6000.0;
+inline constexpr double kOrionSpurAngleDeg = 90.0;   // 由 NASA/JPL 官方图实测定标
 
 // 银心黑洞
 inline constexpr double kSgrAStarRA  = 266.41683;   // 赤经 (度)
@@ -146,15 +178,37 @@ inline const char *kNameEn = "Milky Way";
 inline const char *kType   = "棒旋星系 (SBbc)";
 
 inline const char *kNotes[] = {
-    "银盘直径约 10.6 万光年, 但薄盘厚度仅约 1000 光年 —— 直径是厚度的 100 多倍。",
-    "太阳位于**猎户支**内侧, 距银心约 2.6 万光年, 以约 230 km/s 绕银心运行。"
-    "注意猎户支并非主旋臂, 而是一条长约 3500 光年的次级结构。",
+    "银盘直径约 10.6 万光年, 但薄盘厚度仅约 1000 光年 —— 直径是厚度的 100 多倍。"
+    "这种“极薄”是银河系最反直觉的特征, 也是它看起来像一条亮带的原因。",
+
+    "太阳位于**猎户支**内侧, 距银心约 2.658 万光年 (8.15 kpc), "
+    "以约 236 km/s 绕银心运行。"
+    "★ 猎户支并非主旋臂, 而是一条长约 6000 光年的次级结构 (支/spur), "
+    "夹在英仙臂与人马臂之间。把它称作“猎户臂”是常见的科普错误。",
+
     "一个银河年约 2.25 亿年 —— 太阳至今已绕行约 20 圈。",
-    "银心的**人马座 A\\* (Sgr A\\*)** 是超大质量黑洞, 质量约 430 万倍太阳质量, "
+
+    "银心的**人马座 A\* (Sgr A\*)** 是超大质量黑洞, 质量约 430 万倍太阳质量, "
     "2022 年由事件视界望远镜首次成像。",
+
     "银河系与仙女座星系正以约 110 km/s 相互接近, 预计约 45 亿年后并合。",
-    "四条主旋臂为英仙臂、人马臂、盾牌-半人马臂、矩尺臂; "
-    "旋臂俯仰角约 12°, 属于典型的棒旋星系结构。",
+
+    "★ 旋臂结构数据来自 **Reid et al. 2019 (ApJ 885, 131)** —— "
+    "BeSSeL 巡天用 VLBA 测得约 200 个大质量恒星形成区脉泽的三角视差。"
+    "结论是四条主臂 (英仙臂、人马-船底臂、盾牌-半人马臂、矩尺臂) 加若干臂段与支。",
+
+    "★ 每条臂的螺距角**各不相同** (8.7°~19.5°), 且多数臂带“折点”: "
+    "折点两侧螺距角不同。用统一的俯仰角描述是过度简化。",
+
+    "★ 关于图层: 画面中**半透明的背景图**是 NASA/JPL 发布的银河系结构"
+    "科学插画 (作者 Robert Hurt, 依据 Spitzer 红外与 CO 观测绘制), "
+    "**不是照片** —— 我们身处银盘内部, 外部全景在物理上无法拍到。"
+    "其上的**粒子**是按 Reid 2019 参数生成的 3D 示意模型。",
+
+    "★ 两臂 vs 四臂之争: Spitzer 红外 (红巨星计数) 支持两条主臂, "
+    "射电 21cm 原子氢与脉泽视差支持四条臂。这不矛盾 —— "
+    "不同波段看到的是不同成分。本视图采用四臂模型 (脉泽视差证据更强)。",
+
     nullptr,
 };
 
