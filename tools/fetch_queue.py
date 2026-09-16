@@ -213,6 +213,9 @@ BAD_KW = (
     "dem", "elevation", "topograph", "geolog", "gravity", "magnetic",
     "quadrangle", "pole", "shaded relief", "mercator", "regio",
     "annotated", "false color", "false-color", "enhanced color",
+    # ★ 以下几条都是"看着像全球图, 实际带标注/网格"的版本 (实测踩到):
+    "cratername", "crater name", "with names", "named", "labelled",
+    "labeled", "nomenclature", "grid", "graticule", "quadrangle name",
     "elevation model", "color-coded", "colour-coded",
     # 图例/示意类
     "diagram", "sketch", "legend", "labeled", "labelled", "schematic",
@@ -414,6 +417,20 @@ def pixel_ok(data: bytes) -> tuple:
         return (False, '色相跨 %d 区间, 疑示意图' % spread)
     if white / n * 100 > 12:
         return (False, '纯白 %.0f%%, 疑含图例' % (white / n * 100))
+
+    # ★★ 检测**彩色小文字标注**。
+    #    实测踩到 `PIA21755-CeresMap-CraterNames...` —— 全球图 + 数百个
+    #    彩色地名 + 经纬网格。它的纯白只占 10.2% (压在阈值下方),
+    #    因为标注文字是**彩色**的而非纯白。
+    #
+    #    判据: 自然地表是连续的大色块, 而文字标注会产生大量
+    #    **孤立的高饱和小像素簇**。用"高饱和像素占比"来近似 ——
+    #    标注图的这个比例明显高于自然图。
+    high_sat = sum(1 for s_ in sat if s_ > 0.62)
+    hi_pct = high_sat / n * 100
+    if hi_pct > 2.5 and med > 0.18:
+        return (False, '高饱和像素 %.1f%%, 疑含彩色文字标注' % hi_pct)
+
     return (True, '')
 
 
