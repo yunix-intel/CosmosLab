@@ -83,6 +83,25 @@ public:
     //   所以截断天然保留了宇宙网的骨架。
     //
     // n <= 0 或 n >= m_count 表示显示全部。
+    // ---- SDSS 真实星系的独立显示控制 ----
+    //
+    // ★ 为什么不与"示意结构"共用一个开关:
+    //   实测 SDSS 的 171,398 个星系让总粒子达 242,604, 性能明显下降。
+    //   根因是**星系成团** —— 标定系数 0.067 us/粒子 是在均匀分布下测的,
+    //   而真实星系在星系团/纤维里极度聚集, 大量点落在同一像素上,
+    //   **过度绘制**把填充率成本拉高。
+    //
+    //   分别控制的好处: 用户可以先关掉 SDSS 看宇宙网的整体形态,
+    //   再打开看真实星系分布 —— 两者对应不同的观察意图。
+    //
+    // n <= 0 表示显示全部 SDSS 数据。
+    void setSdssVisible(int n) { m_sdssVisible = n; }
+    int  sdssVisible() const {
+        if (m_sdssCount <= 0) return 0;
+        return (m_sdssVisible <= 0 || m_sdssVisible > m_sdssCount)
+                   ? m_sdssCount : m_sdssVisible;
+    }
+
     void setVisibleCount(int n) { m_visible = n; }
     int  visibleCount() const {
         return (m_visible <= 0 || m_visible > m_count) ? m_count : m_visible;
@@ -95,8 +114,45 @@ public:
     //   而 UI 要显示"当前 X / 总数 Y"。用静态缓存是安全的 ——
     //   build() 只在初始化时跑一次, 之后不再变化。
     static int lastBuiltCount() { return s_lastBuilt; }
+    // 最近一次的 SDSS 星系数 (供 GUI 线程查询)
+    static int lastBuiltSdss() { return s_lastBuiltSdss; }
+
+    // ★ 最近一帧**实际绘制**的粒子数 (供 GUI 线程查询)。
+    //
+    //   为什么不能直接用 lastBuiltCount() 做 UI 显示:
+    //   "星系数量"档位和"SDSS 实测星系"开关都会**二次削减**实际绘制量 ——
+    //   SDSS 有独立的可见性控制 (关闭/25%/50%/全部), 它是在
+    //   示意结构之外**另算**的。于是 total 是缓冲总数,
+    //   真实绘制数可能远小于它 (例如 SDSS 关到 25% 时只剩 45%)。
+    //   UI 若打印 total 会**高估**, 性能预估也会失真。
+    static int lastDrawn() { return s_lastDrawn; }
 
     void render(const QMatrix4x4 &viewProj, float pointScale);
+
+    // ★ 实际绘制量的**唯一实现** —— 渲染线程和 GUI 线程共用。
+    //
+    //   为什么必须是唯一实现: 这个公式有两个坑, 两处各写一遍必然漂移。
+    //     ① 顶点缓冲布局是 [示意结构][SDSS], SDSS 在末尾可独立截断;
+    //     ② "星系数量"档位和"SDSS 开关"是**两个独立维度**,
+    //        要按分段逻辑取 qMin 而不是简单相乘 —— 例如档位落在
+    //        示意结构段内时, SDSS 应当完全不画。
+    //
+    //   参数: total     缓冲总粒子数
+    //         sdssCount 其中 SDSS 星系数 (位于末尾)
+    //         sdssVis   SDSS 开关 (-1=关闭, 0=全部, >0=指定数量)
+    //         vis       "星系数量"档位 (<=0 或 > total 表示全部)
+    static int effectiveDrawn(int total, int sdssCount, int sdssVis, int vis)
+    {
+        const int sdssWant = (sdssVis < 0) ? 0
+                           : ((sdssVis == 0 || sdssVis > sdssCount)
+                                  ? sdssCount : sdssVis);
+        const int schCount = total - sdssCount;
+        if (vis <= 0 || vis > total)
+            return schCount + sdssWant;
+        if (vis <= schCount)
+            return vis;
+        return schCount + qMin(vis - schCount, sdssWant);
+    }
 
     // 场景半径 (映射后的最大半径)
     static float sceneRadius() { return 100.0f; }
@@ -141,8 +197,12 @@ private:
     QOpenGLBuffer m_vbo{QOpenGLBuffer::VertexBuffer};
 
     int m_count         = 0;
+    int m_sdssCount = 0;      // SDSS 真实星系数
+    int m_sdssVisible = 0;    // SDSS 可见数, <=0 全部
     int m_visible = 0;          // <=0 表示全部
-    static int s_lastBuilt;     // 最近一次 build 的总数
+    static int s_lastBuilt;
+    static int s_lastBuiltSdss;     // 最近一次 build 的总数
+    static int s_lastDrawn;         // 最近一帧实际 glDrawArrays 的数量
     int m_filamentCount = 0;   // 纤维中的星系
     int m_voidCount     = 0;   // 空洞边缘的稀疏星系
 

@@ -52,4 +52,7 @@ struct ViewState
 
     // 距离映射模式: 0=对数压缩 1=真实比例
     int    cosmosMapMode = 0;
+
+    // SDSS 真实星系可见数 (0=全部)
+    int    sdssVisible = 0;
 };

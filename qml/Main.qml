@@ -830,12 +830,12 @@ ApplicationWindow {
                 // 实时反馈: 当前粒数 + 预估耗时。颜色随帧率预警。
                 Text {
                     Layout.fillWidth: true
-                    // ★ scene.cosmosVisible <= 0 表示"全部", 此时实际显示数
-                    //   就是总数 —— 不能直接打印 0
-                    text: "显示 "
-                          + (scene.cosmosVisible <= 0
-                             ? scene.cosmosTotal.toLocaleString()
-                             : scene.cosmosVisible.toLocaleString())
+                    // ★ 显示**实际绘制数** (scene.cosmosDrawn) 而不是
+                    //   cosmosTotal —— 后者是缓冲总数, 不含"SDSS 开关"
+                    //   和"星系数量"档位的削减, 直接打印会高估。
+                    //   （旧版用 cosmosVisible<=0 判断, 但"全部"档时
+                    //     cosmosVisible 就是 0, 无法表达 SDSS 的削减。）
+                    text: "显示 " + scene.cosmosDrawn.toLocaleString()
                           + " / " + scene.cosmosTotal.toLocaleString()
                     color: root.cTextDim
                     font.pixelSize: 10
@@ -843,7 +843,12 @@ ApplicationWindow {
                 }
                 Text {
                     Layout.fillWidth: true
-                    text: "预估 " + scene.cosmosEstMs.toFixed(1) + " ms"
+                    // ★ 措辞刻意写"宇宙图层"而不是"帧率":
+                    //   这个数字只是宇宙粒子图层的耗时预估,
+                    //   整帧还包含约 10 个全屏 pass 的后处理链 ——
+                    //   后者在 2880x1800 下才是主要瓶颈。
+                    //   写成"预估帧率"会让学生以为这就是整机帧率。
+                    text: "宇宙图层 约 " + scene.cosmosEstMs.toFixed(1) + " ms"
                           + "  ·  " + Math.round(scene.cosmosEstFps) + " FPS"
                     color: scene.cosmosEstFps > 55 ? "#8fd88f"
                          : scene.cosmosEstFps > 30 ? "#e8cc7a"
@@ -858,6 +863,117 @@ ApplicationWindow {
                     color: Qt.rgba(1, 1, 1, 0.07)
                 }
 
+
+                // ---- SDSS 真实星系 (独立开关) ----
+                //
+                // ★ 为什么与"星系数量"分开:
+                //   上面那个档位控制的是**程序生成的示意结构**,
+                //   这里控制的是 **SDSS 巡天实测的星系位置**。
+                //   两者性质不同, 观察意图也不同, 故分开控制。
+                //
+                // ★ 默认 50%: 实测 171,398 个 SDSS 星系在 2880x1800 下
+                //   会让总粒子达 242,604, 帧率掉到约 12 FPS ——
+                //   原因是星系**成团**(大量点落在同一像素, 过度绘制)。
+                //   半量既能看清真实结构, 又能保持流畅。
+                Text {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 6
+                    text: "SDSS 实测星系"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Repeater {
+                        model: [
+                            { t: "关闭", p: 0.0 },
+                            { t: "25%",  p: 0.25 },
+                            { t: "50%",  p: 0.50 },
+                            { t: "全部", p: 1.0 }
+                        ]
+
+                        Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 24
+                            radius: 6
+
+                            readonly property int targetN:
+                                Math.round(scene.sdssTotal * modelData.p)
+                            readonly property bool active:
+                                modelData.p <= 0.0
+                                    ? scene.sdssVisible <= 0
+                                    : (modelData.p >= 1.0
+                                       ? scene.sdssVisible >= scene.sdssTotal
+                                       : scene.sdssVisible === targetN)
+
+                            color: active ? root.cAccentSoft
+                                          : Qt.rgba(1, 1, 1, 0.05)
+                            border.width: 1
+                            border.color: active
+                                          ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                          : Qt.rgba(1, 1, 1, 0.08)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.t
+                                color: parent.active ? "#bcd9ff" : root.cTextDim
+                                font.pixelSize: 10
+                                font.family: root.sansFont
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                // ★ "关闭"用 -1 表示 (0 在 C++ 侧表示"全部")
+                                onClicked: scene.sdssVisible =
+                                    (modelData.p <= 0.0) ? -1
+                                    : (modelData.p >= 1.0 ? scene.sdssTotal
+                                                          : targetN)
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: {
+                        if (scene.sdssTotal <= 0)
+                            return "未载入 SDSS 星表 (assets/lss/lrg.bin)"
+                        const v = scene.sdssVisible <= 0
+                                  ? scene.sdssTotal : scene.sdssVisible
+                        return "实测 " + v.toLocaleString() + " / "
+                               + scene.sdssTotal.toLocaleString() + " 个星系"
+                               + "　红移 0.60–1.00"
+                    }
+                    color: scene.sdssTotal > 0 ? "#7fd4a0" : "#c8a878"
+                    font.pixelSize: 9
+                    font.family: root.sansFont
+                }
+
+                // ★ 必须说明数据来源与覆盖范围, 否则会被误读为"全部星系"
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    visible: scene.sdssTotal > 0
+                    text: "数据：SDSS DR17 eBOSS LRG 样本（实测光谱红移）。"
+                          + "覆盖距离 74–111 亿光年 —— 这是巡天的观测窗口，"
+                          + "不是全天完整样本。该区间之外的粒子为示意结构。"
+                    color: Qt.rgba(0.56, 0.64, 0.75, 0.75)
+                    font.pixelSize: 9
+                    font.family: root.sansFont
+                    lineHeight: 1.35
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                }
 
                 // ---- 距离映射模式 (对数压缩 / 真实比例) ----
                 //
@@ -929,6 +1045,296 @@ ApplicationWindow {
                     font.pixelSize: 9
                     font.family: root.sansFont
                     lineHeight: 1.35
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                }
+
+                // ============================================================
+                //  红移 —— 可交互演示
+                //
+                //  ★ 为什么不放静态图:
+                //    拖动滑块看谱线实时移动, 比静态图直观得多,
+                //    而且这个交互本身就在演示"红移"的定义。
+                //
+                //  ★★ 属性名避坑 (实测踩到, 花了十几轮才定位):
+                //    初版写的是 `property real z: 0.738` ——
+                //    但 **z 是 QML Item 的内建属性** (控制层叠顺序)。
+                //    覆盖内建属性会让引擎在布局时崩溃, 且**日志完全为空**
+                //    (QML 引擎初始化期的致命错误不走 qWarning),
+                //    而 QML 编译期**不会**对属性名冲突报错。
+                //    故本工具里所有相关变量都加 red 前缀。
+                // ============================================================
+                Item {
+                    id: redshiftTool
+                    Layout.fillWidth: true
+                    // 高度预算 (从 0 起算):
+                    //     0~20   标题 + 滑块
+                    //    42~70  波长色带
+                    //    46~66  谱线标记
+                    //    68~107 标签文字 (最多错 3 行)
+                    //   112      结论行
+                    //   134~156  说明文字 (可能折行)
+                    Layout.preferredHeight: 162
+
+                    // 默认 redz = SDSS LRG 样本的中位红移 0.738
+                    property real redz: 0.738
+
+                    readonly property var lines: [
+                        { n: "CaK", w: 393.4 },
+                        { n: "CaH", w: 396.8 },
+                        { n: "Hd",  w: 410.2 },
+                        { n: "Hg",  w: 434.0 },
+                        { n: "Hb",  w: 486.1 },
+                        { n: "Mg",  w: 517.5 },
+                        { n: "Na",  w: 589.0 },
+                        { n: "Ha",  w: 656.3 }
+                    ]
+                    readonly property real wlMin: 380
+                    readonly property real wlMax: 1350
+
+                    readonly property int visCount: {
+                        let c = 0
+                        for (let i = 0; i < lines.length; ++i) {
+                            if (lines[i].w * (1 + redz) <= 700) ++c
+                        }
+                        return c
+                    }
+
+                    // ---- 标签避让布局 ----
+                    //
+                    // ★ 为什么需要: 所有谱线标记都画在同一条色带上, 而高红移时
+                    //   短波端的几条线 (CaK 393nm / CaH 397nm / Hd 410nm)
+                    //   会挤到相近的像素列 —— 实测 z=0.738 时 CaK 与 CaH
+                    //   只差 3 个像素, 标签文字直接叠在一起不可读。
+                    //
+                    // 做法: 按像素位置从左到右扫描, 给每条线找一个"放得下"的
+                    //   行 (同一行内与前一标签至少隔 20px), 放不下就往下错一行,
+                    //   最多 3 行。
+                    function labelItems() {
+                        const out = []
+                        const W = spectrum.width
+                        const lo = wlMin
+                        const hi = wlMax
+                        if (W <= 0)
+                            return out
+                        // 三行的"已占用右边界"。间距取 14px ——
+                        // 字号 8 的文字实际高约 11px, 留 3px 间隙才不会叠。
+                        const rowEnd = [-1e9, -1e9, -1e9]
+                        for (let i = 0; i < lines.length; ++i) {
+                            const sh = lines[i].w * (1 + redz)
+                            if (sh < lo || sh > hi)
+                                continue                 // 已移出显示范围
+                            const px = W * (sh - lo) / (hi - lo)
+                            let row = 0
+                            while (row < 2 && px - rowEnd[row] < 22)
+                                ++row
+                            rowEnd[row] = px
+                            out.push({ n: lines[i].n, px: px,
+                                       dy: row * 14, vis: sh <= 700 })
+                        }
+                        return out
+                    }
+                    readonly property var labelLayout: labelItems()
+
+                    // 波长 -> 近似颜色。400~700nm 可见, 之外转灰
+                    // (这个视觉断点本身就是教学内容)
+                    function wlColor(w) {
+                        if (w < 400 || w > 700)
+                            return "#4a4d57"
+                        let rr = 0
+                        let gg = 0
+                        let bb = 0
+                        if (w < 440)      { rr = -(w - 440) / 60; gg = 0; bb = 1 }
+                        else if (w < 490) { rr = 0; gg = (w - 440) / 50; bb = 1 }
+                        else if (w < 510) { rr = 0; gg = 1; bb = -(w - 510) / 20 }
+                        else if (w < 580) { rr = (w - 510) / 70; gg = 1; bb = 0 }
+                        else if (w < 645) { rr = 1; gg = -(w - 645) / 65; bb = 0 }
+                        else              { rr = 1; gg = 0; bb = 0 }
+                        return Qt.rgba(Math.max(0, Math.min(1, rr)),
+                                       Math.max(0, Math.min(1, gg)),
+                                       Math.max(0, Math.min(1, bb)), 1)
+                    }
+
+                    Text {
+                        x: 0
+                        y: 0
+                        text: "红移 z = " + redshiftTool.redz.toFixed(3)
+                        color: root.cTextDim
+                        font.pixelSize: 10
+                        font.letterSpacing: 1
+                    }
+
+                    // ---- 滑块 ----
+                    Item {
+                        id: zSlider
+                        x: 0
+                        y: 20
+                        width: redshiftTool.width
+                        height: 16
+
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: zSlider.width
+                            height: 3
+                            radius: 2
+                            color: Qt.rgba(1, 1, 1, 0.10)
+                        }
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: zSlider.width
+                                   * Math.min(1, redshiftTool.redz / 1.2)
+                            height: 3
+                            radius: 2
+                            color: Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                        }
+                        Rectangle {
+                            x: zSlider.width
+                               * Math.min(1, redshiftTool.redz / 1.2) - 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 12
+                            height: 12
+                            radius: 6
+                            color: "#bcd9ff"
+                            border.width: 1
+                            border.color: "#6ba8ff"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            property real lastX: 0
+                            function applyAt(mx) {
+                                redshiftTool.redz = Math.max(0.0,
+                                    Math.min(1.2, mx / zSlider.width * 1.2))
+                            }
+                            onPressed: applyAt(mouseX)
+                            onPositionChanged: {
+                                if (pressed)
+                                    applyAt(mouseX)
+                            }
+                        }
+                    }
+
+                    // ---- 波长色带 ----
+                    Rectangle {
+                        id: spectrum
+                        x: 0
+                        y: 46
+                        width: redshiftTool.width
+                        height: 20
+                        radius: 3
+                        gradient: Gradient {
+                            GradientStop { position: 0.00
+                                color: redshiftTool.wlColor(380) }
+                            GradientStop { position: 0.12
+                                color: redshiftTool.wlColor(450) }
+                            GradientStop { position: 0.28
+                                color: redshiftTool.wlColor(520) }
+                            GradientStop { position: 0.45
+                                color: redshiftTool.wlColor(620) }
+                            GradientStop { position: 0.55
+                                color: redshiftTool.wlColor(700) }
+                            GradientStop { position: 1.00
+                                color: "#3a3d46" }
+                        }
+                    }
+
+                    // 可见光边界 (700nm)
+                    Rectangle {
+                        x: spectrum.width
+                           * (700 - redshiftTool.wlMin)
+                           / (redshiftTool.wlMax - redshiftTool.wlMin)
+                        y: 42
+                        width: 1
+                        height: 28
+                        color: Qt.rgba(1, 1, 1, 0.45)
+                    }
+
+                    // ---- 谱线标记 ----
+                    //
+                    // ★ delegate 内不要写 parent.xxx —— Repeater 的 delegate
+                    //   运行时会被包进内部节点, parent 指向的不是 delegate 自身。
+                    //   这里用 required property modelData + 显式 id。
+                    // ★ 位置与避让都由 labelItems() 预先算好 (见那里的说明),
+                    //   delegate 只负责画 —— 避免在 delegate 里做跨项碰撞检测。
+                    Repeater {
+                        model: redshiftTool.labelLayout
+
+                        Item {
+                            required property var modelData
+                            // ★ 线固定在色带内 (y=46, 高 20 -> 底 66, 色带底 70),
+                            //   **只有标签文字**错行。若连标记线一起错行,
+                            //   下面的线会跑出色带, 看着像 bug。
+                            x: modelData.px - 1
+                            y: 46
+
+                            Rectangle {
+                                width: 2.5
+                                height: 20
+                                color: modelData.vis ? "#ffffff" : "#8a8d96"
+                            }
+
+                            Text {
+                                // 居中于线。x 用 -width/2 自适应文本宽度
+                                // (原来写死 width:40 + x:-9 是偏离的)。
+                                // 左边界保护: 最左侧的线 (低红移时的 CaK)
+                                // 标签不许越过色带左缘。
+                                x: Math.max(-width / 2, -modelData.px + 2)
+                                y: 22 + modelData.dy
+                                text: modelData.n
+                                color: modelData.vis ? "#c8d4e8" : "#7a7d86"
+                                font.pixelSize: 8
+                                font.family: root.sansFont
+                            }
+                        }
+                    }
+
+                    // ---- 结论行 ----
+                    //
+                    // ★ y 的取值: 标签最多错到第 3 行 (dy=28), 文字绝对底边
+                    //   约 68+28+11 = 107。所以结论行必须 >= 110, 否则会被压住。
+                    Text {
+                        x: 0
+                        y: 112
+                        text: "可见光内 " + redshiftTool.visCount + " / 8 条谱线"
+                              + (redshiftTool.visCount === 0
+                                 ? "  — 全部移入红外" : "")
+                        color: redshiftTool.visCount >= 5 ? "#8fd88f"
+                             : redshiftTool.visCount >= 2 ? "#e8cc7a"
+                             : "#e89090"
+                        font.pixelSize: 10
+                        font.family: root.sansFont
+                    }
+
+                    Text {
+                        x: 0
+                        y: 134
+                        width: redshiftTool.width
+                        wrapMode: Text.WordWrap
+                        text: "拖动滑块：谱线整体向长波移动 —— 这就是红移的定义。"
+                              + " z=0.738 时 Hα 从 656nm 移到 1141nm。"
+                        color: root.cTextDim
+                        font.pixelSize: 9
+                        font.family: root.sansFont
+                    }
+                }
+
+                // ★ 两个必须点明的误解
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: "★ 宇宙学红移不是多普勒效应，而是空间膨胀 —— "
+                          + "按 v = cz 算，z=1 就是达到光速，"
+                          + "这在相对论里不可能。\n"
+                          + "★ 星系看起来红多半因为它由老年恒星组成，"
+                          + "红移只是叠加在上面的一层效应。"
+                    color: Qt.rgba(0.82, 0.68, 0.50, 1.0)
+                    font.pixelSize: 9
+                    font.family: root.sansFont
+                    lineHeight: 1.4
                 }
 
                 Rectangle {
@@ -1574,9 +1980,12 @@ ApplicationWindow {
                 // ---- 图片来源标注 (仅在有照片时) ----
                 Text {
                     Layout.fillWidth: true
+                    // ★ 必须显式转 bool。写 `return p && p.length > 0` 时,
+                    //   若 p 是 undefined, `&&` 短路后返回的是 undefined 而非
+                    //   false, QML 会报 "Unable to assign [undefined] to bool"。
                     visible: {
                         const p = galaxyCard.detail.photo
-                        return p && p.length > 0
+                        return (p !== undefined && p !== null && p.length > 0)
                     }
                     text: "图片来源: ESO / NASA 公开图库 (详见 assets/galaxy/SOURCES.txt)"
                     color: Qt.rgba(0.56, 0.64, 0.75, 0.60)

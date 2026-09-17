@@ -106,6 +106,23 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
                NOTIFY cosmosVisibleChanged)
+    // ---- SDSS 真实星系的显示数量 ----
+    //
+    // ★ 与"星系数量"档位分开, 因为两者意图不同:
+    //     星系数量档位 —— 控制**程序生成的示意结构** (看宇宙网形态)
+    //     SDSS 开关    —— 控制**实测星系** (看真实分布)
+    //   SDSS 数据位于顶点缓冲末尾, 可独立截断。
+    Q_PROPERTY(int     sdssVisible READ sdssVisible WRITE setSdssVisible
+               NOTIFY sdssVisibleChanged)
+    Q_PROPERTY(int     sdssTotal   READ sdssTotal   NOTIFY sdssVisibleChanged)
+
+    // ★ 实际绘制数 (最近一帧 glDrawArrays 的数量)。
+    //
+    //   cosmosTotal 是**缓冲总数**, 而"星系数量"档位和"SDSS 开关"
+    //   都会二次削减绘制量 —— UI 若显示 total 会高估。这个属性给
+    //   UI 一个真实值, 性能预估也基于它计算。
+    Q_PROPERTY(int     cosmosDrawn READ cosmosDrawn NOTIFY cosmosPerfChanged)
+
     Q_PROPERTY(double  cosmosEstMs    READ cosmosEstMs    NOTIFY cosmosPerfChanged)
     Q_PROPERTY(double  cosmosEstFps   READ cosmosEstFps   NOTIFY cosmosPerfChanged)
     Q_PROPERTY(QString scaleName   READ scaleName                         NOTIFY scaleChanged)
@@ -199,11 +216,15 @@ public:
                               int scaleLevel, double jd);
     int  cosmosVisible() const { return m_cosmosVisible; }
     int  cosmosTotal() const { return m_cosmosTotal; }
+    int  cosmosDrawn() const { return m_cosmosDrawn; }
     QString testCard() const;
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
     double cosmosEstMs() const { return m_cosmosEstMs; }
+    int  sdssVisible() const { return m_sdssVisible; }
+    int  sdssTotal() const { return m_sdssTotal; }
+    void setSdssVisible(int n);
     double cosmosEstFps() const { return m_cosmosEstFps; }
     void setCosmosVisible(int n);
 
@@ -235,6 +256,7 @@ signals:
     void cosmosVisibleChanged();
     void cosmosTotalChanged();
     void cosmosPerfChanged();
+    void sdssVisibleChanged();
     void cosmosMapModeChanged();
     void sunMarkChanged();
     void galaxyLabelsChanged();
@@ -256,7 +278,10 @@ private:
     int     m_cosmosVisible = 0;   // 宇宙可见粒子数, <=0 全部
     bool    m_cosmosReady = false; // 宇宙粒子总数是否已就绪
     int     m_cosmosTotal = 0;     // 宇宙粒子总数 (就绪后填入)
+    int     m_cosmosDrawn = 0;     // 最近一帧实际绘制数 (含 SDSS 开关的削减)
     int     m_cosmosMapMode = 0;   // 0=对数压缩 1=真实比例
+    int     m_sdssVisible = 0;     // SDSS 可见数 (0=全部)
+    int     m_sdssTotal = 0;       // SDSS 总数
     double  m_cosmosEstMs = 0.0;   // 预估 GPU 耗时 (按实测系数标定)
     double  m_cosmosEstFps = 0.0;  // 预估帧率
     int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)

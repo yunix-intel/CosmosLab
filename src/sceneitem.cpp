@@ -103,6 +103,7 @@ void SolarSceneRenderer::render()
     vs.snap  = m_snapshot.snap;
     vs.cosmosVisible = m_snapshot.cosmosVisible;
     vs.cosmosMapMode  = m_snapshot.cosmosMapMode;
+    vs.sdssVisible    = m_snapshot.sdssVisible;
 
     m_renderer->render(vs);
 }
@@ -143,6 +144,14 @@ SolarScene::SolarScene(QQuickItem *parent)
     else if (window() && window()->devicePixelRatio() >= 1.9)
         m_renderScale = 0.72;
 
+    // SDSS 真实星系的默认显示量。
+    //
+    // ★ 取 50% 的理由 (实测): SDSS 星系在星系团/纤维里**极度聚集**,
+    //   过度绘制把填充率成本拉高 —— 1440x900 下全开约 58 FPS,
+    //   但 2880x1800 (DPR 2) 下会掉到约 12 FPS。
+    //   半量在两种分辨率下都能保持流畅, 且真实结构依然清晰。
+    m_sdssVisible = -2;              // -2 = 待定, 等 onTick 拿到总数后算 50%
+
     // 测试用: SS_MAPMODE=<0|1> 指定宇宙视图的距离映射模式
     if (qEnvironmentVariableIsSet("SS_MAPMODE"))
         m_cosmosMapMode = qEnvironmentVariableIntValue("SS_MAPMODE");
@@ -150,6 +159,11 @@ SolarScene::SolarScene(QQuickItem *parent)
     // 测试用: SS_COSMOS_N=<数量> 指定宇宙视图可见粒子数 (性能测试用)
     if (qEnvironmentVariableIsSet("SS_COSMOS_N"))
         m_cosmosVisible = qEnvironmentVariableIntValue("SS_COSMOS_N");
+
+    // 测试用: SS_SDSS=<数量> 指定 SDSS 星系可见数 (-1=关闭, 0=全部)
+    // ★ 需要它才能做性能标定: 单独改变 SDSS 数量, 隔离聚集性成本。
+    if (qEnvironmentVariableIsSet("SS_SDSS"))
+        m_sdssVisible = qEnvironmentVariableIntValue("SS_SDSS");
 
     // 测试用: SS_FOCUS=<天体id> 指定初始聚焦对象;
     //         SS_FOCUS=overview 表示拉远看整个太阳系。
@@ -229,30 +243,46 @@ void SolarScene::onTick()
             if (!m_cosmosReady) {
                 m_cosmosReady = true;
                 m_cosmosTotal = tot;
+                m_sdssTotal = Cosmos::lastBuiltSdss();
+                // 默认取 50% (见构造处说明)。-2 是待定哨兵值 ——
+                // 因为构造时还不知道总数, 只能等这里算。
+                if (m_sdssVisible == -2)
+                    m_sdssVisible = m_sdssTotal / 2;
                 emit cosmosTotalChanged();
+                emit sdssVisibleChanged();
             }
-            const int vis = (m_cosmosVisible <= 0 || m_cosmosVisible > tot)
-                                ? tot : m_cosmosVisible;
-            // ★ 系数标定 (1440x900, 点精灵, 实测):
-            //      7,120  个 -> 1.46 ms
-            //     17,802 个 -> 1.86 ms
-            //     35,603 个 -> 3.69 ms
-            //     71,206 个 -> 5.63 ms
-            //   最小二乘: 0.067 us/粒子 + 0.94 ms 固定开销。
+            // ★ 实际绘制量 = 共享公式 (与渲染线程完全一致) ——
+            //   不能直接用 tot: "星系数量"档位和"SDSS 开关"都会削减,
+            //   界面若打印 tot 会高估。
+            const int drawn = Cosmos::effectiveDrawn(
+                tot, m_sdssTotal, m_sdssVisible, m_cosmosVisible);
+            // ---- 耗时预估 (宇宙图层本身, 不含后处理链) ----
             //
-            //   ★ 注意: 早先用「重复粒子放大」做压力测试得到的是
-            //     18.8 us/千粒子 —— 比这个高 280 倍, 因为重复点全部
-            //     落在同一位置, 导致**极端过度绘制**, 完全不能代表
-            //     真实的空间分布。**必须用真实截断来标定**。
-            //   ★ 这也意味着: 接入 SDSS 真实星表后, 由于星系的空间
-            //     聚集性 (成团而非均匀), 实际填充率会高于这里的均匀
-            //     假设, 系数需重新实测。
-            const double ms = 0.94 + 0.000067 * vis;
+            // 实测数据 (2880x1800, renderScale 0.72, glFinish 计时):
+            //     N=71,206  (SDSS 关)    6.1 ~ 10.0 ms
+            //     N=158,614 (SDSS 50%)   8.6 ~  9.2 ms
+            //     N=242,604 (SDSS 全开) 10.4 ~ 17.5 ms
+            //   ★ 同一配置反复跑能差 2 倍 —— 这台机器上共享 GPU /
+            //     合成器的干扰很大, 精确标定不可行。取中位区间拟合:
+            //         约 6.0 ms 固定 + 0.042 us/粒子
+            //
+            // ★★ 必须明确的边界: 这是**宇宙图层**的耗时, 不是整机帧率。
+            //    实测整帧 (含约 10 个全屏 pass 的后处理 + 合成)
+            //    在 2880x1800 下只有约 18 FPS —— 后处理才是主瓶颈。
+            //    所以标签写"宇宙图层", 避免学生把这个数字当成帧率。
+            //
+            //   ★ 另一条教训: 早先用「重复粒子放大」做压力测试得到
+            //     18.8 us/千粒子 —— 比真实值高约 280 倍, 因为重复点
+            //     全部落在同一位置, 导致极端过度绘制, 完全不能代表
+            //     真实空间分布。**必须用真实截断来标定**。
+            const double ms = 6.0 + 0.000042 * drawn;
             const double fps = ms > 0.01 ? 1000.0 / ms : 999.0;
-            if (qAbs(ms - m_cosmosEstMs) > 0.01 || qAbs(vis - m_lastVis) != 0) {
+            if (qAbs(ms - m_cosmosEstMs) > 0.01 || drawn != m_lastVis
+                || drawn != m_cosmosDrawn) {
                 m_cosmosEstMs = ms;
                 m_cosmosEstFps = fps;
-                m_lastVis = vis;
+                m_cosmosDrawn = drawn;
+                m_lastVis = drawn;
                 emit cosmosPerfChanged();
             }
         }
@@ -1026,6 +1056,24 @@ QStringList SolarScene::galaxiesWithPhoto() const
     return out;
 }
 
+// ---------------------------------------------------------------------------
+//  SDSS 真实星系的显示数量
+//
+//  ★ 为什么单独控制 (与"星系数量"档位分开):
+//    实测 171,398 个 SDSS 星系让总粒子达 242,604, 2880x1800 下掉到
+//    约 12 FPS。而 SDSS 星系在星系团/纤维里**极度聚集**,
+//    大量点落在同一像素上 —— 过度绘制把填充率成本拉高。
+//    标定的 0.067 us/粒子 是在**均匀分布**下测的, 不适用于它。
+// ---------------------------------------------------------------------------
+void SolarScene::setSdssVisible(int n)
+{
+    if (n == m_sdssVisible)
+        return;
+    m_sdssVisible = n;
+    emit sdssVisibleChanged();
+    update();
+}
+
 QVariantMap SolarScene::cosmosPerf() const
 {
     QVariantMap m;
@@ -1036,11 +1084,15 @@ QVariantMap SolarScene::cosmosPerf() const
     const int total = m_cosmosTotal > 0 ? m_cosmosTotal
                                        : Cosmos::lastBuiltCount();
     m["ready"] = total > 0;
-    const int vis = (m_cosmosVisible <= 0 || m_cosmosVisible > total)
-                        ? total : m_cosmosVisible;
-    const double estMs = 0.5 + 0.0188 * (vis / 1000.0);
+    // ★ 用共享公式算**实际绘制量** (含 SDSS 开关的削减)。
+    //   m_sdssTotal 可能尚未就绪 (build 前为 0), 此时 drawn = total,
+    //   与旧行为一致; 就绪后自动变为真实值。
+    const int drawn = Cosmos::effectiveDrawn(
+        total, m_sdssTotal, m_sdssVisible, m_cosmosVisible);
+    // 与 onTick 里的预估保持同一模型 (见那里的标定说明)
+    const double estMs = 6.0 + 0.000042 * drawn;
     m["total"]   = total;
-    m["visible"] = vis;
+    m["visible"] = drawn;
     m["estMs"]   = estMs;
     m["estFps"]  = estMs > 0.01 ? 1000.0 / estMs : 999.0;
     return m;
@@ -1235,6 +1287,7 @@ ViewState SolarScene::takeSnapshot() const
     s.showAtmo   = m_showAtmo;
     s.cosmosVisible = m_cosmosVisible;
     s.cosmosMapMode = m_cosmosMapMode;
+    s.sdssVisible   = m_sdssVisible;
 
     // snap 是一次性标志: 取走即清除。
     // takeSnapshot 是 const 的, 故用 mutable 成员。

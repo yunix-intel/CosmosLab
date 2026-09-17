@@ -10,6 +10,10 @@
 #include <QtMath>
 #include <algorithm>
 #include <cmath>
+#include <QString>
+#include <QIODevice>
+#include <QFile>
+#include <cstring>
 #include <random>
 
 namespace {
@@ -195,6 +199,8 @@ QVector<CosmosMarker> Cosmos::markers(int mode)
 // ---------------------------------------------------------------------------
 
 int Cosmos::s_lastBuilt = 0;
+int Cosmos::s_lastBuiltSdss = 0;
+int Cosmos::s_lastDrawn = 0;
 
 Cosmos::Cosmos() = default;
 Cosmos::~Cosmos() = default;
@@ -246,6 +252,114 @@ void Cosmos::init(QOpenGLFunctions_3_3_Core *f)
 //
 //    纯随机分布会得到均匀噪点, 完全不像宇宙网 —— 这一点实测对比很明显。
 // ---------------------------------------------------------------------------
+
+// 红移 -> 共动距离 (百万光年)。
+//
+// ★ 用 Simpson 积分算标准 ΛCDM 公式, 不用 z*c/H0 线性近似 ——
+//   后者在 z=1 时低估约 30%, 会把远处的纤维"压扁"。
+//   参数取 Planck 2018: H0=67.4 km/s/Mpc, Ωm=0.315。
+static double comovingDistanceMly(double z)
+{
+    if (z <= 0.0)
+        return 0.0;
+    constexpr double H0 = 67.4, OM0 = 0.315, C_KMS = 299792.458;
+    constexpr double MPC_TO_MLY = 3.26156;
+    const int n = 128;
+    const double dz = z / n;
+    double tot = 0.0;
+    for (int i = 0; i <= n; ++i) {
+        const double zz = i * dz;
+        const double e = std::sqrt(OM0 * std::pow(1.0 + zz, 3) + (1.0 - OM0));
+        const double w = (i == 0 || i == n) ? 1.0 : (i % 2 ? 4.0 : 2.0);
+        tot += w / e;
+    }
+    return (C_KMS / H0) * (dz / 3.0) * tot * MPC_TO_MLY;
+}
+
+// ---------------------------------------------------------------------------
+//  SDSS 真实星系星表
+//
+//  ★ 数据来源: SDSS DR17 eBOSS LRG 聚类样本
+//     https://data.sdss.org/sas/dr17/eboss/lss/catalogs/DR16/
+//       eBOSS_LRG_clustering_data-NGC-vDR16.fits   (北银极 107,500)
+//       eBOSS_LRG_clustering_data-SGC-vDR16.fits   (南银极  67,316)
+//     每个星系都有**光谱测定的红移**, 由红移换算共动距离 ——
+//     于是这是真实的星系三维位置, 不是程序生成的假分布。
+//
+//  ★ 样本特征 (必须在 UI 说明, 否则会被误读为"全部星系"):
+//     红移 0.600 ~ 1.000   共动距离 7,429 ~ 11,093 Mly
+//     这不是全天完整样本, 而是 LRG (亮红星系) 的**观测窗口**。
+//
+//  ★ 与程序生成粒子的关系:
+//     SDSS 只覆盖 z=0.6~1.0 这个壳层。近处 (本星系群/室女团) 与
+//     更远处 (CMB) 没有数据, 故保留程序生成的示意结构。
+//     UI 里明确区分"实测"与"示意" —— 不混淆两者。
+//
+//  ★ 格式: [uint32 计数][每记录 4 个 float32: ra, dec, z, weight]
+//     与 assets/lss/lrg.bin 一致 (由 tools/parse_sdss.py 生成)
+// ---------------------------------------------------------------------------
+
+// 加载 SDSS 星表。返回 (方向, 距离 Mly, 权重) 三元组列表。
+// 文件缺失时返回空 (不报错) —— 这样没有数据的机器也能正常运行。
+struct SdssGalaxy {
+    float dirX, dirY, dirZ;
+    float distMly;
+    float weight;
+};
+
+static QVector<SdssGalaxy> loadSdssCatalog(const QString &path)
+{
+    QVector<SdssGalaxy> out;
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        qWarning().noquote()
+            << QString("[宇宙] 未找到 SDSS 星表 %1 —— 将只用示意结构").arg(path);
+        return out;
+    }
+    const QByteArray raw = f.readAll();
+    f.close();
+
+    // 头 4 字节是计数
+    if (raw.size() < 4) {
+        qWarning() << "[宇宙] SDSS 星表文件过短";
+        return out;
+    }
+    quint32 n = 0;
+    std::memcpy(&n, raw.constData(), 4);
+    const qsizetype need = 4 + qsizetype(n) * 4 * 4;
+    if (raw.size() < need) {
+        qWarning().noquote()
+            << QString("[宇宙] SDSS 星表长度不符: 期望 %1, 实际 %2")
+                   .arg(need).arg(raw.size());
+        return out;
+    }
+
+    out.reserve(int(n));
+    const float *p = reinterpret_cast<const float *>(raw.constData() + 4);
+    for (quint32 i = 0; i < n; ++i) {
+        const float ra = p[i * 4 + 0];
+        const float dec = p[i * 4 + 1];
+        const float z = p[i * 4 + 2];
+        const float w = p[i * 4 + 3];
+        if (!(z > 0.0f) || !(w > 0.0f)
+            || ra < 0.0f || ra > 360.0f || dec < -90.0f || dec > 90.0f)
+            continue;
+
+        const double raR = double(ra) * M_PI / 180.0;
+        const double decR = double(dec) * M_PI / 180.0;
+        const double cd = std::cos(decR);
+        SdssGalaxy g;
+        g.dirX = float(cd * std::cos(raR));
+        g.dirY = float(std::sin(decR));
+        g.dirZ = float(cd * std::sin(raR));
+        // 距离在 C++ 侧就算好 (它是物理量, 与映射模式无关)
+        g.distMly = float(comovingDistanceMly(double(z)));
+        g.weight = w;
+        out.append(g);
+    }
+    return out;
+}
+
 void Cosmos::build()
 {
     QVector<float> data;
@@ -312,6 +426,10 @@ void Cosmos::build()
     };
 
     // ---- 3. 沿纤维撒星系 ----
+    //
+    //  ★ 跳过 SDSS 覆盖的距离区间 (7,400~11,100 Mly) ——
+    //    那里将由真实星系填充。不跳过会出现"双重结构":
+    //    同一片空间既有实测点又有假点, 视觉糊成一团。
     // 每个节点连到它的 3~5 个最近邻, 沿连线撒点
     for (int i = 0; i < nodes.size(); ++i) {
         // 找最近邻
@@ -342,6 +460,13 @@ void Cosmos::build()
                     continue;
                 // 亮度: 靠近节点更亮 (节点处星系更密)
                 const double toNode = qMin(u, 1.0 - u) * 2.0;
+                // ★ 跳过 SDSS 覆盖区间: 该处用真实星系, 不再撒假点
+                const double rHere =
+                    std::sqrt(x * x + y * y + z * z);
+                const double dHere = mlyFromSceneRadius(rHere);
+                if (dHere > 7400.0 && dHere < 11100.0)
+                    continue;
+
                 const float br = float(0.35 + 0.65 * (1.0 - toNode)
                                        * (0.6 + 0.4 * uni(rng)));
                 push(x, y, z, br);
@@ -375,6 +500,13 @@ void Cosmos::build()
         const double z = R * std::sin(ph) * std::sin(th);
         if (inVoid(x, y, z))
             continue;
+        // ★ 同上: SDSS 覆盖区间内不撒假点
+        {
+            const double rHere = std::sqrt(x * x + y * y + z * z);
+            const double dHere = mlyFromSceneRadius(rHere);
+            if (dHere > 7400.0 && dHere < 11100.0)
+                continue;
+        }
         push(x, y, z, float(0.10 + 0.22 * uni(rng)));
         ++m_voidCount;
     }
@@ -406,8 +538,32 @@ void Cosmos::build()
         }
     }
 
+    // ---- 6. SDSS 真实星系 (替换该距离区间内的示意结构) ----
+    //
+    //  ★ 这是"真实数据优先"的落实: 在 SDSS 有观测的距离区间内,
+    //    用**实测的星系位置**而不是程序生成的点。
+    //
+    //  ★ 顶点格式与新架构一致 (方向 + 真实距离 + 亮度),
+    //    所以距离映射仍在着色器里做 —— SDSS 数据自动支持两种映射模式。
+    {
+        const QVector<SdssGalaxy> cat = loadSdssCatalog(
+            QStringLiteral("D:/tmp/solar-system-cpp/assets/lss/lrg.bin"));
+        m_sdssCount = cat.size();
+        for (const SdssGalaxy &g : cat) {
+            // 亮度按权重微调: 权重高的区域观测更完整, 不必额外提亮,
+            // 这里只用很小的抖动避免"一片死白"
+            const float br = 0.42f + 0.35f * qMin(g.weight, 2.0f) / 2.0f;
+            data << g.dirX << g.dirY << g.dirZ << g.distMly << br;
+        }
+        if (m_sdssCount > 0) {
+            qInfo().noquote()
+                << QString("[宇宙] SDSS 真实星系已载入 %1 个").arg(m_sdssCount);
+        }
+    }
+
     m_count = data.size() / kFloats;
     s_lastBuilt = m_count;
+    s_lastBuiltSdss = m_sdssCount;
 
     // ---- 上传 ----
     if (!m_vao.isCreated())
@@ -459,9 +615,20 @@ void Cosmos::render(const QMatrix4x4 &viewProj, float pointScale)
     m_prog->setUniformValue("uMapMode", int(m_mapMode));
 
     m_vao.bind();
-    // ★ 性能开关: 只画前 visibleCount() 个。
-    //   顶点数据不变, 仅改 count —— 切换零成本。
-    m_f->glDrawArrays(GL_POINTS, 0, visibleCount());
+    // ★ 性能开关: 分段控制可见数量。
+    //
+    //   顶点缓冲布局: [示意结构粒子] [SDSS 星系]  (SDSS 是最后追加的)
+    //
+    //   为什么要分段: SDSS 星系成团性强, 单位粒子的填充成本
+    //   远高于均匀分布的示意粒子 (过度绘制)。分开控制能独立取舍。
+    //
+    //   计算提取到了 Cosmos::effectiveDrawn() —— 与 GUI 侧共用,
+    //   避免"渲染真画了 N 个、界面显示 M 个"这类公式漂移。
+    const int drawCount = effectiveDrawn(m_count, m_sdssCount,
+                                         m_sdssVisible, m_visible);
+    m_f->glDrawArrays(GL_POINTS, 0, qMax(0, drawCount));
+    // 记录本帧真实绘制量, 供 GUI 线程显示 (见 cosmos.h 的 lastDrawn 说明)
+    s_lastDrawn = qMax(0, drawCount);
     m_vao.release();
 
     m_prog->release();
