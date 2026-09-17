@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "sceneitem.h"
+#include <QFile>
 #include "bodyregistry.h"
 #include "celestialdata.h"
 #include "ephemeris.h"
@@ -926,6 +927,77 @@ QVariantMap SolarScene::cosmosInfo() const
 //
 //  ★ 换数据集 (如接 SDSS 星表) 后此系数需重新标定。
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  具名天体的详情 (含真实照片)
+//
+//  ★ 照片来源: assets/galaxy/<id>.jpg
+//     全部是 ESO / NASA 的官方观测图, 来源记录见同目录 SOURCES.txt。
+//
+//  ★ 找不到图时 photo 返回空串 —— UI 显示"暂无实景图"。
+//     为什么坚持这样: 这些天体里有一部分 (如 M86/M49 这类普通椭圆星系,
+//     以及拉尼亚凯亚/巨壁/空洞这类**由数据分析定义的结构**)
+//     **根本不存在"一张照片"** —— 它们或者没有单独观测, 或者本质是
+//     速度场/密度场的边界。拿别的图冒充是误导。
+// ---------------------------------------------------------------------------
+QString SolarScene::testCard() const
+{
+    return QString::fromLocal8Bit(qgetenv("SS_CARD"));
+}
+
+QVariantMap SolarScene::galaxyDetail(const QString &id) const
+{
+    QVariantMap out;
+    if (id.isEmpty())
+        return out;
+
+    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+    const QString photo = dir + id + QStringLiteral(".jpg");
+
+    // 从数据表里找该天体
+    const auto fill = [&](const GalaxyData &g) {
+        out["id"]      = QString::fromUtf8(g.id);
+        out["nameCn"]  = QString::fromUtf8(g.nameCn);
+        out["nameEn"]  = QString::fromUtf8(g.nameEn);
+        out["dist"]    = g.distanceMly;
+        out["diameter"]= g.diameterKly;
+        out["massLog"] = g.massLog10;
+        out["type"]    = g.type;
+        out["desc"]    = QString::fromUtf8(g.desc);
+        out["photo"]   = QFile::exists(photo) ? photo : QString();
+    };
+
+    for (int i = 0; i < LOCAL_GROUP_COUNT; ++i) {
+        if (id == QLatin1String(LOCAL_GROUP[i].id)) {
+            fill(LOCAL_GROUP[i]);
+            return out;
+        }
+    }
+    for (int i = 0; i < VIRGO_CLUSTER_COUNT; ++i) {
+        if (id == QLatin1String(VIRGO_CLUSTER[i].id)) {
+            fill(VIRGO_CLUSTER[i]);
+            return out;
+        }
+    }
+    return {};      // 大尺度结构等无照片天体
+}
+
+QStringList SolarScene::galaxiesWithPhoto() const
+{
+    QStringList out;
+    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+    for (int i = 0; i < LOCAL_GROUP_COUNT; ++i) {
+        const QString id = QString::fromUtf8(LOCAL_GROUP[i].id);
+        if (QFile::exists(dir + id + QStringLiteral(".jpg")))
+            out << id;
+    }
+    for (int i = 0; i < VIRGO_CLUSTER_COUNT; ++i) {
+        const QString id = QString::fromUtf8(VIRGO_CLUSTER[i].id);
+        if (QFile::exists(dir + id + QStringLiteral(".jpg")))
+            out << id;
+    }
+    return out;
+}
+
 QVariantMap SolarScene::cosmosPerf() const
 {
     QVariantMap m;
@@ -964,10 +1036,51 @@ QVariantList SolarScene::cosmosNotes() const
 
 QVariantList SolarScene::cosmosStructures() const
 {
+    // ★ 列表包含三层结构, 与 3D 场景里的标签一一对应:
+    //     本星系群成员 → 室女座团成员 → 大尺度结构
+    //
+    //   ★ 每项带 id 与 hasPhoto:
+    //     - id 用于点击后查详情 (SolarScene::galaxyDetail)
+    //     - hasPhoto 让 UI 能标出"哪些有实景图" —— 有图的显示一个小图标,
+    //       没图的点开后明确提示"暂无实景图"。
+    //       不用假图冒充, 是"只做能确定真实的"这一原则的直接体现。
     QVariantList out;
+    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+
+    const auto fromGalaxy = [&](const GalaxyData &g, int kind) {
+        QVariantMap m;
+        const QString id = QString::fromUtf8(g.id);
+        m["id"]       = id;
+        m["name"]     = QString::fromUtf8(g.nameCn);
+        m["en"]       = QString::fromUtf8(g.nameEn);
+        m["dist"]     = g.distanceMly < 1e-9
+                        ? QStringLiteral("\u6211\u4eec\u6240\u5728")
+                        : (g.distanceMly < 1.0
+                           ? QStringLiteral("%1 \u4e07\u5149\u5e74")
+                                 .arg(g.distanceMly * 100.0, 0, 'f', 1)
+                           : QStringLiteral("%1 \u767e\u4e07\u5149\u5e74")
+                                 .arg(g.distanceMly, 0, 'f', 1));
+        m["size"]     = QStringLiteral("\u76f4\u5f84 %1 \u5343\u5149\u5e74")
+                            .arg(g.diameterKly, 0, 'f', 1);
+        m["kind"]     = kind;
+        m["desc"]     = QString::fromUtf8(g.desc);
+        m["hasPhoto"] = QFile::exists(dir + id + QStringLiteral(".jpg"));
+        out.append(m);
+    };
+
+    // ---- 本星系群 (kind=0: 星系) ----
+    for (int i = 0; i < LOCAL_GROUP_COUNT; ++i)
+        fromGalaxy(LOCAL_GROUP[i], 0);
+
+    // ---- 室女座团成员 (kind=0: 星系) ----
+    for (int i = 0; i < VIRGO_CLUSTER_COUNT; ++i)
+        fromGalaxy(VIRGO_CLUSTER[i], 0);
+
+    // ---- 大尺度结构 (kind 沿用原值: 2=超星系团 3=巨壁 4=空洞) ----
     for (int i = 0; i < LARGE_STRUCTURES_COUNT; ++i) {
         const LargeStructure &s = LARGE_STRUCTURES[i];
         QVariantMap m;
+        m["id"]   = QString();
         m["name"] = QString::fromUtf8(s.nameCn);
         m["en"]   = QString::fromUtf8(s.nameEn);
         m["dist"] = s.distanceFromEarthMly < 1.0
@@ -978,14 +1091,18 @@ QVariantList SolarScene::cosmosStructures() const
                        : QStringLiteral("%1 \u767e\u4e07\u5149\u5e74")
                              .arg(s.distanceFromEarthMly, 0, 'f', 0));
         m["size"] = s.sizeMly >= 1000.0
-                    ? QStringLiteral("%1 \u4ebf\u5149\u5e74")
+                    ? QStringLiteral("\u5c3a\u5ea6 %1 \u4ebf\u5149\u5e74")
                           .arg(s.sizeMly / 100.0, 0, 'f', 0)
-                    : QStringLiteral("%1 \u767e\u4e07\u5149\u5e74")
+                    : QStringLiteral("\u5c3a\u5ea6 %1 \u767e\u4e07\u5149\u5e74")
                           .arg(s.sizeMly, 0, 'f', 0);
-        m["kind"] = s.kind;
-        m["desc"] = QString::fromUtf8(s.desc);
+        m["kind"]     = s.kind == 2 ? 4 : (s.kind == 0 ? 3 : 2);
+        m["desc"]     = QString::fromUtf8(s.desc);
+        // ★ 大尺度结构**没有单张照片** —— 它们是速度场/密度场的边界,
+        //   不是能被拍下来的天体。固定为 false, 由 UI 提示。
+        m["hasPhoto"] = false;
         out.append(m);
     }
+
     return out;
 }
 QVariantMap SolarScene::galaxyInfo() const

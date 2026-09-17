@@ -89,6 +89,9 @@ class SolarScene : public QQuickFramebufferObject
     //      3. `running: perf.total <= 0` —— 同样首帧 undefined 比较为
     //         false, 定时器同样不启动。
     //    Q_PROPERTY + NOTIFY 是 Qt 唯一可靠的跨线程→QML 通知机制。
+    // 测试用: SS_CARD=<天体id> 启动时自动打开详情卡 (供截图验证)
+    Q_PROPERTY(QString testCard READ testCard CONSTANT)
+
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
                NOTIFY cosmosVisibleChanged)
@@ -164,6 +167,15 @@ public:
     Q_INVOKABLE QVariantMap  cosmosInfo() const;                 // 宇宙学参数
     // 粒子数与预估 GPU 耗时 (性能开关的反馈)
     Q_INVOKABLE QVariantMap  cosmosPerf() const;
+    // 具名天体的详情 (含真实照片路径)。id 为空或找不到时返回空 map。
+    //
+    // ★ photo 字段是**空字符串**表示"暂无实景图" —— 界面据此
+    //   显示提示, 而不是拿一张不相关的图冒充。这符合"只做能确定
+    //   真实的"原则。
+    Q_INVOKABLE QVariantMap  galaxyDetail(const QString &id) const;
+
+    // 有实景图的天体 id 列表 (供 UI 标记哪些可点开看照片)
+    Q_INVOKABLE QStringList  galaxiesWithPhoto() const;
     Q_INVOKABLE QVariantList cosmosNotes() const;                // 宇宙教学要点
     Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
     Q_INVOKABLE void focusOn(const QString &id);
@@ -176,6 +188,7 @@ public:
                               int scaleLevel, double jd);
     int  cosmosVisible() const { return m_cosmosVisible; }
     int  cosmosTotal() const { return m_cosmosTotal; }
+    QString testCard() const;
     double cosmosEstMs() const { return m_cosmosEstMs; }
     double cosmosEstFps() const { return m_cosmosEstFps; }
     void setCosmosVisible(int n);
