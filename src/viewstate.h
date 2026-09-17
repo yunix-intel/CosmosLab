@@ -49,4 +49,7 @@ struct ViewState
     // 宇宙视图可见粒子数 (性能开关)。<=0 表示全部。
     // ★ 只改 glDrawArrays 的 count, 顶点数据不动 —— 切换零成本。
     int    cosmosVisible = 0;
+
+    // 距离映射模式: 0=对数压缩 1=真实比例
+    int    cosmosMapMode = 0;
 };

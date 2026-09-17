@@ -54,6 +54,11 @@ struct CosmosMarker
     QString detail;        // 真实距离等
     QVector3D pos;
     int     kind;          // 0=星系 1=星系群/团 2=超星系团 3=巨壁 4=空洞
+
+    // ★ 真实距离 (百万光年)。
+    //   标签位置必须随映射模式变化, 所以这里保留**物理量**,
+    //   而不是只存映射后的坐标 —— 否则切换模式时标签会与粒子错位。
+    double  distMly = 0.0;
 };
 
 class Cosmos
@@ -93,17 +98,41 @@ public:
 
     void render(const QMatrix4x4 &viewProj, float pointScale);
 
-    // 场景半径 (对数映射后的最大半径)
+    // 场景半径 (映射后的最大半径)
     static float sceneRadius() { return 100.0f; }
+
+    // ---- 距离映射模式 ----
+    //
+    // ★ 两种模式展示**同一批数据**, 只是轴的性质不同:
+    //     对数压缩 (Log)  —— 一屏容纳 0.2 Mly ~ 46.5 Gly 共六个数量级,
+    //                        代价是远处间隔被压缩 (看起来像挤在一起)
+    //     真实比例 (Linear)—— 距离成比例, 但本星系群会缩到亚像素
+    //                        (这在物理上**正确**: 它在宇宙尺度上确实那么小)
+    //   做成开关, 是为了让"把宇宙塞进一屏付出了什么"这件事**可见** ——
+    //   这本身就是教学要点。
+    enum MapMode { MapLog = 0, MapLinear = 1 };
+
+    void setMapMode(int m) { m_mapMode = (m == MapLinear) ? MapLinear : MapLog; }
+    int  mapMode() const { return int(m_mapMode); }
+
+    // 距离 (Mly) -> 场景半径。静态, 供 UI 侧算标签位置时复用。
+    static float sceneRadiusFromMly(double mly, int mode);
+
+    // 反函数: 场景半径 -> 真实距离 (Mly)。把旧的场景坐标迁移成物理量用。
+    static double mlyFromSceneRadius(double r);
 
     // 真实距离 (Mly) -> 场景半径。对数映射, 见文件头说明。
     static float distToScene(double mly);
 
     // 具名结构列表 (位置已换算)
-    static QVector<CosmosMarker> markers();
+    // mode: 决定返回的场景坐标用哪种映射 —— 标签必须与粒子一致
+    static QVector<CosmosMarker> markers(int mode = MapLog);
 
 private:
     void build();
+
+    // 距离映射模式 (对数压缩 / 真实比例)
+    MapMode m_mapMode = MapLog;
 
     QOpenGLFunctions_3_3_Core *m_f = nullptr;
     QOpenGLShaderProgram *m_prog = nullptr;

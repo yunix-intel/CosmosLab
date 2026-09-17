@@ -102,6 +102,7 @@ void SolarSceneRenderer::render()
     vs.showAtmo    = m_snapshot.showAtmo;
     vs.snap  = m_snapshot.snap;
     vs.cosmosVisible = m_snapshot.cosmosVisible;
+    vs.cosmosMapMode  = m_snapshot.cosmosMapMode;
 
     m_renderer->render(vs);
 }
@@ -141,6 +142,10 @@ SolarScene::SolarScene(QQuickItem *parent)
         m_renderScale = qgetenv("SS_RES").toDouble();
     else if (window() && window()->devicePixelRatio() >= 1.9)
         m_renderScale = 0.72;
+
+    // 测试用: SS_MAPMODE=<0|1> 指定宇宙视图的距离映射模式
+    if (qEnvironmentVariableIsSet("SS_MAPMODE"))
+        m_cosmosMapMode = qEnvironmentVariableIntValue("SS_MAPMODE");
 
     // 测试用: SS_COSMOS_N=<数量> 指定宇宙视图可见粒子数 (性能测试用)
     if (qEnvironmentVariableIsSet("SS_COSMOS_N"))
@@ -298,7 +303,10 @@ void SolarScene::updateSunMark()
         const QMatrix4x4 vpC = pC * vC;
 
         QVariantList labels;
-        const QVector<CosmosMarker> marks = Cosmos::markers();
+        // ★ 必须传当前映射模式: 标签位置要与粒子一致,
+        //   否则切换模式后标签会飘到画面外。
+        const QVector<CosmosMarker> marks =
+            Cosmos::markers(m_cosmosMapMode);
         for (const CosmosMarker &mk : marks) {
             const QVector4D clip = vpC * QVector4D(mk.pos, 1.0f);
             if (clip.w() <= 1e-6f)
@@ -939,6 +947,26 @@ QVariantMap SolarScene::cosmosInfo() const
 //     **根本不存在"一张照片"** —— 它们或者没有单独观测, 或者本质是
 //     速度场/密度场的边界。拿别的图冒充是误导。
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  切换宇宙视图的距离映射模式
+//
+//  ★ 零成本: 映射在着色器里做, 这里只需改一个 int 并触发重绘。
+//    顶点缓冲不动 (它存的是"方向 + 真实距离"这样的物理量)。
+//
+//  ★ 但**标签必须跟着变**: 标签位置由场景坐标投影而来,
+//    而场景坐标是映射后的结果 —— 换成线性映射后, 同一个天体的
+//    场景半径会差上百倍。所以这里要触发标签重算 (update)。
+// ---------------------------------------------------------------------------
+void SolarScene::setCosmosMapMode(int m)
+{
+    const int v = (m == 1) ? 1 : 0;
+    if (v == m_cosmosMapMode)
+        return;
+    m_cosmosMapMode = v;
+    emit cosmosMapModeChanged();
+    update();
+}
+
 QString SolarScene::testCard() const
 {
     return QString::fromLocal8Bit(qgetenv("SS_CARD"));
@@ -1206,6 +1234,7 @@ ViewState SolarScene::takeSnapshot() const
     s.showRings  = m_showRings;
     s.showAtmo   = m_showAtmo;
     s.cosmosVisible = m_cosmosVisible;
+    s.cosmosMapMode = m_cosmosMapMode;
 
     // snap 是一次性标志: 取走即清除。
     // takeSnapshot 是 const 的, 故用 mutable 成员。

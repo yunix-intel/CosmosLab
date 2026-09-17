@@ -20,21 +20,45 @@ constexpr double kDMax    = 46500.0;      // Mly, 可观测宇宙半径
 constexpr float  kSceneR  = 100.0f;
 
 // 粒子属性: 位置(3) + 亮度(1)
-constexpr int kFloats = 4;
+// ★ 顶点格式: aDir(3) + aDistMly(1) + aBright(1)
+//   存**物理量**而非映射后的坐标 —— 切换映射只需改 uniform,
+//   无需重建顶点缓冲。
+constexpr int kFloats = 5;
 
 const char *kVert = R"(
 #version 330 core
-layout(location = 0) in vec3  aPos;
-layout(location = 1) in float aBright;
+layout(location = 0) in vec3  aDir;        // 单位方向
+layout(location = 1) in float aDistMly;    // 真实距离 (百万光年)
+layout(location = 2) in float aBright;
 
 uniform mat4  uViewProj;
 uniform float uPixelScale;
 uniform float uSize;
+uniform int   uMapMode;      // 0 = 对数压缩, 1 = 真实比例
 
 out float vBright;
 
+const float kD0     = 0.1;         // Mly, 让最近天体也有间距
+const float kDMax   = 46500.0;     // Mly, 可观测宇宙半径
+const float kSceneR = 100.0;
+
+// 距离 -> 场景半径
+//
+// ★ 映射放在着色器而非 CPU: 切换模式只需改 uMapMode, 零成本。
+//   放 CPU 则每次切换都要重建并重传整个顶点缓冲。
+//
+// ★ 本函数必须与 C++ 侧 Cosmos::sceneRadiusFromMly 保持**完全一致**,
+//   否则标签位置会与粒子错开。
+float mappedRadius(float mly) {
+    if (uMapMode == 1) {
+        return clamp(mly / kDMax, 0.0, 1.0) * kSceneR;      // 真实比例
+    }
+    return log(1.0 + mly / kD0) / log(1.0 + kDMax / kD0) * kSceneR;
+}
+
 void main() {
-    vec4 clip = uViewProj * vec4(aPos, 1.0);
+    vec3 pos = normalize(aDir) * mappedRadius(aDistMly);
+    vec4 clip = uViewProj * vec4(pos, 1.0);
     gl_Position = clip;
     float sz = uSize * uPixelScale / max(clip.w, 0.001);
     gl_PointSize = clamp(sz, 0.7, 4.5);
@@ -65,17 +89,39 @@ void main() {
 //  距离映射
 // ---------------------------------------------------------------------------
 
-float Cosmos::distToScene(double mly)
+float Cosmos::sceneRadiusFromMly(double mly, int mode)
 {
-    // r = log10(1 + d/d0) / log10(1 + dMax/d0) × R
-    // 取 d + kD0 而非 max(d, kD0), 保证 d=0 时映射到 0 且单调
+    if (mode == MapLinear)
+        return float(qBound(0.0, mly / kDMax, 1.0)) * kSceneR;
     const double num = std::log10(1.0 + mly / kD0);
     const double den = std::log10(1.0 + kDMax / kD0);
     return float(num / den) * kSceneR;
 }
 
-QVector<CosmosMarker> Cosmos::markers()
+float Cosmos::distToScene(double mly)
 {
+    return sceneRadiusFromMly(mly, MapLog);       // 兼容旧调用
+}
+
+double Cosmos::mlyFromSceneRadius(double r)
+{
+    // ★ 对数映射的**反函数**, 用于把"旧的场景坐标"迁移成真实距离。
+    //   现有粒子的场景坐标本就是对数映射的结果, 反推后**视觉完全不变**,
+    //   但数据从此是物理量 (距离 Mly)。
+    //     R = log10(1 + d/d0) / log10(1 + dMax/d0) * Rmax
+    //  => d = d0 * (10^(R/Rmax * log10(1+dMax/d0)) - 1)
+    if (r <= 0.0)
+        return 0.0;
+    const double den = std::log10(1.0 + kDMax / kD0);
+    const double t = qBound(0.0, r / double(kSceneR), 1.0);
+    return kD0 * (std::pow(10.0, t * den) - 1.0);
+}
+
+QVector<CosmosMarker> Cosmos::markers(int mode)
+{
+    // ★ 标签位置必须与粒子用**同一种映射** —— 否则切换模式后
+    //   标签会飘到粒子之外。所以这里也接受 mode 参数。
+    //   同时把真实距离填进 distMly, 供 UI 显示与二次计算。
     QVector<CosmosMarker> out;
 
     // ---- 本星系群成员 ----
@@ -85,7 +131,7 @@ QVector<CosmosMarker> Cosmos::markers()
     //   几个像素。这是有意的视觉放大, 标注里给出真实距离作补偿。
     for (int i = 0; i < LOCAL_GROUP_COUNT; ++i) {
         const GalaxyData &g = LOCAL_GROUP[i];
-        const double r = distToScene(g.distanceMly);
+        const double r = sceneRadiusFromMly(g.distanceMly, mode);
         // 用赤经/赤纬定方向; 本星系群成员挤在一起, 加一圈人为的角度偏移
         const double ra  = g.raDeg  * M_PI / 180.0;
         const double dec = g.decDeg * M_PI / 180.0;
@@ -105,13 +151,13 @@ QVector<CosmosMarker> Cosmos::markers()
                      g.distanceMly < 1e-9
                         ? QStringLiteral("我们所在")
                         : QStringLiteral("%1 百万光年").arg(g.distanceMly, 0, 'f', 2),
-                     p, 0 });
+                     p, 0, g.distanceMly });
     }
 
     // ---- 室女座星系团成员 ----
     for (int i = 0; i < VIRGO_CLUSTER_COUNT; ++i) {
         const GalaxyData &g = VIRGO_CLUSTER[i];
-        const double r = distToScene(g.distanceMly);
+        const double r = sceneRadiusFromMly(g.distanceMly, mode);
         const double ra  = g.raDeg  * M_PI / 180.0;
         const double dec = g.decDeg * M_PI / 180.0;
         const QVector3D p(float(std::cos(dec) * std::cos(ra) * r),
@@ -120,13 +166,13 @@ QVector<CosmosMarker> Cosmos::markers()
         out.append({ QString::fromUtf8(g.nameCn),
                      QString::fromUtf8(g.nameEn),
                      QStringLiteral("%1 百万光年").arg(g.distanceMly, 0, 'f', 1),
-                     p, 1 });
+                     p, 1, g.distanceMly });
     }
 
     // ---- 大尺度结构 ----
     for (int i = 0; i < LARGE_STRUCTURES_COUNT; ++i) {
         const LargeStructure &s = LARGE_STRUCTURES[i];
-        const double r = distToScene(s.distanceFromEarthMly);
+        const double r = sceneRadiusFromMly(s.distanceFromEarthMly, mode);
         // 用结构名做稳定的方位角散列 (同名每次运行位置一致)
         uint h = 2166136261u;
         for (const char *c = s.nameEn; *c; ++c)
@@ -139,7 +185,8 @@ QVector<CosmosMarker> Cosmos::markers()
         out.append({ QString::fromUtf8(s.nameCn),
                      QString::fromUtf8(s.nameEn),
                      QStringLiteral("%1 百万光年").arg(s.distanceFromEarthMly, 0, 'f', 0),
-                     p, s.kind == 2 ? 4 : (s.kind == 0 ? 3 : 2) });
+                     p, s.kind == 2 ? 4 : (s.kind == 0 ? 3 : 2),
+                     s.distanceFromEarthMly });
     }
 
     return out;
@@ -245,8 +292,23 @@ void Cosmos::build()
         return false;
     };
 
+    // ★ push 现在接受**场景坐标**, 内部反推成 (方向, 真实距离 Mly)。
+    //
+    //   为什么这么做: 顶点格式已改为存物理量 (方向 + 距离), 映射在着色器。
+    //   而现有的粒子是用场景坐标撒的 —— 就地反推即可完成迁移:
+    //       r = |(x,y,z)|                  场景半径
+    //       d = mlyFromSceneRadius(r)      真实距离 (对数映射的反函数)
+    //       dir = (x,y,z)/r                方向
+    //   由于"反推再正推得到同样的 r", **视觉完全不变**。
     auto push = [&](double x, double y, double z, float bright) {
-        data << float(x) << float(y) << float(z) << bright;
+        const double r = std::sqrt(x * x + y * y + z * z);
+        if (r < 1e-9) {
+            data << 0.0f << 0.0f << 0.0f << 0.0f << bright;
+            return;
+        }
+        const double d = mlyFromSceneRadius(r);
+        data << float(x / r) << float(y / r) << float(z / r)
+             << float(d) << bright;
     };
 
     // ---- 3. 沿纤维撒星系 ----
@@ -358,13 +420,19 @@ void Cosmos::build()
     m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
     m_vbo.allocate(data.constData(), data.size() * int(sizeof(float)));
 
+    // ★ 顶点布局变了: aDir(3) + aDistMly(1) + aBright(1)
+    //   亮度从第 4 个 float 挪到第 5 个 —— 漏改这里会导致
+    //   所有粒子亮度取到"距离"值, 表现为明暗完全错乱。
     const int stride = kFloats * int(sizeof(float));
-    m_f->glEnableVertexAttribArray(0);
+    m_f->glEnableVertexAttribArray(0);       // 方向 vec3
     m_f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride,
                                reinterpret_cast<void *>(0));
-    m_f->glEnableVertexAttribArray(1);
+    m_f->glEnableVertexAttribArray(1);       // 距离 float
     m_f->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, stride,
                                reinterpret_cast<void *>(3 * sizeof(float)));
+    m_f->glEnableVertexAttribArray(2);       // 亮度 float
+    m_f->glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, stride,
+                               reinterpret_cast<void *>(4 * sizeof(float)));
     m_vao.release();
     m_vbo.release();
 }
@@ -387,6 +455,8 @@ void Cosmos::render(const QMatrix4x4 &viewProj, float pointScale)
     m_prog->setUniformValue("uSize", 1.15f);
     m_prog->setUniformValue("uColor", QVector3D(0.80f, 0.82f, 0.92f));
     m_prog->setUniformValue("uAlpha", 0.50f);
+    // ★ 映射模式: 切换只需改这个 uniform —— 不重建顶点缓冲, 零成本
+    m_prog->setUniformValue("uMapMode", int(m_mapMode));
 
     m_vao.bind();
     // ★ 性能开关: 只画前 visibleCount() 个。

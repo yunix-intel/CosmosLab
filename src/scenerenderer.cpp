@@ -371,6 +371,10 @@ void SceneRenderer::render(const ViewState &vs)
         // ★ 应用可见粒子数 (性能开关)。零成本 —— 只改 draw count。
         m_cosmos.setVisibleCount(vs.cosmosVisible);
 
+        // ★ 应用距离映射模式。同样零成本 —— 映射在着色器里做,
+        //   顶点缓冲存的是"方向 + 真实距离"这样的物理量, 无需重建。
+        m_cosmos.setMapMode(vs.cosmosMapMode);
+
         if (perfEnabled())
             m_f->glFinish();
         QElapsedTimer perfClock;

@@ -858,169 +858,83 @@ ApplicationWindow {
                     color: Qt.rgba(1, 1, 1, 0.07)
                 }
 
+
+                // ---- 距离映射模式 (对数压缩 / 真实比例) ----
+                //
+                // ★ 为什么需要这个开关:
+                //   宇宙要展示 0.2 Mly ~ 46.5 Gly 共六个数量级。
+                //   对数压缩能一屏装下, 但远处间隔被压扁;
+                //   真实比例下本星系群只有 5e-5 的占比, 屏幕上不可见 ——
+                //   这在物理上是**正确**的 (它确实那么小)。
+                //   把两者做成开关, 是为了让"塞进一屏付出了什么"可见。
                 Text {
-                    text: "宇宙学参数"
-                    color: root.cTextDim
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
-                }
-
-                Repeater {
-                    model: [
-                        { k: "宇宙年龄",     v: cosmosStructPanel.info.age },
-                        { k: "哈勃常数",     v: cosmosStructPanel.info.h0 },
-                        { k: "暗能量占比",   v: cosmosStructPanel.info.omegaLambda, hot: true },
-                        { k: "物质总占比",   v: cosmosStructPanel.info.omegaM },
-                        { k: "重子物质占比", v: cosmosStructPanel.info.omegaB },
-                        { k: "CMB 温度",     v: cosmosStructPanel.info.cmb },
-                        { k: "CMB 红移",     v: cosmosStructPanel.info.cmbZ },
-                        { k: "复合时期",     v: cosmosStructPanel.info.recombT },
-                        { k: "可观测半径",   v: cosmosStructPanel.info.obsRadius },
-                        { k: "可观测直径",   v: cosmosStructPanel.info.obsDia },
-                        { k: "星系总数",     v: cosmosStructPanel.info.galaxies }
-                    ]
-
-                    delegate: RowLayout {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: modelData.k
-                            color: root.cTextDim
-                            font.pixelSize: 10
-                        }
-                        Text {
-                            text: modelData.v ? String(modelData.v) : "—"
-                            color: modelData.hot ? "#ffb4a2" : root.cText
-                            font.pixelSize: 10
-                            font.family: root.fitFont(modelData.v ? String(modelData.v) : "—")
-                        }
-                    }
-                }
-
-                // ---- 结构层级 ----
-                Rectangle {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    height: 1
-                    color: Qt.rgba(0.35, 0.42, 0.55, 0.35)
-                }
-
-                Text {
-                    text: "结构层级"
+                    Layout.topMargin: 6
+                    text: "距离映射"
                     color: root.cTextDim
                     font.pixelSize: 10
                     font.letterSpacing: 1
                 }
 
-                Repeater {
-                    model: cosmosStructPanel.info.hierarchy
-
-                    delegate: RowLayout {
-                        required property var modelData
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: modelData.lvl
-                            color: root.cText
-                            font.pixelSize: 10
-                        }
-                        Text {
-                            text: modelData.size
-                            color: root.cTextDim
-                            font.pixelSize: 10
-                            font.family: root.fitFont(modelData.size)
-                        }
-                    }
-                }
-
-                Rectangle {
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    height: 1
-                    color: Qt.rgba(0.35, 0.42, 0.55, 0.35)
-                }
+                    spacing: 4
 
-                Text {
-                    text: "大尺度结构"
-                    color: root.cTextDim
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
-                }
+                    Repeater {
+                        model: [
+                            { t: "对数压缩", v: 0 },
+                            { t: "真实比例", v: 1 }
+                        ]
 
-                Repeater {
-                    model: cosmosStructPanel.structs
-
-                    delegate: Rectangle {
-                        id: structRow
-                        required property var modelData
-                        Layout.fillWidth: true
-                        // ★ 高度跟随内容: 没照片的行矮一些, 视觉上不浪费空间。
-                        //   用 implicitHeight 让 ColumnLayout 自己算。
-                        implicitHeight: rowCol.implicitHeight + 6
-                        radius: 4
-                        color: rowHover.containsMouse
-                               ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
-
-                        MouseArea {
-                            id: rowHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                // 有 id 的天体查详情; 大尺度结构 (id 为空)
-                                // 直接用它自己的 desc
-                                const d = location(modelData.id)
-                                galaxyCard.detail = d
-                                galaxyCard.visible = true
-                            }
-                        }
-
-                        ColumnLayout {
-                            id: rowCol
-                            anchors.fill: parent
-                            anchors.leftMargin: 5
-                            anchors.rightMargin: 5
-                            anchors.topMargin: 3
-                            spacing: 1
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-
-                                Text {
-                                    text: structRow.modelData.name
-                                    color: structRow.modelData.kind === 2 ? "#a8bcd8"
-                                         : structRow.modelData.kind === 0 ? "#d4a5ff"
-                                         : "#ffb4a2"
-                                    font.pixelSize: 10
-                                    font.bold: true
-                                }
-                                // ★ 有实景图的标一个小相机图形 —— 提示用户
-                                //   "这一项点开能看到照片"
-                                Text {
-                                    visible: structRow.modelData.hasPhoto === true
-                                    text: "◉"
-                                    color: "#7fd4a0"
-                                    font.pixelSize: 9
-                                }
-                                Item { Layout.fillWidth: true }
-                            }
+                        Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 24
+                            radius: 6
+                            readonly property bool active:
+                                scene.cosmosMapMode === modelData.v
+                            color: active ? root.cAccentSoft
+                                          : Qt.rgba(1, 1, 1, 0.05)
+                            border.width: 1
+                            border.color: active
+                                          ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                          : Qt.rgba(1, 1, 1, 0.08)
                             Text {
-                                text: structRow.modelData.dist + "  ·  "
-                                      + structRow.modelData.size
-                                color: root.cTextDim
-                                font.pixelSize: 9
-                                font.family: root.fitFont(
-                                    structRow.modelData.dist + "  ·  "
-                                    + structRow.modelData.size)
+                                anchors.centerIn: parent
+                                text: modelData.t
+                                color: parent.active ? "#bcd9ff" : root.cTextDim
+                                font.pixelSize: 10
+                                font.family: root.sansFont
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: scene.cosmosMapMode = modelData.v
                             }
                         }
                     }
+                }
+
+                // ★ 切换后的说明 —— 没有这段用户会以为程序坏了
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: scene.cosmosMapMode === 1
+                          ? "真实比例：距离成比例。此时本星系群仅占画面 "
+                            + "0.005%，屏幕上缩为一点 —— 这是物理事实。"
+                            + "适合配合缩放观察某一区域。"
+                          : "对数压缩：一屏容纳 0.2 百万光年 ~ 465 亿光年。"
+                            + "代价是远处间隔被压缩，标签上的数字才是真实距离。"
+                    color: scene.cosmosMapMode === 1 ? "#e8cc7a" : root.cTextDim
+                    font.pixelSize: 9
+                    font.family: root.sansFont
+                    lineHeight: 1.35
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(1, 1, 1, 0.07)
                 }
 
                 // ---- 对数映射说明 (必须明说, 否则学生会误读) ----

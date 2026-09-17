@@ -90,6 +90,17 @@ class SolarScene : public QQuickFramebufferObject
     //         false, 定时器同样不启动。
     //    Q_PROPERTY + NOTIFY 是 Qt 唯一可靠的跨线程→QML 通知机制。
     // 测试用: SS_CARD=<天体id> 启动时自动打开详情卡 (供截图验证)
+    // ---- 宇宙视图的距离映射模式 ----
+    //
+    // ★ 两种模式展示**同一批数据**, 只是距离轴的性质不同:
+    //     对数压缩 (0) —— 一屏容纳 0.2 Mly ~ 46.5 Gly 共六个数量级,
+    //                     代价是远处间隔被压缩 (看图会以为远处挤在一起)
+    //     真实比例 (1) —— 距离成比例。但此时本星系群只有 5e-5 的画面占比,
+    //                     屏幕上不可见 —— 这在物理上**正确**。
+    //   做成开关是为了让"把宇宙塞进一屏付出了什么代价"这件事可见。
+    Q_PROPERTY(int cosmosMapMode READ cosmosMapMode WRITE setCosmosMapMode
+               NOTIFY cosmosMapModeChanged)
+
     Q_PROPERTY(QString testCard READ testCard CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
@@ -189,6 +200,9 @@ public:
     int  cosmosVisible() const { return m_cosmosVisible; }
     int  cosmosTotal() const { return m_cosmosTotal; }
     QString testCard() const;
+
+    int  cosmosMapMode() const { return m_cosmosMapMode; }
+    void setCosmosMapMode(int m);
     double cosmosEstMs() const { return m_cosmosEstMs; }
     double cosmosEstFps() const { return m_cosmosEstFps; }
     void setCosmosVisible(int n);
@@ -221,6 +235,7 @@ signals:
     void cosmosVisibleChanged();
     void cosmosTotalChanged();
     void cosmosPerfChanged();
+    void cosmosMapModeChanged();
     void sunMarkChanged();
     void galaxyLabelsChanged();
 
@@ -241,6 +256,7 @@ private:
     int     m_cosmosVisible = 0;   // 宇宙可见粒子数, <=0 全部
     bool    m_cosmosReady = false; // 宇宙粒子总数是否已就绪
     int     m_cosmosTotal = 0;     // 宇宙粒子总数 (就绪后填入)
+    int     m_cosmosMapMode = 0;   // 0=对数压缩 1=真实比例
     double  m_cosmosEstMs = 0.0;   // 预估 GPU 耗时 (按实测系数标定)
     double  m_cosmosEstFps = 0.0;  // 预估帧率
     int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)
