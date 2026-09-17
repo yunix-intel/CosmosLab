@@ -69,6 +69,31 @@ ApplicationWindow {
                ? sansFont : monoFont
     }
 
+    // ---- 波长 -> 近似颜色 ----
+    //
+    // ★ 放在根级: 红移工具的面板和星系详情卡**都要用**。
+    //   各自复制一份必然漂移 (改了色相但改了一处)。
+    //
+    // 物理: 400~700nm 是可见光, 之外人眼看不见 —— 返回灰色。
+    //   ★ 这个"变灰"的视觉断点本身就是教学内容: 谱线移出可见光时,
+    //     它不是"变成另一种颜色", 而是**彻底不可见**。
+    function wlToColor(w) {
+        if (w < 400 || w > 700)
+            return "#4a4d57"
+        let rr = 0
+        let gg = 0
+        let bb = 0
+        if (w < 440)      { rr = -(w - 440) / 60; gg = 0; bb = 1 }
+        else if (w < 490) { rr = 0; gg = (w - 440) / 50; bb = 1 }
+        else if (w < 510) { rr = 0; gg = 1; bb = -(w - 510) / 20 }
+        else if (w < 580) { rr = (w - 510) / 70; gg = 1; bb = 0 }
+        else if (w < 645) { rr = 1; gg = -(w - 645) / 65; bb = 0 }
+        else              { rr = 1; gg = 0; bb = 0 }
+        return Qt.rgba(Math.max(0, Math.min(1, rr)),
+                       Math.max(0, Math.min(1, gg)),
+                       Math.max(0, Math.min(1, bb)), 1)
+    }
+
     // ---- 配色 (玻璃拟态) ----
     readonly property color cPanel:      Qt.rgba(0.055, 0.078, 0.125, 0.72)
     readonly property color cPanelSolid: Qt.rgba(0.055, 0.078, 0.125, 0.96)
@@ -755,6 +780,106 @@ ApplicationWindow {
                 width: parent.width - 4
                 spacing: 9
 
+                // ============================================================
+                //  结构列表 (点击查看详情)
+                // ============================================================
+                //
+                // ★★ 为什么必须有这个列表:
+                //   详情卡组件 (galaxyCard) 早就写好了, 数据也一直是齐的
+                //   (scene.cosmosStructures 返回 id/name/dist/size/kind/desc),
+                //   但**从来没有任何 UI 用它** —— 结果是用户根本点不开卡片,
+                //   只有测试入口 SS_CARD 能打开。这里把它接上。
+                //
+                // ★ 三个层级合并成一个列表 (本星系群 → 室女座团 → 大尺度结构),
+                //   因为它们的顺序本身就是"由近及远"的叙事。
+                //
+                // ★ 位置在面板**最前面** —— 一开始放在面板底部, 结果要滚动
+                //   才能看到, 可发现性太差 (详情卡做出来了却没人点得到)。
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Text {
+                        text: "结构列表"
+                        color: root.cText
+                        font.pixelSize: 10
+                        font.family: root.sansFont
+                    }
+                    Item { Layout.fillWidth: true }
+                    Text {
+                        text: "点击查看详情"
+                        color: root.cTextDim
+                        font.pixelSize: 9
+                        font.family: root.sansFont
+                    }
+                }
+
+                Repeater {
+                    model: cosmosStructPanel.structs
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 30
+                        radius: 5
+                        color: clickArea.containsMouse
+                               ? Qt.rgba(0.37, 0.66, 1.0, 0.18)
+                               : Qt.rgba(1, 1, 1, 0.035)
+                        border.width: 1
+                        border.color: clickArea.containsMouse
+                                      ? Qt.rgba(0.45, 0.72, 1.0, 0.55)
+                                      : Qt.rgba(1, 1, 1, 0.08)
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            spacing: 6
+
+                            // 有实景图的标一个小圆点 —— 一眼能看出
+                            // 哪些点开后能看到真实照片
+                            Rectangle {
+                                visible: modelData.hasPhoto === true
+                                width: 5; height: 5; radius: 2.5
+                                color: "#7ac6ff"
+                            }
+
+                            Text {
+                                text: modelData.name
+                                color: root.cText
+                                font.pixelSize: 10
+                                font.family: root.sansFont
+                            }
+                            Item { Layout.fillWidth: true }
+                            Text {
+                                text: modelData.dist
+                                color: root.cTextDim
+                                font.pixelSize: 9
+                                font.family: root.fitFont(modelData.dist)
+                            }
+                        }
+
+                        MouseArea {
+                            id: clickArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                galaxyCard.detail =
+                                    root.cardForStruct(modelData)
+                                galaxyCard.visible = true
+                            }
+                        }
+                    }
+                }
+
+                // 列表与下方"性能开关"之间的分隔
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 3
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                }
+
                 // ---- 星系数量档位 (性能开关) ----
                 //
                 // ★ 为什么做成开关: 场景由 onTick 的 16ms 定时器驱动,
@@ -1140,23 +1265,11 @@ ApplicationWindow {
                     }
                     readonly property var labelLayout: labelItems()
 
-                    // 波长 -> 近似颜色。400~700nm 可见, 之外转灰
-                    // (这个视觉断点本身就是教学内容)
+                    // 波长 -> 近似颜色。
+                    // ★ 实现在根级 (root.wlToColor) —— 星系详情卡也要用,
+                    //   这里只做转发, 避免两处各写一份导致色相漂移。
                     function wlColor(w) {
-                        if (w < 400 || w > 700)
-                            return "#4a4d57"
-                        let rr = 0
-                        let gg = 0
-                        let bb = 0
-                        if (w < 440)      { rr = -(w - 440) / 60; gg = 0; bb = 1 }
-                        else if (w < 490) { rr = 0; gg = (w - 440) / 50; bb = 1 }
-                        else if (w < 510) { rr = 0; gg = 1; bb = -(w - 510) / 20 }
-                        else if (w < 580) { rr = (w - 510) / 70; gg = 1; bb = 0 }
-                        else if (w < 645) { rr = 1; gg = -(w - 645) / 65; bb = 0 }
-                        else              { rr = 1; gg = 0; bb = 0 }
-                        return Qt.rgba(Math.max(0, Math.min(1, rr)),
-                                       Math.max(0, Math.min(1, gg)),
-                                       Math.max(0, Math.min(1, bb)), 1)
+                        return root.wlToColor(w)
                     }
 
                     Text {
@@ -1365,6 +1478,7 @@ ApplicationWindow {
                         lineHeight: 1.3
                     }
                 }
+
             }
         }
     }
@@ -1782,7 +1896,13 @@ ApplicationWindow {
         Component.onCompleted: {
             const t = scene.testCard
             if (t && t.length > 0) {
-                galaxyCard.detail = location(t)
+                // 先按星系 id 查; 查不到就当作大尺度结构的名字再试一次 ——
+                // 后者没有 id, 只能靠名字匹配。两条路都走 root 里的函数,
+                // 保证与用户点击时**完全一致**。
+                let d = location(t)
+                if (!d || d.nameCn === undefined)
+                    d = root.cardForStructByName(t)
+                galaxyCard.detail = d
                 galaxyCard.visible = true
             }
         }
@@ -1929,11 +2049,20 @@ ApplicationWindow {
                         model: {
                             const d = galaxyCard.detail
                             const rows = []
-                            if (d.dist !== undefined)
+                            // ★ 两种距离来源要分先后:
+                            //   distText —— **结构列表给的现成文本**。大尺度
+                            //     结构的距离跨 1 亿~12 亿光年, 若统一换算成
+                            //     "百万光年"会变成一串难读的大数 (如 1200)。
+                            //   dist —— **星系数据的数值** (单位: 百万光年)。
+                            if (d.distText !== undefined)
+                                rows.push({ k: "距离", v: d.distText })
+                            else if (d.dist !== undefined)
                                 rows.push({ k: "距离", v: d.dist > 1e-9
                                             ? d.dist.toFixed(2) + " 百万光年"
                                             : "我们所在" })
-                            if (d.diameter !== undefined)
+                            if (d.sizeText !== undefined)
+                                rows.push({ k: "尺度", v: d.sizeText })
+                            else if (d.diameter !== undefined)
                                 rows.push({ k: "直径", v: d.diameter.toFixed(1) + " 千光年" })
                             if (d.massLog !== undefined)
                                 rows.push({ k: "恒星质量", v: "10^"
@@ -1963,6 +2092,229 @@ ApplicationWindow {
                             }
                             Item { Layout.fillWidth: true }
                         }
+                    }
+                }
+
+                // ---- 红移与谱线位移 ----
+                //
+                // ★★ 为什么不做"整条可见光谱上的位移":
+                //   这些近距星系的 |z| 都 < 0.005 —— Hα (656.3nm) 的位移
+                //   最多 2.8nm。在 380~700nm 的整段光谱上只占 **0.4% 宽度**,
+                //   **肉眼完全看不出来**, 画出来等于没画。
+                //   所以这里**放大到 Hα 附近 ±8nm 的窗口**, 并在标签里
+                //   写明"放大 x 倍", 避免让人误以为位移真有这么大。
+                //
+                // ★ 为什么不画彩虹色带: 648~664nm 整段都是纯红,
+                //   色带在这个窗口里**不含任何信息**。所以改用天文学家
+                //   真正看到的东西 —— **连续谱上的一条吸收线**,
+                //   它的位置就是测红移的依据。
+                Item {
+                    id: redshiftBlock
+                    Layout.fillWidth: true
+                    // ★ 高度自适应: 上四行固定占 66px, 解读行按**实际文本高度**
+                    //   累加。写死高度是不行的 —— "推算红移 + 已移出可见光"
+                    //   两种情况叠加时解读会折成 4 行, 会盖住下面的描述文字。
+                    Layout.preferredHeight: 66 + interpText.implicitHeight + 6
+                    visible: galaxyCard.detail.redshift !== undefined
+
+                    // ★ 属性名用 gz 而不是 z —— z 是 QML Item 的**内建属性**
+                    //   (层叠顺序), 覆盖它会让进程静默退出且日志全空。
+                    readonly property real gz:
+                        galaxyCard.detail.redshift !== undefined
+                        ? galaxyCard.detail.redshift : 0
+
+                    readonly property real cKms: 299792.458   // 光速 km/s
+                    readonly property real haRest: 656.3      // Hα 静止波长 nm
+                    readonly property real haObs: haRest * (1 + gz)
+                    readonly property real velKms: gz * cKms
+
+                    // ★★ 显示窗口必须**自适应**两端 (静止位置与实测位置)。
+                    //
+                    //   固定窗口是不行的: 大尺度结构的 z 可达 0.069,
+                    //   Hα 移到约 701nm —— 早已跑出"±8nm"这种固定窗口,
+                    //   吸收线会画到条外, 看起来像"线不见了"。
+                    //   实测踩到: 固定窗口时 M31/M87 正常, 但点开斯隆巨壁
+                    //   只见一条虚线没有吸收线, 差点误判成计算错误。
+                    readonly property real wLo: Math.min(haRest, haObs) - 3.0
+                    readonly property real wHi: Math.max(haRest, haObs) + 3.0
+
+                    function wl2x(w) {
+                        return (w - wLo) / (wHi - wLo) * strip.width
+                    }
+
+                    // 是否已移出可见光 (700nm) —— 只有大尺度结构会遇到。
+                    // ★ 这是个很好的教学点: 在宇宙学尺度上,
+                    //   连 Hα 这种可见光里最强的谱线都会被推出可见范围。
+                    readonly property bool outOfVisible: haObs > 700.0
+
+                    readonly property string zText:
+                        "红移 z = " + (gz >= 0 ? "+" : "−")
+                        + Math.abs(gz).toFixed(6)
+
+                    // 红移 -> 偏红; 蓝移 -> 偏蓝
+                    readonly property color zColor:
+                        gz < -0.0001 ? "#7ab8ff"
+                      : gz >  0.0001 ? "#ff9a7a"
+                      : root.cTextDim
+
+                    readonly property string velText:
+                        Math.abs(velKms) < 1
+                        ? "相对静止"
+                        : (velKms > 0 ? "退行 " : "接近 ")
+                          + Math.abs(velKms).toFixed(0) + " km/s"
+
+                    readonly property string zoomText:
+                        "窗口 " + wLo.toFixed(1) + " – " + wHi.toFixed(1) + " nm"
+                        + (outOfVisible ? " · ⚠ 已超出可见光"
+                                        : " · 放大显示")
+
+                    // ---- 第一行: z 值 + 速度 ----
+                    Text {
+                        x: 0; y: 0
+                        text: redshiftBlock.zText
+                        color: redshiftBlock.zColor
+                        font.pixelSize: 11
+                        font.family: root.monoFont
+                    }
+                    Text {
+                        x: 210; y: 0
+                        text: redshiftBlock.velText
+                        color: root.cTextDim
+                        font.pixelSize: 10
+                        font.family: root.sansFont
+                    }
+
+                    // ---- 连续谱 + 吸收线 ----
+                    //
+                    // ★ 视觉要点: 连续谱要**暖白且亮**, 吸收线要**很黑**,
+                    //   两者对比强烈才像"光谱"而不是"灰色进度条"。
+                    //   实测第一版用 (0.86,0.84,0.80,0.30) 的灰太低,
+                    //   整条看起来就是一根灰条, 毫无"光"的感觉。
+                    Rectangle {
+                        id: strip
+                        x: 0
+                        y: 20
+                        width: redshiftBlock.width
+                        height: 18
+                        radius: 3
+                        // 连续谱: 偏暖的亮白 (恒星光的平均色; 略偏红
+                        // 是因为窗口在 Hα 附近, 本来就偏长波端)
+                        color: Qt.rgba(0.98, 0.94, 0.86, 0.88)
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1, 0.22)
+                    }
+
+                    // ---- 波长刻度 ----
+                    // ★ 没有刻度的话, "放大 ±8nm"这张图无法读出任何数值,
+                    //   只能看出"线动了一下"。三根短刻度标出窗口的
+                    //   左沿 / 静止位置 / 右沿。
+                    Repeater {
+                        model: [
+                            { w: redshiftBlock.wLo },
+                            { w: redshiftBlock.haRest },
+                            { w: redshiftBlock.wHi }
+                        ]
+
+                        Rectangle {
+                            required property var modelData
+                            x: redshiftBlock.wl2x(modelData.w) - 0.5
+                            y: 38
+                            width: 1
+                            height: 4
+                            color: Qt.rgba(1, 1, 1, 0.32)
+                        }
+                    }
+
+                    // 静止位置 (z=0 时 Hα 应在的地方) —— 虚线式参照
+                    Rectangle {
+                        x: redshiftBlock.wl2x(redshiftBlock.haRest) - 0.5
+                        y: 16
+                        width: 1
+                        height: 26
+                        color: Qt.rgba(1, 1, 1, 0.38)
+                    }
+
+                    // 实测位置 —— 一条**暗吸收线**, 就是天文学家测量的对象。
+                    // 加横跨上下的长度, 让它明显区别于刻度。
+                    Rectangle {
+                        x: redshiftBlock.wl2x(redshiftBlock.haObs) - 2.5
+                        y: 16
+                        width: 5
+                        height: 26
+                        color: Qt.rgba(0.03, 0.04, 0.06, 0.95)
+                    }
+                    // 吸收线两侧的亮缘 —— 强化"这是一条线"而不是"一块黑斑"
+                    Rectangle {
+                        x: redshiftBlock.wl2x(redshiftBlock.haObs) - 4
+                        y: 16
+                        width: 1.5
+                        height: 26
+                        color: Qt.rgba(1, 1, 1, 0.85)
+                    }
+                    Rectangle {
+                        x: redshiftBlock.wl2x(redshiftBlock.haObs) + 2.5
+                        y: 16
+                        width: 1.5
+                        height: 26
+                        color: Qt.rgba(1, 1, 1, 0.85)
+                    }
+
+                    // ---- 第三行: 读数 + 放大说明 ----
+                    Text {
+                        x: 0; y: 48
+                        text: "Hα  " + redshiftBlock.haRest.toFixed(1)
+                              + " → " + redshiftBlock.haObs.toFixed(1) + " nm"
+                        color: root.cText
+                        font.pixelSize: 10
+                        font.family: root.monoFont
+                    }
+                    Text {
+                        x: 210; y: 49
+                        text: redshiftBlock.zoomText
+                        color: Qt.rgba(0.62, 0.70, 0.82, 0.75)
+                        font.pixelSize: 9
+                        font.family: root.sansFont
+                    }
+
+                    // ---- 第四行: 解读 ----
+                    //
+                    // ★ 措辞刻意保守: 只陈述**可以从数据直接推出**的结论,
+                    //   不替用户推断成因 —— 近距星系的红移是"宇宙膨胀 +
+                    //   本动速度"的叠加, 两者的拆分需要更多观测数据。
+                    //
+                    // ★★ 必须区分**实测**与**推算**:
+                    //   星系的 z 来自单条光谱的测量; 大尺度结构没有单条
+                    //   光谱可测, z 由哈勃定律算出 (C++ 侧带 redshiftDerived
+                    //   标志)。混为一谈会让人以为"结构也被测过光谱"。
+                    Text {
+                        id: interpText
+                        x: 0; y: 66
+                        width: redshiftBlock.width
+                        wrapMode: Text.WordWrap
+                        text: {
+                            const g = redshiftBlock.gz
+                            if (galaxyCard.detail.redshiftDerived === true)
+                                return "★ 推算的膨胀红移 —— 在这个尺度上, "
+                                     + "宇宙膨胀已完全主导, 星系自身运动只是零头。"
+                                     + " (由 z = H₀·d/c 算出, 非光谱实测)"
+                                     + (redshiftBlock.outOfVisible
+                                        ? "\n★ 注意 Hα 已被推到 700nm 之外 —— "
+                                          + "在宇宙学距离上, 可见光谱线会整体移入红外, "
+                                          + "这正是高红移巡天要在红外波段做的原因。"
+                                        : "")
+                            if (g < -0.0001)
+                                return "★ 蓝移 —— 它正朝我们接近。"
+                                     + "在这么近的距离上, 宇宙膨胀的贡献极小, "
+                                     + "观测到的移动主要来自星系**自身的运动**。"
+                            if (g > 0.0001)
+                                return "★ 红移 —— 谱线整体向长波端移动, "
+                                     + "这是它正在远离我们的证据。"
+                            return "★ 红移为零基准 —— 银河系是测量其他天体红移的参照。"
+                        }
+                        color: Qt.rgba(0.82, 0.68, 0.50, 1.0)
+                        font.pixelSize: 9
+                        font.family: root.sansFont
+                        lineHeight: 1.35
                     }
                 }
 
@@ -2025,6 +2377,61 @@ ApplicationWindow {
                 : "该天体暂无单独的高质量观测图像。"
         }
         return d
+    }
+
+    // 结构列表项 -> 详情卡数据
+    //
+    // ★ 为什么不复用 location(): 大尺度结构**没有 id**,
+    //   scene.galaxyDetail() 查不到它们 (C++ 侧返回空表)。
+    //   它们的全部信息就在列表项里, 直接搬运即可。
+    //
+    // ★ 但**具名星系仍要走 C++** —— 因为实测红移 (redshift) 和照片
+    //   只在 C++ 的 cosmosdata 里, 列表项里没有。混用会导致点开 M31
+    //   看不到红移区块。
+    function cardForStruct(item) {
+        if (!item)
+            return ({})
+
+        // 有 id -> 具名星系, 走完整数据源
+        if (item.id && item.id.length > 0) {
+            const d = location(item.id)
+            if (d && d.nameCn !== undefined)
+                return d
+        }
+
+        // 无 id -> 大尺度结构
+        if (item.redshift === undefined)
+            return ({})       // 数据未就绪
+
+        return ({
+            nameCn: item.name,
+            nameEn: item.en,
+            desc: item.desc,
+            distText: item.dist,
+            // ★ 剥掉前缀再交给卡片。
+            //   C++ 的 size 字段是给**列表**用的, 自带 "尺度 "/"直径 " 前缀;
+            //   而卡片左侧本来就有一列标签 ("尺度"), 直接用会变成
+            //   "尺度    尺度 14 亿光年" —— 实测踩到过。
+            sizeText: (item.size || "").replace(/^(尺度|直径)\s*/, ""),
+            // ★ 推算红移 (哈勃定律), 与星系的实测红移区分开。
+            //   卡片据此切换解读措辞 (见 redshiftBlock 里的说明)。
+            redshift: item.redshift,
+            redshiftDerived: true,
+            // 没有 photo 字段 -> 卡片走"暂无实景图"分支, 并给出原因
+            noPhotoWhy: "这是大尺度结构 —— 由星系的速度场与密度场"
+                      + "划定的边界, 不是能被拍下来的单个天体。"
+        })
+    }
+
+    // 按名字找大尺度结构 (仅测试入口用)
+    function cardForStructByName(name) {
+        const list = scene.cosmosStructures()
+        for (let i = 0; i < list.length; ++i) {
+            const it = list[i]
+            if (it.name === name || it.en === name)
+                return cardForStruct(it)
+        }
+        return ({})
     }
 }
 

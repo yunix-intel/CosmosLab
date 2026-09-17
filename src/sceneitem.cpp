@@ -1020,6 +1020,9 @@ QVariantMap SolarScene::galaxyDetail(const QString &id) const
         out["diameter"]= g.diameterKly;
         out["massLog"] = g.massLog10;
         out["type"]    = g.type;
+        // ★ 实测红移 (负值 = 蓝移)。详情卡用它画"这个星系的光谱长什么样",
+        //   比只给一个数字直观。见 cosmosdata.h 上的说明。
+        out["redshift"]= g.redshift;
         out["desc"]    = QString::fromUtf8(g.desc);
         out["photo"]   = QFile::exists(photo) ? photo : QString();
     };
@@ -1180,6 +1183,30 @@ QVariantList SolarScene::cosmosStructures() const
         // ★ 大尺度结构**没有单张照片** —— 它们是速度场/密度场的边界,
         //   不是能被拍下来的天体。固定为 false, 由 UI 提示。
         m["hasPhoto"] = false;
+
+        // ---- 红移 (哈勃定律**推算值**) ----
+        //
+        // ★★ 与星系的实测红移**不是一回事**, 必须区分:
+        //     - 星系: 有单条光谱, z 是**测**出来的 (见 cosmosdata.cpp)
+        //     - 这里: 结构没有单条光谱可测, z 由 z = H₀·d/c **算**出来
+        //    UI 侧用 redshiftDerived 标志区分措辞, 不能混为一谈。
+        //
+        // ★ 但这一步有教学价值: 它展示了**为什么近距星系必须用实测值**。
+        //   在 2.5 Mly (M31) 处, 哈勃定律给出的膨胀速度只有约 55 km/s,
+        //   而 M31 的实际本动速度是 -301 km/s —— 膨胀贡献连零头都不到。
+        //   到了 1 亿光年以上的尺度, 哈勃流才终于压过本动速度。
+        //   这正是"哈勃定律只在大尺度上成立"的定量证据。
+        //
+        //   换算: v = H₀·d, 其中 d 由 Mly 换成 Mpc (÷3.26156)
+        const double dMpc = s.distanceFromEarthMly / 3.26156;
+        const double vKms = cosmo::kH0 * dMpc;
+        m["redshift"]        = vKms / 299792.458;
+        m["redshiftDerived"] = true;
+        m["redshiftNote"]    = QStringLiteral(
+            "\u7531\u54c8\u52c3\u5b9a\u5f8b\u63a8\u7b97 (z = H\u2080\u00b7d/c)\u3002"
+            "\u8fd9\u4e9b\u7ed3\u6784\u6ca1\u6709\u5355\u6761\u5149\u8c31\u53ef\u6d4b, "
+            "\u4e0d\u540c\u4e8e\u661f\u7cfb\u7684\u5b9e\u6d4b\u7ea2\u79fb\u3002");
+
         out.append(m);
     }
 
