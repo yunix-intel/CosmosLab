@@ -147,6 +147,8 @@ QVector<CosmosMarker> Cosmos::markers()
 
 // ---------------------------------------------------------------------------
 
+int Cosmos::s_lastBuilt = 0;
+
 Cosmos::Cosmos() = default;
 Cosmos::~Cosmos() = default;
 
@@ -315,7 +317,35 @@ void Cosmos::build()
         ++m_voidCount;
     }
 
+    // ★ 压力测试: SS_COSMOS_MULT=<N> 把粒子数放大 N 倍。
+    //   用于测"帧率 vs 粒子数"曲线, 据此判断能承载多大的星表。
+    //   放大的方式是**带微小抖动的重复** —— 直接复制会让同一像素
+    //   叠加完全相同的数据, 掩盖真实的过度绘制成本。
+    {
+        const int mult = qEnvironmentVariableIntValue("SS_COSMOS_MULT");
+        if (mult > 1) {
+            const int baseN = data.size() / kFloats;
+            QVector<float> big;
+            big.reserve(baseN * mult * kFloats);
+            big += data;
+            std::mt19937 rng(20260917u);
+            std::uniform_real_distribution<float> jit(-0.35f, 0.35f);
+            for (int m = 1; m < mult; ++m) {
+                for (int i = 0; i < baseN; ++i) {
+                    const float *src = &data[i * kFloats];
+                    big << src[0] + jit(rng) << src[1] + jit(rng)
+                        << src[2] + jit(rng) << src[3];
+                }
+            }
+            data = big;
+            qWarning().noquote()
+                << QString("[宇宙] 压力测试: 粒子数放大 %1 倍 -> %2")
+                       .arg(mult).arg(baseN * mult);
+        }
+    }
+
     m_count = data.size() / kFloats;
+    s_lastBuilt = m_count;
 
     // ---- 上传 ----
     if (!m_vao.isCreated())
@@ -359,7 +389,9 @@ void Cosmos::render(const QMatrix4x4 &viewProj, float pointScale)
     m_prog->setUniformValue("uAlpha", 0.50f);
 
     m_vao.bind();
-    m_f->glDrawArrays(GL_POINTS, 0, m_count);
+    // ★ 性能开关: 只画前 visibleCount() 个。
+    //   顶点数据不变, 仅改 count —— 切换零成本。
+    m_f->glDrawArrays(GL_POINTS, 0, visibleCount());
     m_vao.release();
 
     m_prog->release();

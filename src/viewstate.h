@@ -45,4 +45,8 @@ struct ViewState
     bool   showRings  = true;
     bool   showAtmo   = true;
     bool   snap       = false;  // 一次性: 相机直接吸附, 不做阻尼插值
+
+    // 宇宙视图可见粒子数 (性能开关)。<=0 表示全部。
+    // ★ 只改 glDrawArrays 的 count, 顶点数据不动 —— 切换零成本。
+    int    cosmosVisible = 0;
 };

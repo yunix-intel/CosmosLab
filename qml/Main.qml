@@ -732,6 +732,17 @@ ApplicationWindow {
         property var info: scene.cosmosInfo()
         property var structs: scene.cosmosStructures()
 
+        // ★ 性能开关的反馈数据。必须显式引用 scene.cosmosVisible 来建立
+        //   依赖 —— scene.cosmosPerf() 是普通函数调用, 不会自动触发绑定
+        //   更新; 少了这一句, 拖动档位后数字不刷新。
+        // ★ 依赖 scene.cosmosVisible: C++ 侧在粒子总数就绪时会发
+        //   cosmosVisibleChanged 信号 (见 SolarScene::onTick), 触发重算。
+        //   这样启动时序与档位切换都能正确刷新。
+        // ★ 性能数据直接绑定 scene 的 Q_PROPERTY。
+        //   这四个属性由 C++ 的 onTick 持续更新并 emit 通知,
+        //   QML 只需绑定 —— 不需要任何 Timer 或函数调用。
+        //   (之前试过函数返回值 / var 对象 / QML Timer, 都不可靠;
+        //    见 sceneitem.h 里 cosmosTotal 处的教训记录)
         Flickable {
             anchors.fill: parent
             anchors.margins: 14
@@ -743,6 +754,109 @@ ApplicationWindow {
                 id: cosCol
                 width: parent.width - 4
                 spacing: 9
+
+                // ---- 星系数量档位 (性能开关) ----
+                //
+                // ★ 为什么做成开关: 场景由 onTick 的 16ms 定时器驱动,
+                //   帧率上限锁在 62.5 FPS, 所以帧率数字看不出 GPU 余量。
+                //   实测本机的边际成本约 18.8 us / 千粒子 (填充率主导):
+                //     10 万 -> 2.4 ms     100 万 -> 19 ms
+                //     260 万 -> 49 ms     480 万 -> 90 ms
+                //   (260 万即 SDSS 全部星系样本的规模)
+                //   用户按需在"结构完整"与"流畅"之间取舍。
+                //
+                // ★ 切换是**零成本**的: 顶点数据一次上传后不再变动,
+                //   只改 glDrawArrays 的 count。不重传、不重建 VAO。
+                //
+                // ★ 低档位不是"随机丢一半": 数据按重要性顺序生成
+                //   (纤维 → 空洞边缘 → 背景填充), 截断天然保留宇宙网骨架。
+                Text {
+                    text: "星系数量"
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.letterSpacing: 1
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Repeater {
+                        model: [
+                            { t: "10%",  p: 0.10 },
+                            { t: "25%",  p: 0.25 },
+                            { t: "50%",  p: 0.50 },
+                            { t: "全部", p: 1.00 }
+                        ]
+
+                        Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 24
+                            radius: 6
+
+                            readonly property int targetN:
+                                Math.round(scene.cosmosTotal
+                                           * modelData.p)
+                            readonly property bool active:
+                                modelData.p >= 1.0
+                                    ? scene.cosmosVisible <= 0
+                                    : scene.cosmosVisible === targetN
+
+                            color: active ? root.cAccentSoft
+                                          : Qt.rgba(1, 1, 1, 0.05)
+                            border.width: 1
+                            border.color: active
+                                          ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                          : Qt.rgba(1, 1, 1, 0.08)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.t
+                                color: parent.active ? "#bcd9ff" : root.cTextDim
+                                font.pixelSize: 10
+                                font.family: root.sansFont
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: scene.cosmosVisible =
+                                    (modelData.p >= 1.0) ? 0 : targetN
+                            }
+                        }
+                    }
+                }
+
+                // 实时反馈: 当前粒数 + 预估耗时。颜色随帧率预警。
+                Text {
+                    Layout.fillWidth: true
+                    // ★ scene.cosmosVisible <= 0 表示"全部", 此时实际显示数
+                    //   就是总数 —— 不能直接打印 0
+                    text: "显示 "
+                          + (scene.cosmosVisible <= 0
+                             ? scene.cosmosTotal.toLocaleString()
+                             : scene.cosmosVisible.toLocaleString())
+                          + " / " + scene.cosmosTotal.toLocaleString()
+                    color: root.cTextDim
+                    font.pixelSize: 10
+                    font.family: root.sansFont
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: "预估 " + scene.cosmosEstMs.toFixed(1) + " ms"
+                          + "  ·  " + Math.round(scene.cosmosEstFps) + " FPS"
+                    color: scene.cosmosEstFps > 55 ? "#8fd88f"
+                         : scene.cosmosEstFps > 30 ? "#e8cc7a"
+                         : "#e89090"
+                    font.pixelSize: 10
+                    font.family: root.monoFont
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                }
 
                 Text {
                     text: "宇宙学参数"

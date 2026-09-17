@@ -67,8 +67,29 @@ public:
     bool ready() const { return m_ready; }
 
     int particleCount() const { return m_count; }
+
+    // ---- 可见粒子数控制 (性能开关) ----
+    //
+    // ★ 设计要点: 顶点数据**一次上传**后不再变动, 改变显示数量
+    //   只需改 glDrawArrays 的 count —— **零成本切换**, 无重传无卡顿。
+    //
+    // ★ 取前 N 个即可保证"重要结构优先显示": 数据生成时就是按
+    //   重要性顺序追加的 (纤维 → 空洞边缘 → 背景填充), 见 cosmos.cpp。
+    //   所以截断天然保留了宇宙网的骨架。
+    //
+    // n <= 0 或 n >= m_count 表示显示全部。
+    void setVisibleCount(int n) { m_visible = n; }
+    int  visibleCount() const {
+        return (m_visible <= 0 || m_visible > m_count) ? m_count : m_visible;
+    }
     int filamentCount() const { return m_filamentCount; }
     int voidCount() const { return m_voidCount; }
+
+    // 最近一次 build() 生成的总粒子数。
+    // ★ 为什么需要它: 总粒子数只有渲染侧知道 (Cosmos 活在渲染线程),
+    //   而 UI 要显示"当前 X / 总数 Y"。用静态缓存是安全的 ——
+    //   build() 只在初始化时跑一次, 之后不再变化。
+    static int lastBuiltCount() { return s_lastBuilt; }
 
     void render(const QMatrix4x4 &viewProj, float pointScale);
 
@@ -91,6 +112,8 @@ private:
     QOpenGLBuffer m_vbo{QOpenGLBuffer::VertexBuffer};
 
     int m_count         = 0;
+    int m_visible = 0;          // <=0 表示全部
+    static int s_lastBuilt;     // 最近一次 build 的总数
     int m_filamentCount = 0;   // 纤维中的星系
     int m_voidCount     = 0;   // 空洞边缘的稀疏星系
 

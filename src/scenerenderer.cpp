@@ -11,6 +11,7 @@
 // ============================================================================
 
 #include "scenerenderer.h"
+#include <QElapsedTimer>
 #include "bodyregistry.h"
 #include "celestialdata.h"
 #include "ephemeris.h"
@@ -104,6 +105,44 @@ void main() {
     FragColor = vec4(c, a);
 }
 )";
+
+// ---------------------------------------------------------------------------
+//  GPU 耗时测量 —— 用 glFinish 强制同步后计时
+//
+//  ★ 为什么不能只看帧率: 场景由 SolarScene::onTick 的 16ms 定时器驱动,
+//    帧率上限被锁在 62.5 FPS。GPU 耗时只要低于 16ms, 帧率就恒为 62.5,
+//    完全反映不出余量。要评估"能承载多少粒子", 必须测真实耗时。
+// ---------------------------------------------------------------------------
+namespace {
+bool perfEnabled()
+{
+    static const bool on = qEnvironmentVariableIntValue("SS_PERF") > 0;
+    return on;
+}
+
+// 累计统计, 每 N 帧输出一次
+struct PerfAccum {
+    double sumMs = 0.0;
+    int    n = 0;
+    double minMs = 1e9, maxMs = 0.0;
+    void add(double ms) {
+        sumMs += ms; ++n;
+        if (ms < minMs) minMs = ms;
+        if (ms > maxMs) maxMs = ms;
+        if (n % 60 == 0) {
+            qWarning().noquote()
+                << QString("[性能] 最近60帧 GPU 平均 %1 ms (min %2 / max %3)"
+                           "  -> 纯渲染理论上限 %4 FPS")
+                       .arg(sumMs / n, 0, 'f', 2)
+                       .arg(minMs, 0, 'f', 2)
+                       .arg(maxMs, 0, 'f', 2)
+                       .arg(1000.0 / qMax(sumMs / n, 1e-6), 0, 'f', 1);
+            sumMs = 0.0; n = 0; minMs = 1e9; maxMs = 0.0;
+        }
+    }
+};
+} // namespace
+
 void SceneRenderer::initialize()
 {
     if (m_ready)
@@ -328,7 +367,21 @@ void SceneRenderer::render(const ViewState &vs)
 
         m_f->glDisable(GL_DEPTH_TEST);
         m_f->glDisable(GL_CULL_FACE);
+
+        // ★ 应用可见粒子数 (性能开关)。零成本 —— 只改 draw count。
+        m_cosmos.setVisibleCount(vs.cosmosVisible);
+
+        if (perfEnabled())
+            m_f->glFinish();
+        QElapsedTimer perfClock;
+        if (perfEnabled())
+            perfClock.start();
         m_cosmos.render(viewProj, pScaleC);
+        if (perfEnabled()) {
+            m_f->glFinish();
+            static PerfAccum acc;
+            acc.add(double(perfClock.nsecsElapsed()) / 1.0e6);
+        }
 
         if (!m_postfx.ready())
             return;
@@ -349,7 +402,17 @@ void SceneRenderer::render(const ViewState &vs)
 
         // ★ 先画参考底图 (半透明), 再画粒子 —— 粒子在上层, 保住体积感。
         drawGalaxyOverlay(viewProj, vs);
+        if (perfEnabled())
+            m_f->glFinish();
+        QElapsedTimer perfClock;
+        if (perfEnabled())
+            perfClock.start();
         m_galaxy.render(viewProj, pointScale);
+        if (perfEnabled()) {
+            m_f->glFinish();
+            static PerfAccum accG;
+            accG.add(double(perfClock.nsecsElapsed()) / 1.0e6);
+        }
 
         if (!m_postfx.ready())
             return;

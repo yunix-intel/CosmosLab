@@ -75,6 +75,25 @@ class SolarScene : public QQuickFramebufferObject
     // ★ 属性名用 scaleLevel 而非 scale —— QML 的 Item 已有 scale 属性
     //   (item 缩放因子), 同名会遮蔽并导致绑定错乱。
     Q_PROPERTY(int     scaleLevel  READ scale       WRITE setScale        NOTIFY scaleChanged)
+
+
+    // ---- 宇宙视图性能面板的数据 ----
+    //
+    // ★★ 关键教训: 这四个值**必须是 Q_PROPERTY**, 不能靠 QML 调用
+    //    C++ 函数取值。踩过的三段弯路:
+    //      1. `property var perf: scene.cosmosPerf()` —— binding 确实重算
+    //         (日志看到值从 0 变 71206), 但 Text 绑定 perf.xxx 不更新:
+    //         QML 不追踪 var 属性的**内部字段**变化。
+    //      2. QML Timer `running: !perf.ready` —— QVariantMap 缺键时
+    //         JQ 得 undefined, 取反仍 false, 定时器永不启动。
+    //      3. `running: perf.total <= 0` —— 同样首帧 undefined 比较为
+    //         false, 定时器同样不启动。
+    //    Q_PROPERTY + NOTIFY 是 Qt 唯一可靠的跨线程→QML 通知机制。
+    Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
+    Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
+               NOTIFY cosmosVisibleChanged)
+    Q_PROPERTY(double  cosmosEstMs    READ cosmosEstMs    NOTIFY cosmosPerfChanged)
+    Q_PROPERTY(double  cosmosEstFps   READ cosmosEstFps   NOTIFY cosmosPerfChanged)
     Q_PROPERTY(QString scaleName   READ scaleName                         NOTIFY scaleChanged)
     // 太阳在银盘中的位置, 投影到屏幕后的归一化坐标 (0..1)。
     // QML 叠加层用它画"太阳系在这里"的标注 —— 改用 QML 的原因是
@@ -143,6 +162,8 @@ public:
     Q_INVOKABLE QVariantMap  galaxyInfo() const;                // 银河系数据面板
     Q_INVOKABLE QVariantList galaxyNotes() const;               // 银河系教学要点
     Q_INVOKABLE QVariantMap  cosmosInfo() const;                 // 宇宙学参数
+    // 粒子数与预估 GPU 耗时 (性能开关的反馈)
+    Q_INVOKABLE QVariantMap  cosmosPerf() const;
     Q_INVOKABLE QVariantList cosmosNotes() const;                // 宇宙教学要点
     Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
     Q_INVOKABLE void focusOn(const QString &id);
@@ -153,6 +174,12 @@ public:
     Q_INVOKABLE void testShot(const QString &focusId,
                               double dist, double phiDeg, double thetaDeg,
                               int scaleLevel, double jd);
+    int  cosmosVisible() const { return m_cosmosVisible; }
+    int  cosmosTotal() const { return m_cosmosTotal; }
+    double cosmosEstMs() const { return m_cosmosEstMs; }
+    double cosmosEstFps() const { return m_cosmosEstFps; }
+    void setCosmosVisible(int n);
+
     Q_INVOKABLE void resetView();
     Q_INVOKABLE void setTimeToNow();
 
@@ -178,6 +205,9 @@ signals:
     void realScaleChanged();
     void dateTextChanged();
     void scaleChanged();
+    void cosmosVisibleChanged();
+    void cosmosTotalChanged();
+    void cosmosPerfChanged();
     void sunMarkChanged();
     void galaxyLabelsChanged();
 
@@ -195,6 +225,12 @@ private:
     bool    m_showOrbits = true;
     bool    m_showRings = true;
     bool    m_showAtmo = true;
+    int     m_cosmosVisible = 0;   // 宇宙可见粒子数, <=0 全部
+    bool    m_cosmosReady = false; // 宇宙粒子总数是否已就绪
+    int     m_cosmosTotal = 0;     // 宇宙粒子总数 (就绪后填入)
+    double  m_cosmosEstMs = 0.0;   // 预估 GPU 耗时 (按实测系数标定)
+    double  m_cosmosEstFps = 0.0;  // 预估帧率
+    int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;

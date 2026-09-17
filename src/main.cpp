@@ -103,9 +103,12 @@ int main(int argc, char **argv)
     // 注意不能改成 visible: false: 窗口不可见时 Qt 会跳过场景图渲染,
     // grabWindow() 抓到的会是空白 (实测过 offscreen 平台也是同样问题)。
     // opacity 0 的窗口仍然正常渲染, 只是不显示。
+    // ★ 基准测试 (SS_BENCH) 同样让窗口透明 —— 它要跑好几秒,
+    //   不该在用户屏幕上一直显示一个窗口。
     engine.rootContext()->setContextProperty(
         QStringLiteral("ssHeadless"),
-        !qEnvironmentVariable("SS_SELFTEST").isEmpty());
+        !qEnvironmentVariable("SS_SELFTEST").isEmpty()
+            || qEnvironmentVariableIntValue("SS_BENCH") > 0);
 
 
     qInfo() << "[启动] 4 加载 QML";
