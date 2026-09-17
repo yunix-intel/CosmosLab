@@ -811,6 +811,37 @@ ApplicationWindow {
                         font.pixelSize: 9
                         font.family: root.sansFont
                     }
+
+                    // ---- 哈勃图入口 ----
+                    // ★ 放在**可见处** (结构列表标题行), 不要塞到面板底部 ——
+                    //   之前结构列表就因为放太靠下而要滚动才能看到, 教训在这。
+                    Rectangle {
+                        Layout.preferredWidth: 58
+                        Layout.preferredHeight: 19
+                        radius: 4
+                        color: hubBtnMa.containsMouse
+                               ? Qt.rgba(0.37, 0.66, 1.0, 0.32)
+                               : Qt.rgba(0.37, 0.66, 1.0, 0.14)
+                        border.width: 1
+                        border.color: hubBtnMa.containsMouse
+                                      ? Qt.rgba(0.55, 0.78, 1.0, 0.85)
+                                      : Qt.rgba(0.45, 0.62, 0.88, 0.42)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "哈勃图"
+                            color: hubBtnMa.containsMouse ? "#dceaff"
+                                                          : "#9fc4f0"
+                            font.pixelSize: 9
+                            font.family: root.sansFont
+                        }
+                        MouseArea {
+                            id: hubBtnMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: hubbleOverlay.visible = true
+                        }
+                    }
                 }
 
                 Repeater {
@@ -2483,6 +2514,649 @@ ApplicationWindow {
             } else {
                 console.log("[拾取测试] cardForMarker 返回空 —— 链路失败")
             }
+        }
+    }
+
+    // ========================================================================
+    //  哈勃图面板 —— 用真实超新星数据检验宇宙膨胀
+    //
+    //  ★★ 为什么这件事在教学上是"质变":
+    //    之前的宇宙视图是**展示**宇宙长什么样; 这里是**用数据检验模型** ——
+    //    拖动 Ωm, 曲线变形、χ² 变化, 能亲眼看到哪个模型被数据接受、
+    //    哪个被排除。这是从"看"到"做科学"的那一步。
+    //
+    //  ★ 数据: Pantheon+ (2022), 1701 颗 Ia 型超新星。
+    //    它们是**标准烛光** —— 距离由视亮度独立测定, 与红移无关。
+    //    这一点是整张图的立足点: 若改用 SDSS 星系 (距离由红移推出),
+    //    就是循环论证, 参数取什么值都会"符合"。
+    // ========================================================================
+    Rectangle {
+        id: hubbleOverlay
+        anchors.fill: parent
+        visible: false
+        z: 180
+        color: Qt.rgba(0.02, 0.03, 0.05, 0.90)
+
+        // 点背景关闭
+        MouseArea {
+            anchors.fill: parent
+            onClicked: hubbleOverlay.visible = false
+        }
+
+        // ---- 数据与状态 ----
+        property var  hd: ({})
+        property real om: 0.315
+        property real ol: 0.685
+        property real chi2: 0
+        property real omBest: 0.351
+        property real omLo: 0.30
+        property real omHi: 0.40
+
+        // 参考模型的 χ² (固定值, 启动时算一次)
+        property real chi2Best: 0
+        property real chi2Planck: 0
+        property real chi2Eds: 0
+        property real chi2Empty: 0
+
+        property bool ready: false
+
+        // ---- 坐标范围 ----
+        readonly property real lz0: -3.0      // log10(z) 下限 (z = 0.001)
+        readonly property real lz1: 0.40      // 上限 (z = 2.5)
+        readonly property real mu0: 28.4
+        readonly property real mu1: 47.6
+        readonly property int  plotW: 820
+        readonly property int  plotH: 380
+        readonly property real dpr: root.screen ? root.screen.devicePixelRatio : 1
+
+        // 当前曲线用的积分表与零点 (绘图需要)
+        property var  curTable: null
+        property real curC: 0
+
+        // ------------------------------------------------------------------
+        //  宇宙学计算
+        // ------------------------------------------------------------------
+
+        // E(z) = H(z)/H0, 含曲率项 Ωk = 1 - Ωm - ΩΛ
+        function ezOf(z, m, l) {
+            const omk = 1.0 - m - l
+            const q = 1.0 + z
+            return Math.sqrt(m * q * q * q + omk * q * q + l)
+        }
+
+        // ★★ 累积积分表 —— 让 χ² 能实时算的关键
+        //
+        //   朴素做法: 对 1701 颗超新星**各做一次**数值积分 (每个 ~80 步)
+        //   = 13.6 万次 E(z) 求值, 拖滑块会明显卡。
+        //   这里改成: 在一条预先算好的网格上做**累积 Simpson**,
+        //   得到 cum[i] = ∫₀^{z_i} dz/E(z); 之后任意 z 只需插值。
+        //   2000 点网格 → 约 6000 次求值, 快 20 倍以上。
+        //
+        //   ★ 网格必须 **log 等距**而不是线性:
+        //     红移跨 0.0012~2.26 (= 三个半数量级), 线性网格在低 z 端
+        //     第一个格子就跨过整段低红移数据; log 网格让每个区间的
+        //     **相对**宽度一致, Simpson 的相对误差在各处均匀。
+        function buildTable(m, l) {
+            const N = 2000
+            const za = 1e-4          // 起点: 更低的贡献可忽略
+            const zb = 2.6
+            const lr = Math.log(zb / za) / N
+            const zs = []
+            const inv = []
+            for (let i = 0; i <= N; ++i) {
+                const z = za * Math.exp(lr * i)
+                zs.push(z)
+                inv.push(1.0 / ezOf(z, m, l))
+            }
+            const cum = [0.0]
+            for (let i = 1; i <= N; ++i) {
+                const h = zs[i] - zs[i - 1]
+                const zm = 0.5 * (zs[i] + zs[i - 1])
+                const fm = 1.0 / ezOf(zm, m, l)
+                cum.push(cum[i - 1] + h / 6.0 * (inv[i - 1] + 4.0 * fm + inv[i]))
+            }
+            return { cum: cum, N: N, lr: lr, za: za }
+        }
+
+        // 共动距离 (以 c/H0 为单位)。在 log 空间线性插值 ——
+        // 网格本身就是 log 等距的, 在这个空间插值误差最小。
+        function dcOf(t, z) {
+            if (!t || z <= 0)
+                return 0.0
+            let f = Math.log(z / t.za) / t.lr
+            if (f <= 0) f = 0
+            if (f >= t.N) f = t.N - 1
+            const i = Math.floor(f)
+            const r = f - i
+            return t.cum[i] * (1.0 - r) + t.cum[i + 1] * r
+        }
+
+        // 拟合: χ² 与边缘化后的零点 C, 并回传所用积分表
+        //
+        // ★ C 必须作为自由参数: 它同时吸收 H0 与超新星绝对星等 M,
+        //   二者在哈勃图上**完全简并** (只差一个常数), 固定任何一个
+        //   都会得出错误结论。
+        // ★ 用**解析边缘化**: 给定 Ωm/ΩΛ 时 χ² 对 C 是二次式, 极小点
+        //   有闭式解 C* = Σw(μ−m)/Σw, 比网格扫描省掉一整个维度。
+        function fitWith(m, l) {
+            const t = buildTable(m, l)
+            const n = hd.logz.length
+            let sw = 0.0, swd = 0.0
+            const mv = []
+            for (let i = 0; i < n; ++i) {
+                const z = Math.pow(10, hd.logz[i])
+                const dl = (1.0 + z) * dcOf(t, z)
+                const v = 5.0 * Math.log10(Math.max(dl, 1e-12))
+                mv.push(v)
+                const w = 1.0 / (hd.err[i] * hd.err[i])
+                sw += w
+                swd += w * (hd.mu[i] - v)
+            }
+            const C = sw > 0 ? swd / sw : 0.0
+            let c2 = 0.0
+            for (let i = 0; i < n; ++i) {
+                const r = hd.mu[i] - mv[i] - C
+                c2 += r * r / (hd.err[i] * hd.err[i])
+            }
+            return { chi2: c2, C: C, table: t }
+        }
+
+        // 重算当前参数的 χ² 与曲线
+        function refresh() {
+            if (!ready)
+                return
+            const r = fitWith(om, ol)
+            chi2 = r.chi2
+            curTable = r.table
+            curC = r.C
+            fgCv.requestPaint()
+        }
+
+        // 复位到最佳拟合
+        function resetToBest() {
+            omSlider.setValue(omBest)
+            olSlider.setValue(1.0 - omBest)
+        }
+
+        Component.onCompleted: {
+            const d = scene.hubbleData()
+            if (d && d.n !== undefined && d.n > 0) {
+                hd = d
+                omBest = d.omBest
+                omLo = d.omLo
+                omHi = d.omHi
+                om = d.omBest
+                ol = 1.0 - d.omBest
+                ready = true
+
+                // 参考模型的 χ² 只算一次 (不随滑块变化)
+                chi2Planck = fitWith(0.315, 0.685).chi2
+                chi2Eds = fitWith(1.0, 0.0).chi2
+                chi2Empty = fitWith(0.0, 0.0).chi2
+                chi2Best = fitWith(omBest, 1.0 - omBest).chi2
+
+                refresh()
+                bgCv.requestPaint()
+            }
+        }
+
+        // 画布坐标变换
+        function cx(logz) { return (logz - lz0) / (lz1 - lz0) * plotW }
+        function cy(mu)   { return plotH - (mu - mu0) / (mu1 - mu0) * plotH }
+
+        // 给定模型画曲线所需的零点 (与 fitWith 同一套约定)
+        function zeroPointOf(t, m, l) {
+            let sw = 0.0, swd = 0.0
+            for (let i = 0; i < hd.logz.length; ++i) {
+                const z = Math.pow(10, hd.logz[i])
+                const dl = (1.0 + z) * dcOf(t, z)
+                const v = 5.0 * Math.log10(Math.max(dl, 1e-12))
+                const w = 1.0 / (hd.err[i] * hd.err[i])
+                sw += w
+                swd += w * (hd.mu[i] - v)
+            }
+            return sw > 0 ? swd / sw : 0.0
+        }
+
+        // 主卡片
+        Rectangle {
+            id: hubCard
+            anchors.centerIn: parent
+            width: hubbleOverlay.plotW + 56
+            height: hubCol.implicitHeight + 40
+            radius: 12
+            color: Qt.rgba(0.055, 0.078, 0.125, 0.98)
+            border.width: 1
+            border.color: Qt.rgba(0.37, 0.66, 1.0, 0.35)
+
+            MouseArea { anchors.fill: parent }     // 吞点击, 不穿透到背景
+
+            Column {
+                id: hubCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 20
+                spacing: 10
+
+                // ---- 标题行 ----
+                Row {
+                    spacing: 12
+                    Text {
+                        text: "哈勃图"
+                        color: root.cText
+                        font.pixelSize: 20
+                        font.bold: true
+                        font.family: root.sansFont
+                    }
+                    Text {
+                        anchors.baseline: parent.children[0].baseline
+                        text: "用真实超新星数据检验宇宙膨胀模型"
+                        color: root.cTextDim
+                        font.pixelSize: 12
+                        font.family: root.sansFont
+                    }
+                    Text {
+                        anchors.baseline: parent.children[0].baseline
+                        visible: hubbleOverlay.ready
+                        text: "Pantheon+ · " + hubbleOverlay.hd.n
+                              + " 颗 Ia 型超新星 (2022)"
+                        color: Qt.rgba(0.58, 0.76, 0.98, 0.95)
+                        font.pixelSize: 11
+                        font.family: root.sansFont
+                    }
+                    Item { width: 200; height: 1 }
+                    Text {
+                        anchors.baseline: parent.children[0].baseline
+                        text: "✕"
+                        color: hoverClose.containsMouse ? "#ff9a9a" : root.cTextDim
+                        font.pixelSize: 18
+                        MouseArea {
+                            id: hoverClose
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: hubbleOverlay.visible = false
+                        }
+                    }
+                }
+
+                // ---- 绘图区 (两个 Canvas 叠加) ----
+                Item {
+                    width: hubbleOverlay.plotW
+                    height: hubbleOverlay.plotH
+                    // 左边留出放 y 轴数字的位置
+                    x: 44
+
+                    // 底层: 网格 + 坐标轴 + 数据点 (静态)
+                    Canvas {
+                        id: bgCv
+                        anchors.fill: parent
+                        renderStrategy: Canvas.Immediate
+                        // ★ canvasSize 设成物理分辨率, 告诉 Canvas 按高清渲染。
+                        //   但**不要**再手动 ctx.scale(dpr, dpr) ——
+                        //   Qt 已自动把绘图坐标 (逻辑尺寸 820x380) 映射到它。
+                        //   多乘一次会把所有坐标放大一倍, 表现为
+                        //   "只画出一部分、数据点全在画布外"。
+                        canvasSize: Qt.size(width * hubbleOverlay.dpr,
+                                            height * hubbleOverlay.dpr)
+
+                        onPaint: {
+                            const ctx = getContext("2d")
+                            ctx.reset()
+
+                            const W = hubbleOverlay.plotW
+                            const H = hubbleOverlay.plotH
+                            const ov = hubbleOverlay
+
+                            // 网格
+                            ctx.strokeStyle = "rgba(255,255,255,0.07)"
+                            ctx.lineWidth = 1
+                            const zs = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 2.5]
+                            for (let i = 0; i < zs.length; ++i) {
+                                const x = ov.cx(Math.log10(zs[i]))
+                                ctx.beginPath(); ctx.moveTo(x, 0)
+                                ctx.lineTo(x, H); ctx.stroke()
+                            }
+                            for (let v = 30; v <= 47; v += 2) {
+                                const y = ov.cy(v)
+                                ctx.beginPath(); ctx.moveTo(0, y)
+                                ctx.lineTo(W, y); ctx.stroke()
+                            }
+
+                            // 数据点
+                            if (ov.ready) {
+                                const d = ov.hd
+                                ctx.fillStyle = "rgba(150,210,255,0.5)"
+                                for (let i = 0; i < d.logz.length; ++i) {
+                                    const x = ov.cx(d.logz[i])
+                                    const y = ov.cy(d.mu[i])
+                                    ctx.fillRect(x - 1, y - 1, 2, 2)
+                                }
+                            }
+
+                            // 边框
+                            ctx.strokeStyle = "rgba(120,150,190,0.45)"
+                            ctx.lineWidth = 1.5
+                            ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
+
+                            // 轴标签
+                            ctx.fillStyle = "rgba(160,180,205,0.9)"
+                            ctx.font = "11px Consolas, monospace"
+                            for (let i = 0; i < zs.length; ++i) {
+                                const x = ov.cx(Math.log10(zs[i]))
+                                ctx.fillText(String(zs[i]), x - 13, H + 17)
+                            }
+                            for (let v = 30; v <= 46; v += 4) {
+                                ctx.fillText(String(v), -32, ov.cy(v) + 4)
+                            }
+                            ctx.font = "12px 'Microsoft YaHei'"
+                            ctx.fillStyle = "rgba(180,196,218,0.95)"
+                            ctx.fillText("红移 z", W - 46, H + 38)
+                        }
+                    }
+
+                    // 上层: 理论曲线 (参数变化时重绘)
+                    Canvas {
+                        id: fgCv
+                        anchors.fill: parent
+                        renderStrategy: Canvas.Immediate
+                        // 同上: 不要再 ctx.scale(dpr, dpr)
+                        canvasSize: Qt.size(width * hubbleOverlay.dpr,
+                                            height * hubbleOverlay.dpr)
+
+                        onPaint: {
+                            const ctx = getContext("2d")
+                            ctx.reset()
+                            const ov = hubbleOverlay
+                            if (!ov.ready || !ov.curTable)
+                                return
+
+                            // 画一条理论曲线 (N 点折线)
+                            function curve(t, C, color, width) {
+                                ctx.strokeStyle = color
+                                ctx.lineWidth = width
+                                ctx.beginPath()
+                                const N = 140
+                                for (let i = 0; i <= N; ++i) {
+                                    const lz = ov.lz0 + (ov.lz1 - ov.lz0) * i / N
+                                    const z = Math.pow(10, lz)
+                                    const dl = (1.0 + z) * ov.dcOf(t, z)
+                                    const mu = 5.0 * Math.log10(Math.max(dl, 1e-12)) + C
+                                    const x = ov.cx(lz)
+                                    const y = ov.cy(mu)
+                                    if (i === 0) ctx.moveTo(x, y)
+                                    else ctx.lineTo(x, y)
+                                }
+                                ctx.stroke()
+                            }
+
+                            // 参考模型 (细线, 各自用**自己的**零点)
+                            const tEds = ov.buildTable(1.0, 0.0)
+                            curve(tEds, ov.zeroPointOf(tEds, 1.0, 0.0),
+                                  "rgba(255,118,108,0.8)", 2)
+                            const tEmp = ov.buildTable(0.0, 0.0)
+                            curve(tEmp, ov.zeroPointOf(tEmp, 0.0, 0.0),
+                                  "rgba(255,205,112,0.8)", 2)
+
+                            // 当前模型 (粗线)
+                            curve(ov.curTable, ov.curC, "#7ee28a", 3.5)
+                        }
+                    }
+                }
+
+                // ---- Ωm 滑块 ----
+                Row {
+                    spacing: 10
+                    Text {
+                        text: "Ωm"
+                        color: root.cText
+                        font.pixelSize: 12
+                        font.family: root.monoFont
+                        width: 26
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Slider {
+                        id: omSlider
+                        width: 260
+                        from: 0.0; to: 1.0; stepSize: 0.005
+                        value: 0.315
+                        anchors.verticalCenter: parent.verticalCenter
+                        onMoved: {
+                            hubbleOverlay.om = value
+                            omDebounce.restart()
+                        }
+                    }
+                    Text {
+                        text: hubbleOverlay.om.toFixed(3)
+                        color: root.cText
+                        font.pixelSize: 12
+                        font.family: root.monoFont
+                        width: 52
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // ---- ΩΛ 滑块 ----
+                Row {
+                    spacing: 10
+                    Text {
+                        text: "ΩΛ"
+                        color: root.cText
+                        font.pixelSize: 12
+                        font.family: root.monoFont
+                        width: 26
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Slider {
+                        id: olSlider
+                        width: 260
+                        from: 0.0; to: 1.0; stepSize: 0.005
+                        value: 0.685
+                        anchors.verticalCenter: parent.verticalCenter
+                        onMoved: {
+                            hubbleOverlay.ol = value
+                            omDebounce.restart()
+                        }
+                    }
+                    Text {
+                        text: hubbleOverlay.ol.toFixed(3)
+                        color: root.cText
+                        font.pixelSize: 12
+                        font.family: root.monoFont
+                        width: 52
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                // 防抖: 拖动时不要每一帧都重算 (一次完整重算约 6000 次
+                // 积分求值 + 1701 次插值, 每帧都算会掉帧)
+                Timer {
+                    id: omDebounce
+                    interval: 90
+                    onTriggered: hubbleOverlay.refresh()
+                }
+
+                // ---- 读数区 ----
+                Rectangle {
+                    width: hubbleOverlay.plotW + 16
+                    height: readCol.implicitHeight + 20
+                    radius: 6
+                    color: Qt.rgba(1, 1, 1, 0.04)
+                    border.width: 1
+                    border.color: Qt.rgba(1, 1, 1, 0.09)
+
+                    Column {
+                        id: readCol
+                        x: 12; y: 10
+                        spacing: 5
+
+                        // 当前 χ²
+                        Row {
+                            spacing: 14
+                            Text {
+                                text: "当前模型  χ² = "
+                                      + hubbleOverlay.chi2.toFixed(0)
+                                color: "#7ee28a"
+                                font.pixelSize: 12
+                                font.family: root.monoFont
+                            }
+                            Text {
+                                text: {
+                                    const d = hubbleOverlay.chi2
+                                          - hubbleOverlay.chi2Best
+                                    if (d < 1.0)
+                                        return "Δχ² = " + d.toFixed(1)
+                                              + "  ← 与最佳拟合无法区分"
+                                    if (d < 4.0)
+                                        return "Δχ² = " + d.toFixed(0)
+                                              + "  ·  可接受"
+                                    if (d < 25.0)
+                                        return "Δχ² = " + d.toFixed(0)
+                                              + "  ·  数据不太支持"
+                                    return "Δχ² = " + d.toFixed(0)
+                                          + "  ·  已被数据排除"
+                                }
+                                color: {
+                                    const d = hubbleOverlay.chi2
+                                          - hubbleOverlay.chi2Best
+                                    return d < 4.0 ? "#8fd88f"
+                                         : d < 25.0 ? "#e8cc7a"
+                                         : "#e89090"
+                                }
+                                font.pixelSize: 11
+                                font.family: root.sansFont
+                            }
+                        }
+
+                        Text {
+                            text: "Ωk = 1 − Ωm − ΩΛ = "
+                                  + (1.0 - hubbleOverlay.om
+                                     - hubbleOverlay.ol).toFixed(3)
+                            color: root.cTextDim
+                            font.pixelSize: 10
+                            font.family: root.monoFont
+                        }
+
+                        // 参考模型对比表
+                        Text {
+                            text: "参考模型"
+                            color: root.cText
+                            font.pixelSize: 11
+                            font.family: root.sansFont
+                            topPadding: 4
+                        }
+                        Repeater {
+                            model: {
+                                const o = hubbleOverlay
+                                return [
+                                    { n: "最佳拟合 (本数据)",
+                                      s: "Ωm = " + o.omBest.toFixed(3),
+                                      c: o.chi2Best, col: "#7ee28a" },
+                                    { n: "Planck 2018 (CMB)",
+                                      s: "Ωm = 0.315", c: o.chi2Planck,
+                                      col: "#be96ff" },
+                                    { n: "爱因斯坦-德西特 (减速)",
+                                      s: "Ωm = 1, ΩΛ = 0", c: o.chi2Eds,
+                                      col: "#ff766c" },
+                                    { n: "空宇宙",
+                                      s: "Ωm = 0, ΩΛ = 0", c: o.chi2Empty,
+                                      col: "#ffcd70" }
+                                ]
+                            }
+                            delegate: Row {
+                                required property var modelData
+                                spacing: 0
+                                Rectangle {
+                                    width: 3; height: 13; radius: 1.5
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: modelData.col
+                                }
+                                Text {
+                                    width: 168
+                                    leftPadding: 8
+                                    text: modelData.n
+                                    color: root.cTextDim
+                                    font.pixelSize: 10
+                                    font.family: root.sansFont
+                                }
+                                Text {
+                                    width: 100
+                                    text: "χ² = " + modelData.c.toFixed(0)
+                                    color: modelData.col
+                                    font.pixelSize: 10
+                                    font.family: root.monoFont
+                                }
+                                Text {
+                                    text: "Δχ² = "
+                                          + (modelData.c
+                                             - hubbleOverlay.chi2Best).toFixed(0)
+                                    color: root.cTextDim
+                                    font.pixelSize: 10
+                                    font.family: root.monoFont
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ---- 结论 + 复位按钮 ----
+                Row {
+                    spacing: 14
+                    Text {
+                        width: hubbleOverlay.plotW - 30
+                        wrapMode: Text.WordWrap
+                        text: "★ 拖动滑块改变宇宙学参数，看曲线如何变形。"
+                              + "数据点明显**拒绝**红色的减速宇宙 —— "
+                              + "它的 Δχ² 高达 "
+                              + (hubbleOverlay.chi2Eds
+                                 - hubbleOverlay.chi2Best).toFixed(0)
+                              + "。这就是宇宙加速膨胀的定量证据。"
+                        color: Qt.rgba(0.82, 0.68, 0.50, 1.0)
+                        font.pixelSize: 10
+                        font.family: root.sansFont
+                        lineHeight: 1.35
+                    }
+                    Rectangle {
+                        width: 74; height: 26; radius: 5
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: resetMa.containsMouse
+                               ? Qt.rgba(0.37, 0.66, 1.0, 0.28)
+                               : Qt.rgba(1, 1, 1, 0.06)
+                        border.width: 1
+                        border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "复位"
+                            color: root.cText
+                            font.pixelSize: 11
+                            font.family: root.sansFont
+                        }
+                        MouseArea {
+                            id: resetMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: hubbleOverlay.resetToBest()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 测试用: SS_HUBBLE=1 时启动即打开哈勃图面板
+    Timer {
+        interval: 300
+        running: hubbleOverlay.ready && !hubbleOverlay.visible
+                 && scene.testHubble
+        repeat: false
+        onTriggered: {
+            hubbleOverlay.visible = true
+            console.log("[哈勃图] 已打开: " + hubbleOverlay.hd.n + " 点, χ² = "
+                        + hubbleOverlay.chi2.toFixed(1)
+                        + ", Ωm最佳 = " + hubbleOverlay.omBest)
         }
     }
 

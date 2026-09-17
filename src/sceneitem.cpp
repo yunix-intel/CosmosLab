@@ -4,6 +4,9 @@
 
 #include "sceneitem.h"
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonObject>
 #include "bodyregistry.h"
 #include "celestialdata.h"
 #include "ephemeris.h"
@@ -167,6 +170,9 @@ SolarScene::SolarScene(QQuickItem *parent)
     //   (点了没反应, 或弹出空卡片), 必须有个可自动化触发的方式。
     if (qEnvironmentVariableIsSet("SS_MARKER"))
         m_testMarker = QString::fromUtf8(qgetenv("SS_MARKER"));
+
+    // 测试用: SS_HUBBLE=1 启动即打开哈勃图面板
+    m_testHubble = qEnvironmentVariableIntValue("SS_HUBBLE") > 0;
 
     // 测试用: SS_SDSS=<数量> 指定 SDSS 星系可见数 (-1=关闭, 0=全部)
     // ★ 需要它才能做性能标定: 单独改变 SDSS 数量, 隔离聚集性成本。
@@ -1053,9 +1059,43 @@ QVariantMap SolarScene::galaxyDetail(const QString &id) const
     return {};      // 大尺度结构等无照片天体
 }
 
-QStringList SolarScene::galaxiesWithPhoto() const
+// ---------------------------------------------------------------------------
+//  哈勃图数据 (Pantheon+ Ia 型超新星)
+//
+//  ★ 数据来源: Pantheon+ 数据发布 (2022), 1701 颗 Ia 型超新星。
+//    距离由**视亮度独立测定** (标准烛光), 与红移无关 —— 因此可以用来
+//    检验 v–d 关系。这与 SDSS 星系不同: 后者的距离是从红移推出来的,
+//    拿它画哈勃图是循环论证。
+//
+//  ★ z 在文件里存的是 **log10(z)**: 样本红移跨三个半数量级,
+//    存 z 本身会让低红移端的有效精度被浮点格式吃掉。
+// ---------------------------------------------------------------------------
+QVariantMap SolarScene::hubbleData() const
 {
-    QStringList out;
+    if (!m_hubbleCache.isEmpty())
+        return m_hubbleCache;
+
+    const QString path =
+        QStringLiteral("D:/tmp/solar-system-cpp/assets/sn/hubble.json");
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) {
+        qWarning() << "[哈勃图] 无法打开" << path;
+        return {};
+    }
+    QJsonParseError err{};
+    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    if (err.error != QJsonParseError::NoError) {
+        qWarning() << "[哈勃图] JSON 解析失败:" << err.errorString();
+        return {};
+    }
+    m_hubbleCache = doc.toVariant().toMap();
+    qInfo() << "[哈勃图] 已载入"
+            << m_hubbleCache.value("n").toInt() << "颗超新星";
+    return m_hubbleCache;
+}
+
+QStringList SolarScene::galaxiesWithPhoto() const
+{    QStringList out;
     const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
     for (int i = 0; i < LOCAL_GROUP_COUNT; ++i) {
         const QString id = QString::fromUtf8(LOCAL_GROUP[i].id);

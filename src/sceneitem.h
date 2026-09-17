@@ -105,6 +105,8 @@ class SolarScene : public QQuickFramebufferObject
     // 测试用: 模拟点击 3D 标签 (见 sceneitem.cpp 里 SS_MARKER 的说明)。
     // ★ CONSTANT 是合适的 —— 它在构造时定好, 之后不变。
     Q_PROPERTY(QString testMarker READ testMarker CONSTANT)
+    // 测试用: SS_HUBBLE=1 时启动即打开哈勃图面板 (供自动化截图验证)
+    Q_PROPERTY(bool    testHubble READ testHubble CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
@@ -208,6 +210,14 @@ public:
     // 有实景图的天体 id 列表 (供 UI 标记哪些可点开看照片)
     Q_INVOKABLE QStringList  galaxiesWithPhoto() const;
     Q_INVOKABLE QVariantList cosmosNotes() const;                // 宇宙教学要点
+
+    // 哈勃图数据 (Pantheon+ Ia 型超新星)。
+    //
+    // ★ 为什么由 C++ 读文件而不是 QML 用 XHR:
+    //   QML 的 XHR 对 file:// 的支持依赖构建配置, 容易在换环境时突然失效;
+    //   而 C++ 直接 QFile 读 + QJsonDocument 解析是最稳的。
+    // ★ 解析一次后缓存 —— 这个文件 29 KB, 每次打开面板都重读没必要。
+    Q_INVOKABLE QVariantMap  hubbleData() const;
     Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
     Q_INVOKABLE void focusOn(const QString &id);
 
@@ -222,6 +232,7 @@ public:
     int  cosmosDrawn() const { return m_cosmosDrawn; }
     QString testCard() const;
     QString testMarker() const { return m_testMarker; }
+    bool testHubble() const { return m_testHubble; }
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
@@ -290,6 +301,7 @@ private:
     double  m_cosmosEstFps = 0.0;  // 预估帧率
     int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)
     QString m_testMarker;          // 测试用: 模拟点击的标签 (SS_MARKER)
+    bool    m_testHubble = false;  // 测试用: 启动即开哈勃图 (SS_HUBBLE)
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;
@@ -313,6 +325,7 @@ private:
     bool   m_sunMarkOn = false;
 
     QVariantList m_galaxyLabels;        // 银河系标注 (位置 + 名称)
+    mutable QVariantMap m_hubbleCache;  // 哈勃图数据 (首次读取后缓存)
     double       m_galaxyViewWidthLy = 0.0;
 
     // 渲染分辨率缩放。默认按屏幕 DPR 自适应:
