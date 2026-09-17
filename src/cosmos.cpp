@@ -155,7 +155,11 @@ QVector<CosmosMarker> Cosmos::markers(int mode)
                      g.distanceMly < 1e-9
                         ? QStringLiteral("我们所在")
                         : QStringLiteral("%1 百万光年").arg(g.distanceMly, 0, 'f', 2),
-                     p, 0, g.distanceMly });
+                     p, 0, g.distanceMly,
+                     // ★ id 用**数据表里的 id** (如 "andromeda") ——
+                     //   点击标签时靠它查详情卡, 不能靠中文名反查
+                     //   (中文名是显示用的, 与数据表的键是两套)。
+                     QString::fromUtf8(g.id) });
     }
 
     // ---- 室女座星系团成员 ----
@@ -170,7 +174,8 @@ QVector<CosmosMarker> Cosmos::markers(int mode)
         out.append({ QString::fromUtf8(g.nameCn),
                      QString::fromUtf8(g.nameEn),
                      QStringLiteral("%1 百万光年").arg(g.distanceMly, 0, 'f', 1),
-                     p, 1, g.distanceMly });
+                     p, 1, g.distanceMly,
+                     QString::fromUtf8(g.id) });
     }
 
     // ---- 大尺度结构 ----
@@ -190,7 +195,11 @@ QVector<CosmosMarker> Cosmos::markers(int mode)
                      QString::fromUtf8(s.nameEn),
                      QStringLiteral("%1 百万光年").arg(s.distanceFromEarthMly, 0, 'f', 0),
                      p, s.kind == 2 ? 4 : (s.kind == 0 ? 3 : 2),
-                     s.distanceFromEarthMly });
+                     s.distanceFromEarthMly,
+                     // ★ 大尺度结构**没有数据表 id** (它们不是星系),
+                     //   用英文名当标识 —— 与 cosmosStructures() 的 nameEn
+                     //   一致, 使"列表点击"与"标签点击"能走同一条查表路径。
+                     QString::fromUtf8(s.nameEn) });
     }
 
     return out;

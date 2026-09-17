@@ -160,6 +160,14 @@ SolarScene::SolarScene(QQuickItem *parent)
     if (qEnvironmentVariableIsSet("SS_COSMOS_N"))
         m_cosmosVisible = qEnvironmentVariableIntValue("SS_COSMOS_N");
 
+    // 测试用: SS_MARKER=<标签文本或 id> —— 启动时**模拟点击一个 3D 标签**,
+    //         走与真实点击完全相同的代码路径, 用于自动化验证拾取是否正确。
+    // ★ 为什么需要它: 点击是鼠标事件, 截图验证不了。而"标签上的 id 是否
+    //   正确传到 QML"、"cardForMarker 能否查到数据"这两件事都会静默失败
+    //   (点了没反应, 或弹出空卡片), 必须有个可自动化触发的方式。
+    if (qEnvironmentVariableIsSet("SS_MARKER"))
+        m_testMarker = QString::fromUtf8(qgetenv("SS_MARKER"));
+
     // 测试用: SS_SDSS=<数量> 指定 SDSS 星系可见数 (-1=关闭, 0=全部)
     // ★ 需要它才能做性能标定: 单独改变 SDSS 数量, 隔离聚集性成本。
     if (qEnvironmentVariableIsSet("SS_SDSS"))
@@ -356,6 +364,9 @@ void SolarScene::updateSunMark()
                 { "text", mk.nameCn },
                 { "sub",  mk.detail },
                 { "kind", QString::fromUtf8(kn) },
+                // ★ 数据 id —— QML 靠它决定这个标签**能不能点开详情卡**。
+                //   银河系视图的旋臂标签不带 id (它们不是天体), 因此不可点。
+                { "id",   mk.id },
             });
         }
 

@@ -102,6 +102,9 @@ class SolarScene : public QQuickFramebufferObject
                NOTIFY cosmosMapModeChanged)
 
     Q_PROPERTY(QString testCard READ testCard CONSTANT)
+    // 测试用: 模拟点击 3D 标签 (见 sceneitem.cpp 里 SS_MARKER 的说明)。
+    // ★ CONSTANT 是合适的 —— 它在构造时定好, 之后不变。
+    Q_PROPERTY(QString testMarker READ testMarker CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
@@ -218,6 +221,7 @@ public:
     int  cosmosTotal() const { return m_cosmosTotal; }
     int  cosmosDrawn() const { return m_cosmosDrawn; }
     QString testCard() const;
+    QString testMarker() const { return m_testMarker; }
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
@@ -285,6 +289,7 @@ private:
     double  m_cosmosEstMs = 0.0;   // 预估 GPU 耗时 (按实测系数标定)
     double  m_cosmosEstFps = 0.0;  // 预估帧率
     int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)
+    QString m_testMarker;          // 测试用: 模拟点击的标签 (SS_MARKER)
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;

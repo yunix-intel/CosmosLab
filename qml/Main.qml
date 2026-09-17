@@ -1738,16 +1738,31 @@ ApplicationWindow {
                     spacing: 1
 
                     Rectangle {
+                        id: tagBg
                         width: labelRow.width + 12
                         height: 18
                         radius: 4
-                        color: Qt.rgba(0.05, 0.06, 0.09, 0.82)
-                        border.width: 1
-                        border.color: modelData.kind === "core"
-                                      ? Qt.rgba(1.0, 0.82, 0.40, 0.75)
-                                      : modelData.kind === "spur"
-                                        ? Qt.rgba(0.50, 0.85, 0.91, 0.75)
-                                        : Qt.rgba(0.72, 0.79, 0.88, 0.55)
+
+                        // ★ 只有**带 id 的标签**才可点开详情。
+                        //   银河系视图的旋臂标签 (如"英仙臂") 不带 id ——
+                        //   它们是结构描述, 不是可查询的天体。C++ 侧对它们
+                        //   留空 id, 这里据此决定是否响应鼠标。
+                        readonly property bool clickable:
+                            modelData.id !== undefined
+                            && modelData.id !== null
+                            && modelData.id.length > 0
+
+                        color: tagMa.containsMouse
+                               ? Qt.rgba(0.13, 0.19, 0.30, 0.94)
+                               : Qt.rgba(0.05, 0.06, 0.09, 0.82)
+                        border.width: tagMa.containsMouse ? 2 : 1
+                        border.color: tagMa.containsMouse
+                                      ? Qt.rgba(0.55, 0.78, 1.0, 0.95)
+                                      : (modelData.kind === "core"
+                                         ? Qt.rgba(1.0, 0.82, 0.40, 0.75)
+                                         : modelData.kind === "spur"
+                                           ? Qt.rgba(0.50, 0.85, 0.91, 0.75)
+                                           : Qt.rgba(0.72, 0.79, 0.88, 0.55))
 
                         Row {
                             id: labelRow
@@ -1772,6 +1787,74 @@ ApplicationWindow {
                                 text: modelData.sub
                                 color: Qt.rgba(0.62, 0.68, 0.78, 0.9)
                                 font.pixelSize: 9
+                            }
+                        }
+
+                        // ★ 点击热区就放在标签底上 (而不是外面套一层) ——
+                        //   标签宽度是自适应的 (labelRow.width + 12),
+                        //   套在外面就得手动同步尺寸, 容易对不齐。
+                        //
+                        // ★ 为什么热区要覆盖整个标签而不只是那个 5px 小十字:
+                        //   用户的直觉是"点名字"。5px 的圆点几乎点不中。
+                        //
+                        // ★★ 关键: 这个 MouseArea 必须**自己实现拖拽**。
+                        //   相机拖拽原本由根级那个全屏 MouseArea 负责, 但
+                        //   QML 的鼠标事件只传给最上层的 MouseArea —— 标签
+                        //   一旦接受 press, 根级就收不到了, 表现为
+                        //   **"鼠标正好压在标签上时拖不动视角"**。
+                        //   所以这里复刻同样的拖拽逻辑 (4 行), 见下面的注释。
+                        MouseArea {
+                            id: tagMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: tagBg.clickable
+                            cursorShape: pressed ? Qt.ClosedHandCursor
+                                                 : Qt.PointingHandCursor
+
+                            property real lastX: 0
+                            property real lastY: 0
+                            property real pressX: 0
+                            property real pressY: 0
+                            property bool moved: false
+
+                            onPressed: (m) => {
+                                lastX = m.x
+                                lastY = m.y
+                                pressX = m.x
+                                pressY = m.y
+                                moved = false
+                            }
+                            onPositionChanged: (m) => {
+                                const dx = m.x - lastX
+                                const dy = m.y - lastY
+                                lastX = m.x
+                                lastY = m.y
+                                // ★ 用**累计位移**判定是否算拖拽, 不能用每帧
+                                //   位移 —— 手抖 1px 就会把点击误判成拖拽。
+                                //   阈值 4px 是常见的手感取值。
+                                if (Math.abs(m.x - pressX) > 4
+                                        || Math.abs(m.y - pressY) > 4)
+                                    moved = true
+                                // ★ 与根级 MouseArea 的拖拽逻辑保持一致 ——
+                                //   两处若不一致, 会出现"在标签上和在空白处
+                                //   拖动的手感不一样"。
+                                if (m.buttons & Qt.RightButton)
+                                    scene.panCamera(dx, dy)
+                                else
+                                    scene.rotateCamera(dx, dy)
+                            }
+                            onWheel: (w) => scene.zoomCamera(w.angleDelta.y / 120.0)
+
+                            onClicked: {
+                                // ★ 拖拽结束也会触发 clicked, 必须排除 ——
+                                //   否则"在标签上拖一下视角"会顺带弹出详情卡。
+                                if (moved)
+                                    return
+                                const d = root.cardForMarker(modelData)
+                                if (d && d.nameCn !== undefined) {
+                                    galaxyCard.detail = d
+                                    galaxyCard.visible = true
+                                }
                             }
                         }
                     }
@@ -2349,6 +2432,60 @@ ApplicationWindow {
         }
     }
 
+    // ---- 测试用: 模拟点击 3D 标签 (SS_MARKER) ----
+    //
+    // ★★ 为什么不复用上面 SS_CARD 那条路径:
+    //   那条是**直查数据表**, 不经过标签。而这里要验证的是
+    //   "标签上的 id 有没有正确从 C++ 传到 QML" —— 只有走
+    //   scene.galaxyLabels 再调 cardForMarker 才能真正覆盖这段链路。
+    //
+    // ★ 必须等标签列表**真的填充**后再查: 标签是渲染线程算完投影后
+    //   emit 过来的, Component.onCompleted 时还是空数组。
+    Timer {
+        id: markerProbe
+        interval: 400
+        repeat: true
+        running: scene.testMarker.length > 0
+        property bool done: false
+
+        onTriggered: {
+            if (markerProbe.done)
+                return
+            const list = scene.galaxyLabels
+            if (!list || list.length === 0)
+                return                      // 还没投影出来, 再等一轮
+
+            const want = scene.testMarker
+            let hit = null
+            for (let i = 0; i < list.length; ++i) {
+                const L = list[i]
+                if (L.text === want || L.id === want) {
+                    hit = L
+                    break
+                }
+            }
+            markerProbe.done = true
+
+            if (!hit) {
+                console.log("[拾取测试] 未匹配到标签: " + want
+                            + "  (标签总数 " + list.length + ")")
+                return
+            }
+            console.log("[拾取测试] 命中标签 text=" + hit.text
+                        + "  id=" + hit.id + "  kind=" + hit.kind)
+            const d = root.cardForMarker(hit)
+            if (d && d.nameCn !== undefined) {
+                console.log("[拾取测试] 卡片数据 OK: " + d.nameCn
+                            + "  redshift=" + d.redshift
+                            + "  derived=" + d.redshiftDerived)
+                galaxyCard.detail = d
+                galaxyCard.visible = true
+            } else {
+                console.log("[拾取测试] cardForMarker 返回空 —— 链路失败")
+            }
+        }
+    }
+
     // 查询某天体的详情 (id 为空时返回列表项自带的信息)
     //
     // ★ 为什么要分两条路:
@@ -2432,6 +2569,34 @@ ApplicationWindow {
                 return cardForStruct(it)
         }
         return ({})
+    }
+
+    // 3D 场景里的标签 -> 详情卡数据
+    //
+    // ★ 与"结构列表点击"的区别: 标签里**只有** 名字 / 距离文本 / id,
+    //   没有 desc、没有红移 —— 必须回查数据表补齐。
+    //   所以这里不能直接喂给 cardForStruct()。
+    //
+    // ★ 两条查表路径的先后不能颠倒:
+    //   先试星系 (location) —— 它给的是**实测红移**, 信息最全;
+    //   再试大尺度结构 —— 它们没有数据表 id, 用英文名匹配。
+    function cardForMarker(m) {
+        if (!m)
+            return ({})
+
+        const id = (m.id !== undefined && m.id !== null) ? m.id : ""
+
+        if (id.length > 0) {
+            const g = location(id)
+            if (g && g.nameCn !== undefined)
+                return g
+            const s = cardForStructByName(id)
+            if (s && s.nameCn !== undefined)
+                return s
+        }
+
+        // 退路: 用显示名再试一次 (nameCn)
+        return cardForStructByName(m.text || "")
     }
 }
 
