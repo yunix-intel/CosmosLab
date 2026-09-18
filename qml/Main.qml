@@ -107,6 +107,9 @@ ApplicationWindow {
     property var  current: ({})
     property string currentId: "earth"
     property bool  listHidden: false
+    // ★ 恒星视图为 UI-only (不新增渲染尺度, 复用太阳系画布):
+    //   打开时隐藏三尺度各自面板, 显示恒星列表面板。
+    property bool  stellarView: false
 
     Component.onCompleted: {
         // 采纳 C++ 侧的初始焦点 —— 它可能被环境变量 SS_FOCUS 覆盖,
@@ -217,7 +220,7 @@ ApplicationWindow {
         width: 268
         height: parent.height - 74 - 46
         // 银河系尺度用另一套面板 (见下方 galaxyPanel)
-        visible: !root.listHidden && scene.scaleLevel === 0
+        visible: !root.listHidden && scene.scaleLevel === 0 && !root.stellarView
 
         ColumnLayout {
             anchors.fill: parent
@@ -426,7 +429,7 @@ ApplicationWindow {
         // "overview" 是全景视角, 并没有某个具体天体可显示 ——
         // 早期这里不做判断, 结果是一整块面板全是占位符 "—", 看着像坏了。
         // 银河系尺度下由 galaxyStatPanel 接管, 这里同样要隐藏。
-        visible: scene.scaleLevel === 0 && root.currentId !== "overview"
+        visible: scene.scaleLevel === 0 && root.currentId !== "overview" && !root.stellarView
 
         ColumnLayout {
             id: infoColumn
@@ -575,6 +578,31 @@ ApplicationWindow {
                     }
                 }
 
+                // ★ 恒星段为 UI-only 视图: 不碰 scaleLevel 状态机,
+                //   只切换面板显隐。渲染仍走当前尺度画布。
+                Rectangle {
+                    width: 66; height: 26; radius: 7
+                    color: root.stellarView
+                           ? root.cAccentSoft : Qt.rgba(1, 1, 1, 0.05)
+                    border.width: 1
+                    border.color: root.stellarView
+                                  ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                  : Qt.rgba(1, 1, 1, 0.08)
+                    Text {
+                        anchors.centerIn: parent
+                        text: "恒星"
+                        color: root.stellarView ? "#bcd9ff" : root.cTextDim
+                        font.pixelSize: 11
+                        font.bold: root.stellarView
+                        font.family: root.sansFont
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.stellarView = !root.stellarView
+                    }
+                }
+
                 Repeater {
                     model: [
                         { t: "太阳系", v: 0 },
@@ -621,7 +649,7 @@ ApplicationWindow {
         x: 18; y: 74
         width: 288
         height: parent.height - 74 - 46
-        visible: scene.scaleLevel === 1
+        visible: scene.scaleLevel === 1 && !root.stellarView
 
         property var g: ({})
 
@@ -769,7 +797,7 @@ ApplicationWindow {
         x: 18; y: 74
         width: 288
         height: parent.height - 74 - 46
-        visible: scene.scaleLevel === 2
+        visible: scene.scaleLevel === 2 && !root.stellarView
 
         // ★ 用属性初始化式绑定, 而不是 Component.onCompleted 赋值。
         //   onCompleted 在**首次绑定求值之后**才跑, 于是 Repeater 的
@@ -1543,7 +1571,7 @@ ApplicationWindow {
         height: cosNoteCol.implicitHeight + 28
         x: parent.width - width - 18
         y: parent.height - height - 46
-        visible: scene.scaleLevel === 2
+        visible: scene.scaleLevel === 2 && !root.stellarView
 
         property var notes: scene.cosmosNotes()
 
@@ -1595,7 +1623,7 @@ ApplicationWindow {
         height: noteCol.implicitHeight + 28
         x: parent.width - width - 18
         y: parent.height - height - 46
-        visible: scene.scaleLevel === 1
+        visible: scene.scaleLevel === 1 && !root.stellarView
 
         property var notes: []
 
@@ -1663,6 +1691,18 @@ ApplicationWindow {
     }
 
     // ========================================================================
+    //  恒星视图面板 (B.1/B.2) —— UI-only, 不新增渲染尺度
+    //
+    //  ★ 由 root.stellarView 控制显隐, 与 scaleLevel 正交。
+    //    打开时三尺度各自面板已全部隐藏 (见各 visible 处的互斥条件),
+    //    渲染画布沿用当前尺度 (教学上恒星列表不需要 3D 粒子场)。
+    // ========================================================================
+    StellarPanel {
+        id: stellarPanel
+        visible: root.stellarView
+    }
+
+    // ========================================================================
     //  银河系 · 太阳位置标注
     //
     //  画在 QML 叠加层而不是 GL 里, 因为 OpenGL core profile 的线宽上限
@@ -1671,7 +1711,7 @@ ApplicationWindow {
     // ========================================================================
     Item {
         id: galaxySunMarker
-        visible: scene.scaleLevel === 1 && scene.sunMarkOn
+        visible: scene.scaleLevel === 1 && !root.stellarView && scene.sunMarkOn
         // 位置由 C++ 投影得到 (归一化 0..1)
         x: scene.sunMarkX * root.width
         y: scene.sunMarkY * root.height
@@ -1758,7 +1798,7 @@ ApplicationWindow {
         // ★ 银河系 (1) 与宇宙 (2) 都要显示标注层。
         //   初版只写了 === 1, 于是宇宙视图里所有标注都不出现 ——
         //   而画面本身是正常的, 很容易误判成"投影算错了"。
-        visible: scene.scaleLevel >= 1
+        visible: scene.scaleLevel >= 1 && !root.stellarView
         z: 5
 
         Repeater {
@@ -1921,9 +1961,10 @@ ApplicationWindow {
         Item {
             id: scaleBar
             // 阈值同样按尺度分派: 宇宙视图的数值天然大得多
-            visible: scene.scaleLevel === 2
-                     ? scene.galaxyViewWidthLy > 0.5
-                     : scene.galaxyViewWidthLy > 100
+            visible: !root.stellarView
+                     && (scene.scaleLevel === 2
+                         ? scene.galaxyViewWidthLy > 0.5
+                         : scene.galaxyViewWidthLy > 100)
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 52
@@ -2036,17 +2077,24 @@ ApplicationWindow {
 
         // 详情数据 (由列表项点击时填入, 或由 location() 返回)
         property var detail: ({})
+        // 通俗/精准切换 (仅 B.1/B.2 有 pop 的条目有效)
+        property bool popMode: false
 
         // 测试用: SS_CARD=<id> 时启动即打开 (供自动化截图验证)
         Component.onCompleted: {
             const t = scene.testCard
             if (t && t.length > 0) {
                 // 先按星系 id 查; 查不到就当作大尺度结构的名字再试一次 ——
-                // 后者没有 id, 只能靠名字匹配。两条路都走 root 里的函数,
-                // 保证与用户点击时**完全一致**。
+                // 后者没有 id, 只能靠名字匹配。再查不到试 B.1/B.2 新增条目。
+                // 三条路都走 root 里的函数, 保证与用户点击时**完全一致**。
                 let d = location(t)
                 if (!d || d.nameCn === undefined)
                     d = root.cardForStructByName(t)
+                // ★ B.1/B.2 新增条目: SS_CARD 同样直达 (与面板点击同路径)
+                if (!d || d.nameCn === undefined)
+                    d = root.stellarAgnDetail(t)
+                if (!d || d.nameCn === undefined)
+                    d = root.stellarAgnDetail(t)
                 galaxyCard.detail = d
                 galaxyCard.visible = true
             }
@@ -2212,8 +2260,19 @@ ApplicationWindow {
                             if (d.massLog !== undefined)
                                 rows.push({ k: "恒星质量", v: "10^"
                                             + d.massLog.toFixed(2) + " 太阳质量" })
-                            if (d.typeText !== undefined)
+                            // ★ B.1/B.2 新增条目字段 (直接显示, 无需换算):
+                            //   spec(光谱型/类型) / teffText / massText /
+                            //   cat(分组) —— 由 C++ 侧拼好文本, QML 只搬运。
+                            if (d.spec !== undefined)
+                                rows.push({ k: "类型", v: d.spec })
+                            else if (d.typeText !== undefined)
                                 rows.push({ k: "类型", v: d.typeText })
+                            if (d.teffText !== undefined)
+                                rows.push({ k: "有效温度", v: d.teffText })
+                            if (d.massText !== undefined)
+                                rows.push({ k: "质量", v: d.massText })
+                            if (d.cat !== undefined)
+                                rows.push({ k: "分组", v: d.cat })
                             return rows
                         }
 
@@ -2463,11 +2522,48 @@ ApplicationWindow {
                     }
                 }
 
-                // ---- 描述 ----
+                // ---- 描述 (教科书精准 + 通俗科普切换) ----
+                //
+                // ★ B.1/B.2 新增条目带 pop 字段 (通俗版)。切换选项默认
+                //   显示 desc (精准版); 有 pop 的条目才显示切换按钮。
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text {
+                        text: "说明"
+                        color: root.cTextDim
+                        font.pixelSize: 10
+                        font.family: root.sansFont
+                    }
+                    Item { Layout.fillWidth: true }
+                    Rectangle {
+                        visible: galaxyCard.detail.pop !== undefined
+                        width: 118; height: 22; radius: 5
+                        color: galaxyCard.popMode
+                               ? Qt.rgba(0.37, 0.66, 1.0, 0.22)
+                               : Qt.rgba(1, 1, 1, 0.05)
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1, 0.10)
+                        Text {
+                            anchors.centerIn: parent
+                            text: galaxyCard.popMode ? "通俗版" : "精准版"
+                            color: galaxyCard.popMode ? "#bcd9ff" : root.cTextDim
+                            font.pixelSize: 10
+                            font.family: root.sansFont
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: galaxyCard.popMode = !galaxyCard.popMode
+                        }
+                    }
+                }
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: (galaxyCard.detail.desc || "")
+                    text: (galaxyCard.popMode && galaxyCard.detail.pop !== undefined)
+                          ? galaxyCard.detail.pop
+                          : (galaxyCard.detail.desc || "")
                     color: root.cText
                     font.pixelSize: 11
                     font.family: root.sansFont
@@ -3273,6 +3369,21 @@ ApplicationWindow {
             if (it.name === name || it.en === name)
                 return cardForStruct(it)
         }
+        return ({})
+    }
+
+    // B.1/B.2 新增条目详情: 先试恒星链, 再试 AGN-星系-暂现源。
+    // ★ 复用 galaxyCard: 卡片字段 (nameCn/desc/pop/distText/spec/
+    //   teffText/massText/cat/noPhotoWhy) 两边已对齐, 无需新卡片。
+    function stellarAgnDetail(id) {
+        if (!id || id.length === 0)
+            return ({})
+        let d = scene.stellarDetail(id)
+        if (d && d.nameCn !== undefined)
+            return d
+        d = scene.agnDetail(id)
+        if (d && d.nameCn !== undefined)
+            return d
         return ({})
     }
 

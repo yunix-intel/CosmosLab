@@ -1,0 +1,456 @@
+{
+ "_note": "演化解说词: 每ID四语种 zh(普通话)/yue(粤语)/ja(日语)/en(英语)。命名 evo.<剧本>.<sN>。原创TTS接入后由引擎按ID取用。",
+ "_voice": "原创TTS音色, 不做真人复刻",
+ "ids": [
+  "evo.low.s0",
+  "evo.low.s1",
+  "evo.low.s2",
+  "evo.low.s3",
+  "evo.mid.s0",
+  "evo.mid.s1",
+  "evo.mid.s2",
+  "evo.mid.s3",
+  "evo.mid.s4",
+  "evo.mid.s5",
+  "evo.mid.s6",
+  "evo.mas.s0",
+  "evo.mas.s1",
+  "evo.mas.s2",
+  "evo.mas.s3",
+  "evo.mas.s4",
+  "evo.mas.s5",
+  "evo.sn.s0",
+  "evo.sn.s1",
+  "evo.sn.s2",
+  "evo.sn.s3",
+  "evo.sn.s4",
+  "evo.sn.s5",
+  "evo.mrg.s0",
+  "evo.mrg.s1",
+  "evo.mrg.s2",
+  "evo.mrg.s3",
+  "evo.agn.s0",
+  "evo.agn.s1",
+  "evo.agn.s2",
+  "evo.agn.s3",
+  "evo.agn.s4",
+  "evo.cos.s0",
+  "evo.cos.s1",
+  "evo.cos.s2",
+  "evo.cos.s3",
+  "evo.cos.s4",
+  "evo.cos.s5",
+  "evo.cos.s6",
+  "evo.pln.s0",
+  "evo.pln.s1",
+  "evo.pln.s2",
+  "evo.pln.s3",
+  "evo.pln.s4",
+  "evo.pln.s5",
+  "evo.psf.s0",
+  "evo.psf.s1",
+  "evo.psf.s2",
+  "evo.psf.s3",
+  "evo.psf.s4",
+  "evo.bin.s0",
+  "evo.bin.s1",
+  "evo.bin.s2",
+  "evo.bin.s3",
+  "evo.bin.s4",
+  "evo.rmn.s0",
+  "evo.rmn.s1",
+  "evo.rmn.s2",
+  "evo.rmn.s3",
+  "evo.clu.s0",
+  "evo.clu.s1",
+  "evo.clu.s2",
+  "evo.clu.s3",
+  "evo.clu.s4"
+ ],
+ "text": {
+  "evo.low.s0": {
+   "zh": "一颗0.3倍太阳质量的红矮星点燃了核心的氢聚变, 进入主序。它是全对流结构, 燃料利用得非常充分。",
+   "yue": "一粒0.3倍太阳质量嘅红矮星点着咗核心嘅氢聚变, 进入主序。佢系全对流结构, 燃料用得好充分。",
+   "ja": "質量0.3太陽の赤色矮星が中心で水素核融合に点火し、主系列に入りました。完全対流構造のため、燃料を余すことなく使います。",
+   "en": "A 0.3-solar-mass red dwarf ignites hydrogen fusion in its core and joins the main sequence. Fully convective, it burns its fuel thoroughly."
+  },
+  "evo.low.s1": {
+   "zh": "一千亿年过去了, 它还在平稳地烧氢。红矮星的主序寿命可达数千亿年 —— 宇宙的年龄还不够它走完一生。",
+   "yue": "一千亿年过去, 佢仲喺度平稳咁烧氢。红矮星嘅主序寿命可以去到几千亿年 —— 宇宙嘅年纪都唔够佢行完一生。",
+   "ja": "1000億年が経っても、まだ穏やかに水素を燃やしています。赤色矮星の主系列寿命は数千億年に及び、宇宙の年齢では一生を終えられません。",
+   "en": "A hundred billion years on, it still burns hydrogen steadily. A red dwarf's main-sequence lifetime spans hundreds of billions of years — longer than the age of the universe."
+  },
+  "evo.low.s2": {
+   "zh": "两千亿岁, 氢接近耗尽, 它缓慢收缩、增温。注意: 这是理论外推, 我们从未实测到这类演化的终点。",
+   "yue": "二千亿岁, 氢就嚟烧完, 佢慢慢收缩、升温。留意: 呢个系理论推演, 我哋从未实际睇到呢类演化嘅终点。",
+   "ja": "2000億歳、水素は尽きかけ、ゆっくり収縮して温度を上げます。注意:これは理論的な外挿であり、このような進化の終点を観測したことはありません。",
+   "en": "At 200 billion years, hydrogen nearly exhausted, it slowly contracts and heats. Note: this is theoretical extrapolation — no such endpoint has ever been observed."
+  },
+  "evo.low.s3": {
+   "zh": "终点是一颗氦白矮星。但单星通道在宇宙年龄内根本到不了 —— 这颗星的结局, 只是写在纸上的预言。",
+   "yue": "终点系一粒氦白矮星。但单星通道喺宇宙年龄内根本到唔到 —— 呢粒星嘅结局, 只系写喺纸上嘅预言。",
+   "ja": "終点はヘリウム白色矮星です。しかし単独星の進化では宇宙年齢内に到達できません——この星の結末は、紙の上の予言にすぎません。",
+   "en": "The endpoint is a helium white dwarf. But a single star cannot get there within the age of the universe — this star's fate exists only on paper."
+  },
+  "evo.mid.s0": {
+   "zh": "一颗和太阳一样的恒星诞生了。有效温度5778开, 光度1倍太阳 —— 零龄主序, 一切从这里开始。",
+   "yue": "一粒同太阳一样嘅恒星出世喇。有效温度5778度, 光度1倍太阳 —— 零龄主序, 一切由呢度开始。",
+   "ja": "太陽と同じ星が生まれました。有効温度5778度、光度1太陽——零歳主系列、すべてはここから始まります。",
+   "en": "A Sun-like star is born. Effective temperature 5778 K, luminosity one solar — zero-age main sequence, everything starts here."
+  },
+  "evo.mid.s1": {
+   "zh": "46亿岁, 这就是太阳的现在。核心的氢已消耗约一半, 光度比初生时高了约三成。",
+   "yue": "46亿岁, 呢个就系太阳嘅而家。核心嘅氢已经烧咗约一半, 光度比出世时高咗约三成。",
+   "ja": "46億歳、これが太陽の現在です。中心の水素は約半分消費され、光度は誕生時より約3割高くなっています。",
+   "en": "4.6 billion years — this is the Sun today. About half its core hydrogen is spent, and it shines some 30 percent brighter than at birth."
+  },
+  "evo.mid.s2": {
+   "zh": "100亿岁, 核心氢耗尽, 氢壳层接力燃烧, 包层急剧膨胀。它成了红巨星, 半径可达上百倍太阳。",
+   "yue": "100亿岁, 核心氢烧完, 氢壳层接力烧, 包层急速膨胀。佢变成咗红巨星, 半径可以去到上百倍太阳。",
+   "ja": "100億歳、中心の水素は尽き、水素殻が燃え、外層は急膨張します。赤色巨星となり、半径は太陽の数百倍に達します。",
+   "en": "At 10 billion years the core hydrogen runs out, a hydrogen shell takes over, and the envelope balloons. It becomes a red giant, hundreds of times the Sun's radius."
+  },
+  "evo.mid.s3": {
+   "zh": "简并的氦核被点燃 —— 氦闪。随后进入平稳的氦燃烧, 落在赫罗图的水平支上, 也就是红团簇。",
+   "yue": "简并嘅氦核被点着 —— 氦闪。之后进入平稳嘅氦燃烧, 落喺赫罗图嘅水平支上, 即系红团簇。",
+   "ja": "縮退したヘリウム核に点火——ヘリウムフラッシュ。その後安定したヘリウム燃焼に入り、HR図の水平分枝(レッドクランプ)に位置します。",
+   "en": "The degenerate helium core ignites — the helium flash. It settles into steady helium burning on the horizontal branch, the red clump."
+  },
+  "evo.mid.s4": {
+   "zh": "氦和氢双壳层燃烧, 热脉冲一次次抛射包层。超风最强时, 每年可吹掉十万分之一太阳质量。",
+   "yue": "氦同氢双壳层燃烧, 热脉冲一次次抛走包层。超风最劲时, 每年可以吹走十万分之一太阳质量。",
+   "ja": "ヘリウムと水素の二重殻燃焼、熱パルスが外層を剥ぎ取ります。スーパーウィンドの最盛期には、年間10万分の1太陽質量が失われます。",
+   "en": "Double-shell burning with thermal pulses strips the envelope. At peak superwind, it sheds a hundred-thousandth of a solar mass per year."
+  },
+  "evo.mid.s5": {
+   "zh": "被剥离的包层被中心星电离, 点亮成行星状星云 —— 持续仅约一万年, 宇宙尺度上的一瞬。",
+   "yue": "被剥走嘅包层俾中心星电离, 点亮成行星状星云 —— 维持得约一万年, 宇宙尺度上一瞬即逝。",
+   "ja": "剥ぎ取られた外層は中心星に電離され、惑星状星雲として輝きます——持続期間は約1万年、宇宙的には一瞬です。",
+   "en": "The stripped envelope, ionized by the exposed core, glows as a planetary nebula — lasting some ten thousand years, an instant on cosmic scales."
+  },
+  "evo.mid.s6": {
+   "zh": "剩下约0.6倍太阳质量的碳氧核, 不再聚变, 靠余热慢慢冷却。这就是白矮星 —— 冷却序列还能用来定年龄。",
+   "yue": "剩返约0.6倍太阳质量嘅碳氧核, 唔再聚变, 靠余热慢慢冷却。呢个就系白矮星 —— 冷却序列仲可以用来定年龄。",
+   "ja": "約0.6太陽質量の炭素酸素核が残り、核融合なく余熱で冷えます。これが白色矮星です——冷却系列は年齢測定にも使えます。",
+   "en": "A 0.6-solar-mass carbon-oxygen core remains, cooling on leftover heat. This is a white dwarf — and its cooling sequence serves as a cosmic clock."
+  },
+  "evo.mas.s0": {
+   "zh": "一颗20倍太阳质量的O型星登场: 有效温度35000开, 光度10万倍太阳, CNO循环主导燃烧。生而璀璨, 注定短命。",
+   "yue": "一粒20倍太阳质量嘅O型星登场: 有效温度35000度, 光度10万倍太阳, CNO循环主导燃烧。生而璀璨, 注定短命。",
+   "ja": "20太陽質量のO型星が登場:有効温度35000度、光度10万太陽、CNOサイクルが支配します。輝かしく生まれ、短命が定められています。",
+   "en": "A 20-solar-mass O star takes the stage: 35,000 K, a hundred thousand solar luminosities, CNO-cycle burning. Brilliant at birth, doomed to brevity."
+  },
+  "evo.mas.s1": {
+   "zh": "仅800万年, 核心氢耗尽。太阳要用100亿年走的路, 它800万年就走完了 —— 大质量星活得短而亮。",
+   "yue": "得800万年, 核心氢烧完。太阳要用100亿年行嘅路, 佢800万年就行完 —— 大质量星活得短而亮。",
+   "ja": "わずか800万年で中心水素は尽きます。太陽が100億年かける道を800万年で走破します——大質量星は短く明るく生きます。",
+   "en": "In just 8 million years the core hydrogen is gone. The road the Sun walks in 10 billion years, it runs in 8 million — massive stars live short and bright."
+  },
+  "evo.mas.s2": {
+   "zh": "外层膨胀为超巨星, 可能是红超巨, 也可能是蓝超巨 —— 取决于质量损失与金属丰度。氖、氧、硅逐级燃烧, 每一级都比上一级快得多。",
+   "yue": "外层膨胀成超巨星, 可能系红超巨, 都可能系蓝超巨 —— 睇质量损失同金属丰度。氖、氧、硅逐级燃烧, 每一级都比上一级快好多。",
+   "ja": "外層は超巨星へ膨張します。赤色にも青色にもなり得ます——質量損失と金属量次第です。ネオン・酸素・ケイ素と段階燃焼が進み、各段階は加速度的に短くなります。",
+   "en": "The envelope swells into a supergiant — red or blue, depending on mass loss and metallicity. Neon, oxygen, silicon burn in stages, each far faster than the last."
+  },
+  "evo.mas.s3": {
+   "zh": "强星风剥掉了氢包层, 露出氦碳氧核心 —— 沃尔夫-拉叶阶段。质量损失率可达每年十万分之一到万分之一太阳质量。",
+   "yue": "强星风剥走咗氢包层, 露出氦碳氧核心 —— 沃尔夫-拉叶阶段。质量损失率可以去到每年十万分之一到万分之一太阳质量。",
+   "ja": "強い恒星風が水素外層を剥ぎ取り、ヘリウム炭素酸素の核が露出します——ウォルフ・ライエ段階。質量損失率は年間10万分の1から1万分の1太陽質量に達します。",
+   "en": "Fierce winds strip the hydrogen envelope, exposing the helium-carbon-oxygen core — the Wolf-Rayet phase, shedding up to a ten-thousandth of a solar mass per year."
+  },
+  "evo.mas.s4": {
+   "zh": "铁核坍缩, 核坍缩超新星爆发。因为包层已被剥离, 光谱中没有氢线 —— 这就是Ib型。中微子带走了约99%的能量。",
+   "yue": "铁核坍缩, 核坍缩超新星爆发。因为包层已经剥走, 光谱入面冇氢线 —— 呢个就系Ib型。中微子带走咗约99%嘅能量。",
+   "ja": "鉄核が崩壊し、重力崩壊型超新星が爆発します。外層は既に剥がれているためスペクトルに水素線はありません——Ib型です。エネルギーの約99%はニュートリノが持ち去ります。",
+   "en": "The iron core collapses. With the envelope already gone, no hydrogen lines appear — a Type Ib supernova. Some 99 percent of the energy escapes as neutrinos."
+  },
+  "evo.mas.s5": {
+   "zh": "遗迹是一个黑洞。20倍太阳质量、太阳金属丰度下大概率成黑洞 —— 中子星与黑洞的分界约在20到25倍太阳质量, 只能给区间。",
+   "yue": "遗迹系一个黑洞。20倍太阳质量、太阳金属丰度下大概率成黑洞 —— 中子星同黑洞嘅分界约喺20到25倍太阳质量, 只可以俾区间。",
+   "ja": "残骸はブラックホールです。20太陽質量・太陽金属量ではブラックホールになる可能性が高く、中性子星との境界は20〜25太陽質量と幅をもって示されます。",
+   "en": "The remnant is a black hole. At 20 solar masses and solar metallicity, a black hole is the likely outcome — the neutron-star boundary sits somewhere between 20 and 25 solar masses."
+  },
+  "evo.sn.s0": {
+   "zh": "爆发开始, 光度急升。注意光谱里没有氢线 —— 这就是Ia型的分类判据, 也是它能当标准烛光的前提。",
+   "yue": "爆发开始, 光度急升。留意光谱入面冇氢线 —— 呢个就系Ia型嘅分类判据, 亦系佢可以当标准烛光嘅前提。",
+   "ja": "爆発開始、光度は急上昇します。スペクトルに水素線がないことに注意——これがIa型の分類基準であり、標準光源たり得る前提です。",
+   "en": "Eruption begins, luminosity surges. Note the absence of hydrogen lines — the defining criterion of Type Ia, and what qualifies it as a standard candle."
+  },
+  "evo.sn.s1": {
+   "zh": "约19天达到B波段极大, 绝对星等约负19.3。这是标准烛光的定标点 —— 更宽的光变对应更亮的峰值, 即宽亮关系。",
+   "yue": "约19日去到B波段极大, 绝对星等约负19.3。呢个系标准烛光嘅定标点 —— 光变越宽峰值越亮, 即系宽亮关系。",
+   "ja": "約19日でBバンド極大、絶対等級約-19.3。標準光源の較正点です——光度曲線が幅広いほど極大が明るい、幅・光度関係が成り立ちます。",
+   "en": "About 19 days to B-band maximum at absolute magnitude −19.3. This anchors the standard candle — broader light curves peak brighter, the width-luminosity relation."
+  },
+  "evo.sn.s2": {
+   "zh": "约30天, 近红外出现二次隆起 —— 铁族元素电离态变化的指纹。不是所有超新星都有, 正常Ia才有。",
+   "yue": "约30日, 近红外出现二次隆起 —— 铁族元素电离态变化嘅指纹。唔系粒粒超新星都有, 正常Ia先有。",
+   "ja": "約30日、近赤外に二度目の盛り上がり——鉄族元素の電離状態変化の指紋です。正常なIa型に特有の現象です。",
+   "en": "Around day 30 a secondary bump rises in the near-infrared — the fingerprint of changing iron-group ionization, seen only in normal Type Ia."
+  },
+  "evo.sn.s3": {
+   "zh": "60天, 过渡段。光球退入铁核, 颜色转红, 光变开始指数衰减。",
+   "yue": "60日, 过渡段。光球退入铁核, 颜色转红, 光变开始指数衰减。",
+   "ja": "60日、移行期。光球は鉄核へ後退し、色は赤くなり、光度曲線は指数関数的減衰に入ります。",
+   "en": "Day 60, the transitional phase. The photosphere retreats into the iron core, colors redden, exponential decline sets in."
+  },
+  "evo.sn.s4": {
+   "zh": "150天, 钴衰变尾。钴56衰变成铁56, 半衰期77天 —— 光变的尾巴就是元素嬗变的直接记录。",
+   "yue": "150日, 钴衰变尾。钴56衰变成铁56, 半衰期77日 —— 光变条尾就系元素嬗变嘅直接记录。",
+   "ja": "150日、コバルト減衰尾。コバルト56が鉄56に変わり、半減期77日——光度曲線の尾は元素変換の直接の記録です。",
+   "en": "Day 150, the cobalt tail. Cobalt-56 decays to iron-56 with a 77-day half-life — the light curve's tail is transmutation recorded live."
+  },
+  "evo.sn.s5": {
+   "zh": "300天后进入遗迹阶段: 抛射物稀薄成星云相, 禁线主导。数百年后, 它会成为第谷那样的超新星遗迹。",
+   "yue": "300日后进入遗迹阶段: 抛射物稀薄成星云相, 禁线主导。几百年后, 佢会成为第谷噉样嘅超新星遗迹。",
+   "ja": "300日後、残骸期に入ります:放出物は希薄な星雲相となり禁制線が支配します。数百年後、第谷のような超新星残骸になります。",
+   "en": "Past day 300 the remnant phase begins — thin nebular ejecta ruled by forbidden lines. In centuries it will look like Tycho's remnant."
+  },
+  "evo.mrg.s0": {
+   "zh": "现在: 银河系与仙女座相距约77万秒差距, 以约110公里每秒接近。仙女座的蓝移就是直接证据。",
+   "yue": "而家: 银河系同仙女座相距约77万秒差距, 以约110公里每秒接近。仙女座嘅蓝移就系直接证据。",
+   "ja": "現在:銀河系とアンドロメダは約77万パーセク離れ、秒速約110kmで接近中です。アンドロメダの青方偏移が直接の証拠です。",
+   "en": "Today: the Milky Way and Andromeda lie 770 kiloparsecs apart, closing at 110 km/s. Andromeda's blueshift is the direct evidence."
+  },
+  "evo.mrg.s1": {
+   "zh": "约40亿年后第一次近心点: 潮汐尾被拉出, 星暴触发。可以对照触须星系 —— 那就是现在进行时的并合。",
+   "yue": "约40亿年后第一次近心点: 潮汐尾被拉出, 星暴触发。可以对照触须星系 —— 果边就系进行紧嘅并合。",
+   "ja": "約40億年後に最初の近心点:潮汐尾が引き出され、スターバーストが始まります。触角銀河が現在進行形の実例です。",
+   "en": "First pericenter in ~4 billion years: tidal tails drawn out, starburst ignited. The Antennae galaxies show this happening right now."
+  },
+  "evo.mrg.s2": {
+   "zh": "约60亿年后并合: 核球合并, 盘结构被打乱, 星暴达峰后淬灭开始。银河系的旋臂就此消失。",
+   "yue": "约60亿年后并合: 核球合并, 盘结构被打乱, 星暴到顶后淬灭开始。银河系嘅旋臂就此消失。",
+   "ja": "約60億年後に合体:バルジは合わさり、円盤構造は乱され、スターバーストの後に鎮静化が始まります。銀河系の渦巻き腕は消えます。",
+   "en": "Merger at ~6 billion years: bulges coalesce, disks are shredded, starburst peaks then quenches. The Milky Way's spiral arms vanish."
+  },
+  "evo.mrg.s3": {
+   "zh": "80亿年后弛豫为大椭圆星系, 有人叫它Milkomeda。太阳系届时命运不确定 —— 大概率被甩到外晕, 但太阳本身安然无恙。",
+   "yue": "80亿年后弛豫成大椭圆星系, 有人叫佢Milkomeda。太阳系到时命运未定 —— 大概率被甩到外晕, 但太阳本身无恙。",
+   "ja": "80億年後には巨大楕円銀河に緩和します(Milkomedaの愛称も)。太陽系の運命は不確定ですが、外側ハローに放り出されつつ太陽自体は無事でしょう。",
+   "en": "By 8 billion years a giant elliptical relaxes into place — Milkomeda. The solar system's fate is uncertain, likely flung to the outer halo, the Sun itself unharmed."
+  },
+  "evo.agn.s0": {
+   "zh": "一座宁静的椭圆星系, 中心超大质量黑洞在沉睡, 没有喷流。黑洞与核球的M-西格玛关系已经就位。",
+   "yue": "一座宁静嘅椭圆星系, 中心超大质量黑洞瞓紧觉, 冇喷流。黑洞同核球嘅M-西格玛关系已经就位。",
+   "ja": "静かな楕円銀河、中心の超大質量ブラックホールは眠り、ジェットはありません。M-シグマ関係は既に成立しています。",
+   "en": "A quiet elliptical galaxy, its supermassive black hole asleep, no jets. The M–sigma relation between black hole and bulge is already in place."
+  },
+  "evo.agn.s1": {
+   "zh": "并合送来气体, 气体流入核区, 吸积盘点亮, 宽线区出现。活动星系核被触发了。",
+   "yue": "并合送嚟气体, 气体流入核区, 吸积盘点亮, 宽线区出现。活动星系核被触发喇。",
+   "ja": "合体がガスを運び、核領域へ流入して降着円盤が輝き、広輝線領域が現れます。活動銀河核が点火しました。",
+   "en": "A merger delivers gas to the nucleus, the accretion disk lights up, the broad-line region appears. The active nucleus switches on."
+  },
+  "evo.agn.s2": {
+   "zh": "相对论性喷流打通千秒差距尺度 —— M87的喷流约5千秒差距。注意: 正对喷流看, 它就是耀变体。视角决定分类, 这是统一模型的核心。",
+   "yue": "相对论性喷流打通千秒差距尺度 —— M87嘅喷流约5千秒差距。留意: 正对喷流睇, 佢就系耀变体。视角决定分类, 呢个系统一模型嘅核心。",
+   "ja": "相対論的ジェットがキロパーセク級を貫きます(M87で約5kpc)。正面から見ればブレーザーです。見かけの分類を決めるのは視角——統一モデルの核心です。",
+   "en": "Relativistic jets punch through kiloparsec scales — M87's spans ~5 kpc. Seen head-on, this same object is a blazar. Viewing angle decides classification: the heart of the unified model."
+  },
+  "evo.agn.s3": {
+   "zh": "喷流瓣长到数百千秒差距, 激波加热星系周气体 —— 这就是AGN反馈, 可能是星系停止形成恒星的原因之一。注意: 候选机制, 不是定论。",
+   "yue": "喷流瓣长到数百千秒差距, 激波加热星系周气体 —— 呢个就系AGN反馈, 可能系星系停造星嘅原因之一。留意: 候选机制, 唔系定论。",
+   "ja": "ローブは数百kpcに成長し、衝撃波が銀河周囲ガスを加熱します——AGNフィードバック、星形成停止の候補メカニズムです(未確定)。",
+   "en": "Lobes spanning hundreds of kiloparsecs shock-heat circumgalactic gas — AGN feedback, a candidate cause of quenching. Candidate, not verdict."
+  },
+  "evo.agn.s4": {
+   "zh": "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。只剩遗迹瓣在射电波段慢慢 fading —— 巨椭圆星系重归宁静。",
+   "yue": "燃料烧完, 喷流熄灭, 瓣辐射老化变陡。净返遗迹瓣喺射电波段慢慢变暗 —— 巨椭圆星系重归宁静。",
+   "ja": "燃料が尽き、ジェットは消え、ローブの放射は老化します。残骸ローブが電波で静かに fading します——巨大楕円銀河は静けさに戻ります。",
+   "en": "Fuel exhausted, jets die, lobes fade and steepen. Only relic lobes linger in radio — the giant elliptical returns to quiet."
+  },
+  "evo.cos.s0": {
+   "zh": "大爆炸后1秒到3分钟: 太初核合成。氦4质量分数约25%, 氘氢比锁定重子密度 —— 与宇宙微波背景独立一致, 大爆炸最硬的预言之一。",
+   "yue": "大爆炸后1秒到3分钟: 太初核合成。氦4质量分数约25%, 氘氢比锁定重子密度 —— 同宇宙微波背景独立一致, 大爆炸最硬嘅预言之一。",
+   "ja": "ビッグバン後1秒〜3分:元素合成。ヘリウム4質量分率約25%、重水素比がバリオン密度を決めます——CMBと独立に一致する、大爆炸論最強の予言です。",
+   "en": "One second to three minutes after the Bang: primordial nucleosynthesis. Helium-4 at ~25%, deuterium fixing baryon density — matching the CMB independently, the Big Bang's hardest prediction."
+  },
+  "evo.cos.s1": {
+   "zh": "约5万年, 物质密度超过辐射: 物质-辐射相等。从此引力战胜辐射压, 扰动开始增长 —— 结构形成的起点。",
+   "yue": "约5万年, 物质密度超过辐射: 物质-辐射相等。由呢刻起引力战胜辐射压, 扰动开始增长 —— 结构形成嘅起点。",
+   "ja": "約5万年、物質密度が放射を上回ります:物質・放射等価。以後、重力が放射圧に勝ち、揺らぎが成長します——構造形成の起点です。",
+   "en": "At ~50,000 years matter overtakes radiation. Gravity beats radiation pressure from here on, perturbations grow — the starting line of structure formation."
+  },
+  "evo.cos.s2": {
+   "zh": "38万年, 复合: 电子与质子结合, 光子退耦自由传播 —— 这就是今天2.7255开的宇宙微波背景, 红移约1090。我们能看到的最古老的光。",
+   "yue": "38万年, 复合: 电子同质子结合, 光子退耦自由传播 —— 呢个就系今日2.7255度嘅宇宙微波背景, 红移约1090。我哋睇到最古老嘅光。",
+   "ja": "38万年、再結合:電子と陽子が結びつき、光子は自由に進みます——今日2.7255度の宇宙背景放射、赤方偏移約1090。我々が見られる最古の光です。",
+   "en": "380,000 years, recombination: electrons meet protons, photons stream free — today's 2.7255 K cosmic microwave background at redshift ~1090. The oldest light we can ever see."
+  },
+  "evo.cos.s3": {
+   "zh": "约2亿年, 第一代恒星点亮 —— 第三星族, 理论预言为主, 实测尚未确认。黑暗时代结束。",
+   "yue": "约2亿年, 第一代恒星点亮 —— 第三星族, 理论预言为主, 实测仲未确认。黑暗时代结束。",
+   "ja": "約2億年、最初の星々が灯ります——種族III、主に理論予言で、観測は未確定です。暗黒時代の終わりです。",
+   "en": "Around 200 million years the first stars ignite — Population III, still mostly theoretical, unconfirmed observationally. The dark ages end."
+  },
+  "evo.cos.s4": {
+   "zh": "红移6到10, 再电离: 星系的紫外光子电离星系际氢。类星体光谱中的 Gunn-Peterson 谷就是证据。",
+   "yue": "红移6到10, 再电离: 星系嘅紫外光子电离星系际氢。类星体光谱入面嘅 Gunn-Peterson 谷就系证据。",
+   "ja": "赤方偏移6〜10、再電離:銀河の紫外線が銀河間水素を電離します。クエーサースペクトルのGunn-Peterson谷が証拠です。",
+   "en": "Redshift 6 to 10, reionization: galactic ultraviolet ionizes intergalactic hydrogen. The Gunn–Peterson trough in quasar spectra is the evidence."
+  },
+  "evo.cos.s5": {
+   "zh": "红移约0.6, 暗能量接管, 膨胀开始加速。1998年超新星证据; 本项目的哈勃图面板用Δ卡方实测复现了这一结论。",
+   "yue": "红移约0.6, 暗能量接管, 膨胀开始加速。1998年超新星证据; 本项目嘅哈勃图面板用Δ卡方实测复现咗呢个结论。",
+   "ja": "赤方偏移約0.6、ダークエネルギーが支配し、膨張は加速に転じます。1998年超新星の証拠;本プロジェクトのハッブル図もΔχ²で再現しています。",
+   "en": "At redshift ~0.6 dark energy takes over and expansion accelerates. The 1998 supernova evidence — reproduced in this project's Hubble panel via Δχ²."
+  },
+  "evo.cos.s6": {
+   "zh": "138亿年后的现在。普朗克2018: 哈勃常数67.4, 物质密度0.315, 平直宇宙。但普朗克与距离阶梯的哈勃常数差约5个标准差 —— 当前最大未解。",
+   "yue": "138亿年后嘅而家。普朗克2018: 哈勃常数67.4, 物质密度0.315, 平直宇宙。但普朗克同距离阶梯嘅哈勃常数差约5个标准差 —— 当前最大未解。",
+   "ja": "138億年後の現在。Planck2018:ハッブル定数67.4、物質密度0.315、平坦宇宙。しかしCMBと距離梯子の値は約5σ食い違い——目下最大の未解決問題です。",
+   "en": "Today, 13.8 billion years on. Planck 2018: H₀ = 67.4, Ωm = 0.315, a flat universe. Yet CMB and distance-ladder H₀ differ by ~5σ — the biggest open problem in cosmology."
+  },
+  "evo.pln.s0": {
+   "zh": "II类盘: 气体加尘埃, 质量约恒星的1%。ALMA已经拍到大量环缝结构 —— 行星正在盘里刻痕。",
+   "yue": "II类盘: 气体加尘埃, 质量约恒星嘅1%。ALMA已经影到大量环缝结构 —— 行星喺盘入面刻紧痕。",
+   "ja": "クラスII円盤:気体と塵、質量は恒星の約1%。ALMAは多数のリング構造を撮像済みです——惑星が溝を刻んでいます。",
+   "en": "Class II disk: gas plus dust, ~1% of the star's mass. ALMA has imaged rings and gaps galore — planets carving grooves as they grow."
+  },
+  "evo.pln.s1": {
+   "zh": "尘埃长大: 微米尘埃聚成公里级星子。卵石吸积还是引力不稳定?两种机制还在竞争, 没有定论。",
+   "yue": "尘埃长大: 微米尘埃聚成公里级星子。卵石吸积定系引力不稳定?两种机制仲喺度争, 未有定论。",
+   "ja": "塵の成長:ミクロン塵がkm級微惑星に。ペブル集積か重力不安定か——二つの機構はまだ競合中で未確定です。",
+   "en": "Dust grows up: micron grains clump into kilometer planetesimals. Pebble accretion or gravitational instability? Both mechanisms still compete, undecided."
+  },
+  "evo.pln.s2": {
+   "zh": "寡头生长: 约10倍地球质量的固核触发失控气体吸积 —— 气态巨行星的内核就位了。",
+   "yue": "寡头生长: 约10倍地球质量嘅固核触发失控气体吸积 —— 气态巨行星嘅内核就位喇。",
+   "ja": "寡頭成長:約10地球質量の固体核が暴走的ガス集積を引き起こします——巨大ガス惑星の核が定まります。",
+   "en": "Oligarchic growth: a ~10-Earth-mass solid core triggers runaway gas accretion — the giant planet's heart is set."
+  },
+  "evo.pln.s3": {
+   "zh": "约500万年气体散去。I/II型迁移登场: 留在外侧就是HR 8799, 内移成热木星就是飞马座51b —— 同一起点, 两种命运。",
+   "yue": "约500万年气体散去。I/II型迁移登场: 留喺外侧就系HR 8799, 内移成热木星就系飞马座51b —— 同一起点, 两种命运。",
+   "ja": "約500万年でガスは散逸。I/II型移動が登場します:外に残ればHR 8799、内へ来ればペガスス座51b——同じ起点、二つの運命です。",
+   "en": "Gas disperses by ~5 Myr. Type I/II migration takes over: stay out wide like HR 8799, or spiral in as a hot Jupiter like 51 Peg b — same start, two fates."
+  },
+  "evo.pln.s4": {
+   "zh": "类地行星收尾: 巨撞击阶段。月球就是这么来的 —— 一颗火星大小的天体撞上原地球, 碎片聚成月亮。",
+   "yue": "类地行星收尾: 巨撞击阶段。月球就系咁嚟 —— 一粒火星咁大嘅天体撞上原地球, 碎片聚成月亮。",
+   "ja": "地球型惑星の仕上げ:巨大衝突期。月はこうして生まれました——火星サイズの天体が原始地球に衝突し、破片が集まりました。",
+   "en": "Terrestrial finale: the giant-impact phase. That is how the Moon was born — a Mars-sized body struck the proto-Earth, debris coalescing into our satellite."
+  },
+  "evo.pln.s5": {
+   "zh": "碎屑盘: 残余小天体碰撞级联, 红外超明显 —— 织女星型。太阳系的柯伊伯带就是老年碎屑盘。",
+   "yue": "碎屑盘: 残余小天体碰撞级联, 红外超明显 —— 织女星型。太阳系嘅柯伊伯带就系老年碎屑盘。",
+   "ja": "デブリ円盤:残った小天体の衝突カスケードで赤外超過が顕著——ベガ型。太陽系のカイパーベルトは老齢デブリ円盤です。",
+   "en": "Debris disk: leftover planetesimals grind down in collisional cascade, glowing in infrared — Vega-type. Our Kuiper Belt is one such elderly disk."
+  },
+  "evo.psf.s0": {
+   "zh": "前恒星核: 分子云核, 满足金斯判据量级才坍缩。注意只给量级不给单值 —— 判据依赖几何与磁场假设。",
+   "yue": "前恒星核: 分子云核, 满足金斯判据量级先坍缩。留意只俾量级唔俾单值 —— 判据视几何同磁场假设而定。",
+   "ja": "プレステラー核:分子雲核、ジーンズ条件のオーダーで collapse します。単一値ではなく量級のみ——形状と磁場の仮定に依存します。",
+   "en": "Prestellar core: a molecular cloud core collapses once the Jeans criterion is met in order of magnitude. Order only, no single value — geometry and magnetic fields matter."
+  },
+  "evo.psf.s1": {
+   "zh": "0类原恒星: 深埋包层, 光度低、特征温度低于70开。双极外向流最强 —— 婴儿恒星在打喷嚏。",
+   "yue": "0类原恒星: 深埋包层, 光度低、特征温度低于70度。双极外向流最劲 —— BB恒星喺度打乞嚏。",
+   "ja": "クラス0:厚い外層に埋もれ、光度は低く特性温度70度未満。双極アウトフロー最盛期——赤ちゃん星のくしゃみです。",
+   "en": "Class 0 protostar: buried in envelope, low luminosity, characteristic temperature under 70 K. Bipolar outflows at their fiercest — the baby star sneezes."
+  },
+  "evo.psf.s2": {
+   "zh": "I类: 包层加盘并存, 特征温度70到650开。包层还在, 但盘已经能看见了 —— 典型的过渡形态。",
+   "yue": "I类: 包层加盘并存, 特征温度70到650度。包层仲喺度, 但盘已经睇到 —— 过渡形态。",
+   "ja": "クラスI:外層と円盤が共存、特性温度70〜650度。外層は残るが円盤が見え始めます——移行形態です。",
+   "en": "Class I: envelope plus disk, characteristic temperature 70–650 K. The envelope lingers but the disk shows through — a transitional form."
+  },
+  "evo.psf.s3": {
+   "zh": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积还在继续。",
+   "yue": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积仲继续紧。",
+   "ja": "クラスII、古典的おうし座T型星:円盤主導、Hα強輝線と紫外超過。外層は去り、集積は続きます。",
+   "en": "Class II, the classical T Tauri star: disk-dominated, strong H-alpha plus ultraviolet excess. Envelope gone, accretion ongoing."
+  },
+  "evo.psf.s4": {
+   "zh": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列走完 —— 接下来就是主序前的收缩了。",
+   "yue": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列行完 —— 之后就系主序前嘅收缩喇。",
+   "ja": "クラスIII、弱輝線星:円盤は散逸し、光球が支配します。星形成系列の完走——次は主系列前の収縮です。",
+   "en": "Class III, the weak-line star: disk dispersed, photosphere in charge. The formation sequence is complete — pre-main-sequence contraction comes next."
+  },
+  "evo.bin.s0": {
+   "zh": "宽双星: 两颗O/B主序星, 周期年量级。故事从一对大质量双胞胎开始。",
+   "yue": "宽双星: 两粒O/B主序星, 周期年量级。故事由一对大质量双胞胎开始。",
+   "ja": "広い連星:O/B主系列星が二つ、周期は年オーダー。物語は大質量の双子から始まります。",
+   "en": "Wide binary: two O/B main-sequence stars, period measured in years. The story opens with massive twins."
+  },
+  "evo.bin.s1": {
+   "zh": "包层共有: 第一次超新星后, 伴星膨胀吞没致密星, 轨道在共有包层里大幅收缩。效率参数高度不确定 —— 只定性, 不定量。",
+   "yue": "包层共有: 第一次超新星后, 伴星膨胀吞没致密星, 轨道喺共有包层入面大幅收缩。效率参数高度不确定 —— 只定性, 唔定量。",
+   "ja": "共通外層:最初の超新星後、伴星が膨張してコンパクト星を飲み込み、軌道は大幅に縮小します。効率パラメータは不定性大——定性的にのみ扱います。",
+   "en": "Common envelope: after the first supernova the companion swallows the compact star, and the orbit shrinks drastically inside the shared envelope. Efficiencies deeply uncertain — qualitative only."
+  },
+  "evo.bin.s2": {
+   "zh": "双中子星: 周期小时量级, 引力波缓慢带走角动量 —— 赫尔斯-泰勒式的衰减, 和PSR 1913+16一样。",
+   "yue": "双中子星: 周期小时量级, 引力波慢慢带走角动量 —— 赫尔斯-泰勒式嘅衰减, 同PSR 1913+16一样。",
+   "ja": "二重中性子星:周期は時間オーダー、重力波が角運動量をゆっくり奪います——PSR 1913+16と同じハルス・テイラー型減衰です。",
+   "en": "Double neutron stars: period in hours, gravitational waves bleeding away angular momentum — Hulse–Taylor style decay, as in PSR 1913+16."
+  },
+  "evo.bin.s3": {
+   "zh": "啁啾段, 最后约100秒: 频率扫过LIGO频带, 从数十到数百赫兹。GW170817的啁啾持续了约100秒 —— 人类听到的宇宙声音。",
+   "yue": "啁啾段, 最后约100秒: 频率扫过LIGO频带, 由几十到几百赫兹。GW170817嘅啁啾持续咗约100秒 —— 人类听到嘅宇宙声音。",
+   "ja": "チャープ、最後の約100秒:周波数はLIGO帯を数十〜数百Hzへ掃引します。GW170817のチャープは約100秒続きました——人類が聴いた宇宙の音です。",
+   "en": "The chirp, final ~100 seconds: frequency sweeping through the LIGO band, tens to hundreds of hertz. GW170817 chirped for ~100 seconds — the sound of the cosmos, heard by humans."
+  },
+  "evo.bin.s4": {
+   "zh": "并合, 千新星AT2017gfo: 金、铂等r过程元素起源的直接证据, 外加短伽马暴170817A。多信使天文学元年。",
+   "yue": "并合, 千新星AT2017gfo: 金、铂等r过程元素起源嘅直接证据, 外加短伽马暴170817A。多信使天文学元年。",
+   "ja": "合体、キロノバAT2017gfo:金・白金などr過程元素起源の直接証拠、短ガンマ線バースト170817A付き。マルチメッセンジャー天文学元年です。",
+   "en": "Merger: kilonova AT2017gfo — direct evidence for the r-process origin of gold and platinum, plus short GRB 170817A. Year one of multi-messenger astronomy."
+  },
+  "evo.rmn.s0": {
+   "zh": "年轻残骸, 千年尺度: 蟹状星云脉冲星周期33毫秒; 刚诞生的白矮星光度约百分之一太阳。",
+   "yue": "年轻残骸, 千年尺度: 蟹状星云脉冲星周期33毫秒; 啱啱出世嘅白矮星光度约百分之一太阳。",
+   "ja": "若い残骸、千年スケール:かに星雲パルサー周期33ミリ秒;生まれたての白色矮星の光度は約100分の1太陽です。",
+   "en": "Young remnants on millennial scales: the Crab pulsar spins at 33 ms; a newborn white dwarf glows at ~1% solar luminosity."
+  },
+  "evo.rmn.s1": {
+   "zh": "百万年: 脉冲星周期显著增长 —— 磁偶极辐射制动, 理想情形制动指数为3; 白矮星冷却序列可以定年龄。",
+   "yue": "百万年: 脉冲星周期明显增长 —— 磁偶极辐射制动, 理想情形制动指数系3; 白矮星冷却序列可以定年龄。",
+   "ja": "百万年:パルサー周期は顕著に伸びます——磁気双極子制動、理想的には制動指数3;白色矮星の冷却系列は年齢測定に使えます。",
+   "en": "A million years: pulsar periods lengthen markedly — magnetic-dipole braking with ideal braking index 3; white-dwarf cooling sequences date the population."
+  },
+  "evo.rmn.s2": {
+   "zh": "亿年: 普通脉冲星多已越过死亡线, 不再打灯; 白矮星光度约万分之一太阳, 冷却成老弱残兵。",
+   "yue": "亿年: 普通脉冲星多已越过死亡线, 唔再打灯; 白矮星光度约万分之一太阳, 冷却成老弱残兵。",
+   "ja": "億年:通常のパルサーは大半がデスラインを越えて消灯;白色矮星は光度約1万分の1太陽に冷えます。",
+   "en": "A hundred million years: most ordinary pulsars have crossed the death line and gone dark; white dwarfs fade to ~10⁻⁴ solar luminosity."
+  },
+  "evo.rmn.s3": {
+   "zh": "百亿年: 黑矮星理论存在, 但宇宙年龄内到不了 —— 和低质量链呼应上了。而毫秒脉冲星守时到此时钟精度依然惊人。",
+   "yue": "百亿年: 黑矮星理论存在, 但宇宙年龄内到唔到 —— 同低质量链呼应返。而毫秒脉冲星守时到呢个钟数精度依然惊人。",
+   "ja": "百億年:黒色矮星は理論上存在しますが宇宙年齢内には到達しません——低質量系列と呼応します。一方ミリ秒パルサーの時計精度は驚異的です。",
+   "en": "Ten billion years: black dwarfs exist in theory but remain unreachable within cosmic time — echoing the low-mass track. Millisecond pulsars, meanwhile, still keep astonishing time."
+  },
+  "evo.clu.s0": {
+   "zh": "嵌入团: 仍埋在分子云中, 气体占主导 —— 猎户座梯形那样的婴儿星团。",
+   "yue": "嵌入团: 仲埋喺分子云入面, 气体占主导 —— 猎户座梯形噉样嘅BB星团。",
+   "ja": "埋め込み星団:まだ分子雲に埋もれ、ガスが支配的——オリオン座トラペジウムのような赤ちゃん星団です。",
+   "en": "Embedded cluster: still buried in its molecular cloud, gas-dominated — a baby cluster like the Trapezium."
+  },
+  "evo.clu.s1": {
+   "zh": "约300万年气体排出: 大质量星反馈吹散气体。效率低就团毁人亡 —— 这就是婴儿死亡率, 多数星团活不过这一关。",
+   "yue": "约300万年气体排出: 大质量星反馈吹散气体。效率低就团毁人亡 —— 呢个就系婴儿死亡率, 多数星团活唔过呢关。",
+   "ja": "約300万年でガス放出:大質量星のフィードバックがガスを吹き飛ばします。効率が低ければ星団は瓦解——乳児死亡率、多くはここを越えられません。",
+   "en": "Gas expulsion at ~3 Myr: massive-star feedback blows the gas away. Low efficiency means cluster death — infant mortality, which most clusters do not survive."
+  },
+  "evo.clu.s2": {
+   "zh": "约1亿年弛豫蒸发: 两体弛豫加潮汐剥离, 低质量星优先逃逸 —— 质量分层。昴星团约1亿岁, 正在这一段。",
+   "yue": "约1亿年弛豫蒸发: 两体弛豫加潮汐剥离, 低质量星优先逃逸 —— 质量分层。昴星团约1亿岁, 喺呢段。",
+   "ja": "約1億年で緩和・蒸発:二体緩和と潮汐剥離で低質量星から逃げます——質量分化。プレアデス(約1億歳)はこの段階です。",
+   "en": "Relaxation and evaporation at ~100 Myr: two-body relaxation plus tidal stripping lets low-mass stars escape first — mass segregation. The Pleiades (~100 Myr) live here."
+  },
+  "evo.clu.s3": {
+   "zh": "约10亿年核坍缩或瓦解: 毕星团约7亿岁正在瓦解; 致密球状团可核坍缩, M15式。分岔路口, 或散或缩。",
+   "yue": "约10亿年核坍缩或瓦解: 毕星团约7亿岁瓦解紧; 致密球状团可核坍缩, M15式。分岔路口, 或散或缩。",
+   "ja": "約10億年で核崩壊か瓦解:ヒアデス(約7億歳)は瓦解中;高密度球状星団は核崩壊へ(M15型)。散るか縮むかの分岐点です。",
+   "en": "Core collapse or dissolution at ~1 Gyr: the Hyades (~700 Myr) are dissolving; dense globulars may collapse like M15. Scatter or shrink — the fork in the road."
+  },
+  "evo.clu.s4": {
+   "zh": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就是宇宙年龄下限, 自洽性检查通过。",
+   "yue": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就系宇宙年龄下限, 自洽性检查通过。",
+   "ja": "100億年、球状星団の暮年:生き残りM13は約120億歳——球状星団年齢は宇宙年齢の下限、自洽性チェック合格です。",
+   "en": "Ten billion years, globular twilight: survivors like M13 at ~12 Gyr — globular ages floor the age of the universe. Consistency check passed."
+  }
+ }
+}

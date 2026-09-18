@@ -109,6 +109,8 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(bool    testHubble READ testHubble CONSTANT)
     // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
     Q_PROPERTY(QString testEvo READ testEvo CONSTANT)
+    // 测试用: SS_STELLAR=1 启动即显示恒星面板
+    Q_PROPERTY(bool testStellar READ testStellar CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
@@ -221,6 +223,11 @@ public:
     // ★ 解析一次后缓存 —— 这个文件 29 KB, 每次打开面板都重读没必要。
     Q_INVOKABLE QVariantMap  hubbleData() const;
     Q_INVOKABLE QVariantList cosmosStructures() const;           // 大尺度结构清单
+    // B.1/B.2 新增代表: 恒星链 / AGN-星系-暂现源。QML 按分组展示。
+    Q_INVOKABLE QVariantList stellarList() const;
+    Q_INVOKABLE QVariantList agnList() const;
+    Q_INVOKABLE QVariantMap  stellarDetail(const QString &id) const;
+    Q_INVOKABLE QVariantMap  agnDetail(const QString &id) const;
     Q_INVOKABLE void focusOn(const QString &id);
 
     // ---- 测试/自检专用: 一次设定全套视角参数 ----
@@ -236,6 +243,7 @@ public:
     QString testMarker() const { return m_testMarker; }
     bool testHubble() const { return m_testHubble; }
     QString testEvo() const { return m_testEvo; }
+    bool testStellar() const { return m_testStellar; }
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
@@ -306,6 +314,7 @@ private:
     QString m_testMarker;          // 测试用: 模拟点击的标签 (SS_MARKER)
     bool    m_testHubble = false;  // 测试用: 启动即开哈勃图 (SS_HUBBLE)
     QString m_testEvo;             // 测试用: SS_EVO=<id>[:<prog>] 开演化播放器
+    bool    m_testStellar = false; // 测试用: SS_STELLAR=1 显示恒星面板
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;

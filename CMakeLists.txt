@@ -28,6 +28,7 @@ qt_add_qml_module(solar_system
     QML_FILES
         qml/Main.qml
         qml/EvoOverlay.qml
+        qml/StellarPanel.qml
     SOURCES
         src/main.cpp
         src/celestialdata.h    src/celestialdata.cpp
@@ -47,6 +48,8 @@ qt_add_qml_module(solar_system
         src/galaxyarms.h        src/galaxyarms.cpp
         src/galaxydata.h
         src/galaxy.h           src/galaxy.cpp
+        src/stellardata.h      src/stellardata.cpp
+        src/agndata.h          src/agndata.cpp
         src/postfx.h           src/postfx.cpp
         src/scenerenderer.h    src/scenerenderer.cpp
         src/sceneitem.h        src/sceneitem.cpp

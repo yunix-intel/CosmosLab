@@ -1,0 +1,98 @@
+# 解说词生成器 (分批追加, 最后合并为 assets/evo/narration.json)
+# 用法: python3 tools/narr_gen.py
+# 每批 put() 后 json.dump 到 tools/_narr_partN.json, 最后由 narr_merge.py 合并
+import json, os
+
+OUT = "D:/tmp/solar-system-cpp/tools/_narr_part1.json"
+N = {}
+def put(i, zh, yue, ja, en):
+    N[i] = {"zh": zh, "yue": yue, "ja": ja, "en": en}
+
+put("evo.low.s0",
+"一颗0.3倍太阳质量的红矮星点燃了核心的氢聚变, 进入主序。它是全对流结构, 燃料利用得非常充分。",
+"一粒0.3倍太阳质量嘅红矮星点着咗核心嘅氢聚变, 进入主序。佢系全对流结构, 燃料用得好充分。",
+"質量0.3太陽の赤色矮星が中心で水素核融合に点火し、主系列に入りました。完全対流構造のため、燃料を余すことなく使います。",
+"A 0.3-solar-mass red dwarf ignites hydrogen fusion in its core and joins the main sequence. Fully convective, it burns its fuel thoroughly.")
+put("evo.low.s1",
+"一千亿年过去了, 它还在平稳地烧氢。红矮星的主序寿命可达数千亿年 —— 宇宙的年龄还不够它走完一生。",
+"一千亿年过去, 佢仲喺度平稳咁烧氢。红矮星嘅主序寿命可以去到几千亿年 —— 宇宙嘅年纪都唔够佢行完一生。",
+"1000億年が経っても、まだ穏やかに水素を燃やしています。赤色矮星の主系列寿命は数千億年に及び、宇宙の年齢では一生を終えられません。",
+"A hundred billion years on, it still burns hydrogen steadily. A red dwarf's main-sequence lifetime spans hundreds of billions of years — longer than the age of the universe.")
+put("evo.low.s2",
+"两千亿岁, 氢接近耗尽, 它缓慢收缩、增温。注意: 这是理论外推, 我们从未实测到这类演化的终点。",
+"二千亿岁, 氢就嚟烧完, 佢慢慢收缩、升温。留意: 呢个系理论推演, 我哋从未实际睇到呢类演化嘅终点。",
+"2000億歳、水素は尽きかけ、ゆっくり収縮して温度を上げます。注意:これは理論的な外挿であり、このような進化の終点を観測したことはありません。",
+"At 200 billion years, hydrogen nearly exhausted, it slowly contracts and heats. Note: this is theoretical extrapolation — no such endpoint has ever been observed.")
+put("evo.low.s3",
+"终点是一颗氦白矮星。但单星通道在宇宙年龄内根本到不了 —— 这颗星的结局, 只是写在纸上的预言。",
+"终点系一粒氦白矮星。但单星通道喺宇宙年龄内根本到唔到 —— 呢粒星嘅结局, 只系写喺纸上嘅预言。",
+"終点はヘリウム白色矮星です。しかし単独星の進化では宇宙年齢内に到達できません——この星の結末は、紙の上の予言にすぎません。",
+"The endpoint is a helium white dwarf. But a single star cannot get there within the age of the universe — this star's fate exists only on paper.")
+put("evo.mid.s0",
+"一颗和太阳一样的恒星诞生了。有效温度5778开, 光度1倍太阳 —— 零龄主序, 一切从这里开始。",
+"一粒同太阳一样嘅恒星出世喇。有效温度5778度, 光度1倍太阳 —— 零龄主序, 一切由呢度开始。",
+"太陽と同じ星が生まれました。有効温度5778度、光度1太陽——零歳主系列、すべてはここから始まります。",
+"A Sun-like star is born. Effective temperature 5778 K, luminosity one solar — zero-age main sequence, everything starts here.")
+put("evo.mid.s1",
+"46亿岁, 这就是太阳的现在。核心的氢已消耗约一半, 光度比初生时高了约三成。",
+"46亿岁, 呢个就系太阳嘅而家。核心嘅氢已经烧咗约一半, 光度比出世时高咗约三成。",
+"46億歳、これが太陽の現在です。中心の水素は約半分消費され、光度は誕生時より約3割高くなっています。",
+"4.6 billion years — this is the Sun today. About half its core hydrogen is spent, and it shines some 30 percent brighter than at birth.")
+put("evo.mid.s2",
+"100亿岁, 核心氢耗尽, 氢壳层接力燃烧, 包层急剧膨胀。它成了红巨星, 半径可达上百倍太阳。",
+"100亿岁, 核心氢烧完, 氢壳层接力烧, 包层急速膨胀。佢变成咗红巨星, 半径可以去到上百倍太阳。",
+"100億歳、中心の水素は尽き、水素殻が燃え、外層は急膨張します。赤色巨星となり、半径は太陽の数百倍に達します。",
+"At 10 billion years the core hydrogen runs out, a hydrogen shell takes over, and the envelope balloons. It becomes a red giant, hundreds of times the Sun's radius.")
+put("evo.mid.s3",
+"简并的氦核被点燃 —— 氦闪。随后进入平稳的氦燃烧, 落在赫罗图的水平支上, 也就是红团簇。",
+"简并嘅氦核被点着 —— 氦闪。之后进入平稳嘅氦燃烧, 落喺赫罗图嘅水平支上, 即系红团簇。",
+"縮退したヘリウム核に点火——ヘリウムフラッシュ。その後安定したヘリウム燃焼に入り、HR図の水平分枝(レッドクランプ)に位置します。",
+"The degenerate helium core ignites — the helium flash. It settles into steady helium burning on the horizontal branch, the red clump.")
+put("evo.mid.s4",
+"氦和氢双壳层燃烧, 热脉冲一次次抛射包层。超风最强时, 每年可吹掉十万分之一太阳质量。",
+"氦同氢双壳层燃烧, 热脉冲一次次抛走包层。超风最劲时, 每年可以吹走十万分之一太阳质量。",
+"ヘリウムと水素の二重殻燃焼、熱パルスが外層を剥ぎ取ります。スーパーウィンドの最盛期には、年間10万分の1太陽質量が失われます。",
+"Double-shell burning with thermal pulses strips the envelope. At peak superwind, it sheds a hundred-thousandth of a solar mass per year.")
+put("evo.mid.s5",
+"被剥离的包层被中心星电离, 点亮成行星状星云 —— 持续仅约一万年, 宇宙尺度上的一瞬。",
+"被剥走嘅包层俾中心星电离, 点亮成行星状星云 —— 维持得约一万年, 宇宙尺度上一瞬即逝。",
+"剥ぎ取られた外層は中心星に電離され、惑星状星雲として輝きます——持続期間は約1万年、宇宙的には一瞬です。",
+"The stripped envelope, ionized by the exposed core, glows as a planetary nebula — lasting some ten thousand years, an instant on cosmic scales.")
+put("evo.mid.s6",
+"剩下约0.6倍太阳质量的碳氧核, 不再聚变, 靠余热慢慢冷却。这就是白矮星 —— 冷却序列还能用来定年龄。",
+"剩返约0.6倍太阳质量嘅碳氧核, 唔再聚变, 靠余热慢慢冷却。呢个就系白矮星 —— 冷却序列仲可以用来定年龄。",
+"約0.6太陽質量の炭素酸素核が残り、核融合なく余熱で冷えます。これが白色矮星です——冷却系列は年齢測定にも使えます。",
+"A 0.6-solar-mass carbon-oxygen core remains, cooling on leftover heat. This is a white dwarf — and its cooling sequence serves as a cosmic clock.")
+put("evo.mas.s0",
+"一颗20倍太阳质量的O型星登场: 有效温度35000开, 光度10万倍太阳, CNO循环主导燃烧。生而璀璨, 注定短命。",
+"一粒20倍太阳质量嘅O型星登场: 有效温度35000度, 光度10万倍太阳, CNO循环主导燃烧。生而璀璨, 注定短命。",
+"20太陽質量のO型星が登場:有効温度35000度、光度10万太陽、CNOサイクルが支配します。輝かしく生まれ、短命が定められています。",
+"A 20-solar-mass O star takes the stage: 35,000 K, a hundred thousand solar luminosities, CNO-cycle burning. Brilliant at birth, doomed to brevity.")
+put("evo.mas.s1",
+"仅800万年, 核心氢耗尽。太阳要用100亿年走的路, 它800万年就走完了 —— 大质量星活得短而亮。",
+"得800万年, 核心氢烧完。太阳要用100亿年行嘅路, 佢800万年就行完 —— 大质量星活得短而亮。",
+"わずか800万年で中心水素は尽きます。太陽が100億年かける道を800万年で走破します——大質量星は短く明るく生きます。",
+"In just 8 million years the core hydrogen is gone. The road the Sun walks in 10 billion years, it runs in 8 million — massive stars live short and bright.")
+put("evo.mas.s2",
+"外层膨胀为超巨星, 可能是红超巨, 也可能是蓝超巨 —— 取决于质量损失与金属丰度。氖、氧、硅逐级燃烧, 每一级都比上一级快得多。",
+"外层膨胀成超巨星, 可能系红超巨, 都可能系蓝超巨 —— 睇质量损失同金属丰度。氖、氧、硅逐级燃烧, 每一级都比上一级快好多。",
+"外層は超巨星へ膨張します。赤色にも青色にもなり得ます——質量損失と金属量次第です。ネオン・酸素・ケイ素と段階燃焼が進み、各段階は加速度的に短くなります。",
+"The envelope swells into a supergiant — red or blue, depending on mass loss and metallicity. Neon, oxygen, silicon burn in stages, each far faster than the last.")
+put("evo.mas.s3",
+"强星风剥掉了氢包层, 露出氦碳氧核心 —— 沃尔夫-拉叶阶段。质量损失率可达每年十万分之一到万分之一太阳质量。",
+"强星风剥走咗氢包层, 露出氦碳氧核心 —— 沃尔夫-拉叶阶段。质量损失率可以去到每年十万分之一到万分之一太阳质量。",
+"強い恒星風が水素外層を剥ぎ取り、ヘリウム炭素酸素の核が露出します——ウォルフ・ライエ段階。質量損失率は年間10万分の1から1万分の1太陽質量に達します。",
+"Fierce winds strip the hydrogen envelope, exposing the helium-carbon-oxygen core — the Wolf-Rayet phase, shedding up to a ten-thousandth of a solar mass per year.")
+put("evo.mas.s4",
+"铁核坍缩, 核坍缩超新星爆发。因为包层已被剥离, 光谱中没有氢线 —— 这就是Ib型。中微子带走了约99%的能量。",
+"铁核坍缩, 核坍缩超新星爆发。因为包层已经剥走, 光谱入面冇氢线 —— 呢个就系Ib型。中微子带走咗约99%嘅能量。",
+"鉄核が崩壊し、重力崩壊型超新星が爆発します。外層は既に剥がれているためスペクトルに水素線はありません——Ib型です。エネルギーの約99%はニュートリノが持ち去ります。",
+"The iron core collapses. With the envelope already gone, no hydrogen lines appear — a Type Ib supernova. Some 99 percent of the energy escapes as neutrinos.")
+put("evo.mas.s5",
+"遗迹是一个黑洞。20倍太阳质量、太阳金属丰度下大概率成黑洞 —— 中子星与黑洞的分界约在20到25倍太阳质量, 只能给区间。",
+"遗迹系一个黑洞。20倍太阳质量、太阳金属丰度下大概率成黑洞 —— 中子星同黑洞嘅分界约喺20到25倍太阳质量, 只可以俾区间。",
+"残骸はブラックホールです。20太陽質量・太陽金属量ではブラックホールになる可能性が高く、中性子星との境界は20〜25太陽質量と幅をもって示されます。",
+"The remnant is a black hole. At 20 solar masses and solar metallicity, a black hole is the likely outcome — the neutron-star boundary sits somewhere between 20 and 25 solar masses.")
+
+json.dump(N, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+print("part1:", len(N), "->", OUT)

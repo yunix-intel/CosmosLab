@@ -13,6 +13,8 @@
 #include "galaxydata.h"
 #include "cosmos.h"
 #include "cosmosdata.h"
+#include "stellardata.h"
+#include "agndata.h"
 #include "galaxyarms.h"
 #include "scenerenderer.h"
 #include "scene.h"
@@ -177,6 +179,9 @@ SolarScene::SolarScene(QQuickItem *parent)
     // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
     if (qEnvironmentVariableIsSet("SS_EVO"))
         m_testEvo = QString::fromUtf8(qgetenv("SS_EVO"));
+
+    // 测试用: SS_STELLAR=1 启动即显示恒星面板
+    m_testStellar = qEnvironmentVariableIntValue("SS_STELLAR") > 0;
 
     // 测试用: SS_SDSS=<数量> 指定 SDSS 星系可见数 (-1=关闭, 0=全部)
     // ★ 需要它才能做性能标定: 单独改变 SDSS 数量, 隔离聚集性成本。
@@ -1166,7 +1171,16 @@ QVariantList SolarScene::cosmosNotes() const
         "\u65af\u9686\u5de8\u58c1\u957f\u7ea6 13.8 \u4ebf\u5149\u5e74, \u5149\u7a7f\u8d8a\u5b83\u9700\u8981 13.8 \u4ebf\u5e74 \u2014\u2014 \u7ea6\u4e3a\u5b87\u5b99\u5e74\u9f84 (137.97 \u4ebf\u5e74) \u7684\u5341\u5206\u4e4b\u4e00\u3002",
         "\u5b87\u5b99\u5fae\u6ce2\u80cc\u666f (CMB) \u662f\u5927\u7206\u70b8\u540e 38 \u4e07\u5e74\u7684\u5149, \u6e29\u5ea6 2.7255 K, \u7ea2\u79fb z \u7ea6 1090\u3002\u5b83\u662f\u6211\u4eec\u80fd\u770b\u5230\u7684\u5b87\u5b99\u6700\u53e4\u8001\u7684\u7167\u7247\u3002",
         "\u672c\u661f\u7cfb\u7fa4\u6b63\u4ee5\u7ea6 185 km/s \u671d\u5ba4\u5973\u5ea7\u661f\u7cfb\u56e2\u5760\u843d; \u800c\u66f4\u5927\u7684\u5c3a\u5ea6\u4e0a, \u6574\u4e2a\u62c9\u5c3c\u4e9a\u51ef\u4e9a\u8d85\u661f\u7cfb\u56e2\u90fd\u671d\u5de8\u5f15\u6e90\u6d41\u52a8 \u2014\u2014 \u8bf4\u660e\u8fd0\u52a8\u662f\u5206\u5c42\u7684\u3002",
-    };
+        "\u2605 \u6697\u7269\u8d28\u8bc1\u636e\u94fe 1 \u661f\u7cfb\u65cb\u8f6c\u66f2\u7ebf: \u65cb\u6da1\u661f\u7cfb\u5916\u56f4\u8f6c\u901f\u4e0d\u4e0b\u964d (Rubin 1970s, M33/NGC 3198) \u2014\u2014 \u53ef\u89c1\u7269\u8d28\u5f15\u529b\u6491\u4e0d\u4f4f, \u9700\u6697\u6655\u3002",
+        "\u2605 \u6697\u7269\u8d28\u8bc1\u636e\u94fe 2 \u661f\u7cfb\u56e2: \u4f4d\u529b\u8d28\u91cf\u4e0e X \u5c04\u7ebf\u6c14\u4f53\u9759\u529b\u5e73\u8861\u7ed9\u51fa\u540c\u6837\u7ed3\u8bba (Zwicky 1933/1937, \u540e\u53d1\u5ea7\u56e2\u4e3a historic \u4f8b)\u3002",
+        "\u2605 \u6697\u7269\u8d28\u8bc1\u636e\u94fe 3 \u5b50\u5f39\u661f\u7cfb\u56e2: \u900f\u955c\u8d28\u91cf\u5cf0\u4e0e X \u5c04\u7ebf\u6c14\u5cf0\u9519\u5f00 \u2014\u2014 \u78b0\u649e\u540e\u6697\u7269\u8d28\u4e0e\u6c14\u4f53\u5206\u5bb6, \u4fee\u6b63\u5f15\u529b\u96be\u540c\u65f6\u89e3\u91ca (Clowe et al. 2006)\u3002",
+        "\u2605 \u6697\u7269\u8d28\u8bc1\u636e\u94fe 4 CMB \u7b2c\u4e09\u5cf0\u9ad8\u5ea6\u5b9a\u6697\u7269\u8d28\u5bc6\u5ea6 + \u5927\u5c3a\u5ea6\u7ed3\u6784\u529f\u7387\u8c31 \u2014\u2014 \u4e0e\u524d\u4e09\u6761\u72ec\u7acb\u4e00\u81f4\u3002\u76f4\u63a5\u63a2\u6d4b (XENON/LZ) \u8fc4\u4eca\u96f6\u7ed3\u679c, \u53ea\u7ed9\u4e0a\u9650\u3002",
+        "\u2605 \u8ddd\u79bb\u9636\u68af\u4e94\u7ea7: \u89c6\u5dee\u5230\u9020\u7236 (Leavitt \u5468\u5149) \u5230 TRGB/SBF \u5230 SNe Ia \u5230\u54c8\u52c3\u6d41\u3002\u6bcf\u7ea7\u6709\u9002\u7528\u8303\u56f4\u4e0e\u7cfb\u7edf\u8bef\u5dee, \u4e0a\u4e00\u7ea7\u662f\u4e0b\u4e00\u7ea7\u7684\u5b9a\u6807\u3002",
+        "\u2605 H0 tension: Planck (CMB) 67.4 vs SH0ES (\u8ddd\u79bb\u9636\u68af) \u7ea6 73 \u2014\u2014 \u5dee\u7ea6 5 sigma, \u5f53\u524d\u5b87\u5b99\u5b66\u6700\u5927\u672a\u89e3\u4e4b\u4e00, \u672c\u9879\u76ee\u4e24\u8fb9\u6570\u636e\u90fd\u6709 (CMB \u53c2\u6570 + \u54c8\u52c3\u56fe)\u3002",
+        "\u2605 \u5b87\u5b99\u547d\u8fd0\u662f\u6761\u4ef6\u53e5: LCDM \u9ed8\u8ba4\u70ed\u5bc2; Big Rip \u9700 w<-1 (\u672a\u8bc1\u8ba4); Big Crunch \u9700\u95ed\u5408\u5b87\u5b99 (CMB \u5df2\u6d4b\u5e73\u76f4, \u6392\u9664)\u3002",
+        "\u2605 \u7ed3\u6784\u600e\u4e48\u957f\u51fa\u6765: \u7269\u8d28-\u8f90\u5c04\u76f8\u7b49\u540e\u6270\u52a8\u5f00\u59cb\u589e\u957f (Jeans \u4e0d\u7a33\u5b9a\u6027); CMB \u6e29\u5ea6\u8d77\u4f0f\u5373\u4eca\u65e5\u7ed3\u6784\u7684\u79cd\u5b50, \u529f\u7387\u8c31\u89c1\u8bc1\u3002",
+        "\u2605 BAO \u6807\u51c6\u5c3a: \u91cd\u5b50\u58f0\u5b66\u632f\u8361\u7559\u4e0b\u7ea6 150 Mpc \u7279\u5f81\u5c3a\u5ea6 (SDSS/BOSS) \u2014\u2014 \u4e0e\u8d85\u65b0\u661f\u3001CMB \u4e09\u8db3\u9f0e\u7acb\u5b9a\u5b87\u5b99\u5b66\u53c2\u6570\u3002",
+};
     for (const char *n : notes)
         out.append(QString::fromUtf8(n));
     return out;
@@ -1265,6 +1279,132 @@ QVariantList SolarScene::cosmosStructures() const
         out.append(m);
     }
 
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+//  B.1/B.2 恒星链与 AGN 列表 + 详情 (含通俗科普 pop 字段)
+//
+//  ★ 距离显示规则: distLy<0 → 河外/不适用, 显示 desc 中的说明,
+//    列表 dist 栏固定为 "—"。QML 不得自行换算。
+// ---------------------------------------------------------------------------
+QVariantList SolarScene::stellarList() const
+{
+    QVariantList out;
+    for (int i = 0; i < STELLAR_COUNT; ++i) {
+        const StellarEntry &e = STELLAR_ENTRIES[i];
+        QVariantMap m;
+        m["id"]    = QString::fromUtf8(e.id);
+        m["name"]  = QString::fromUtf8(e.nameCn);
+        m["en"]    = QString::fromUtf8(e.nameEn);
+        m["cat"]   = QString::fromUtf8(e.catCn);
+        m["spec"]  = QString::fromUtf8(e.spec);
+        m["dist"]  = e.distLy < 0
+                     ? QStringLiteral("—")
+                     : (e.distLy < 1.0
+                        ? QStringLiteral("%1 光年").arg(e.distLy, 0, 'f', 2)
+                        : (e.distLy < 10000.0
+                           ? QStringLiteral("%1 光年").arg(e.distLy, 0, 'f', 0)
+                           : QStringLiteral("%1 万光年").arg(e.distLy / 10000.0, 0, 'f', 1)));
+        m["hasPhoto"] = false;   // B.1/B.2 暂无实景图, 统一走无图分支
+        out.append(m);
+    }
+    return out;
+}
+
+QVariantList SolarScene::agnList() const
+{
+    QVariantList out;
+    for (int i = 0; i < AGN_COUNT; ++i) {
+        const AgnEntry &e = AGN_ENTRIES[i];
+        QVariantMap m;
+        m["id"]    = QString::fromUtf8(e.id);
+        m["name"]  = QString::fromUtf8(e.nameCn);
+        m["en"]    = QString::fromUtf8(e.nameEn);
+        m["cat"]   = QString::fromUtf8(e.catCn);
+        m["dist"]  = e.distMly < 0
+                     ? QStringLiteral("—")
+                     : (e.distMly >= 1000.0
+                        ? QStringLiteral("%1 亿光年").arg(e.distMly / 100.0, 0, 'f', 1)
+                        : QStringLiteral("%1 百万光年").arg(e.distMly, 0, 'f', 0));
+        m["hasPhoto"] = false;
+        out.append(m);
+    }
+    return out;
+}
+
+QVariantMap SolarScene::stellarDetail(const QString &id) const
+{
+    QVariantMap out;
+    if (id.isEmpty())
+        return out;
+    const StellarEntry *e = findStellar(id.toUtf8().constData());
+    if (!e)
+        return out;
+    out["id"]     = QString::fromUtf8(e->id);
+    out["nameCn"] = QString::fromUtf8(e->nameCn);
+    out["nameEn"] = QString::fromUtf8(e->nameEn);
+    out["cat"]    = QString::fromUtf8(e->catCn);
+    out["spec"]   = QString::fromUtf8(e->spec);
+    out["distText"] = e->distLy < 0
+                      ? QStringLiteral("银河系外 / 不适用 (见说明)")
+                      : (e->distLy < 1.0
+                         ? QStringLiteral("%1 光年").arg(e->distLy, 0, 'f', 2)
+                         : (e->distLy < 10000.0
+                            ? QStringLiteral("%1 光年").arg(e->distLy, 0, 'f', 0)
+                            : QStringLiteral("%1 万光年").arg(e->distLy / 10000.0, 0, 'f', 1)));
+    if (e->teff > 0)
+        out["teffText"] = QStringLiteral("%1 K").arg(e->teff, 0, 'f', 0);
+    // ★ 质量单位按量级切换: 系外行星用太阳质量会变成 0.0009 这类难读数。
+    //   阈值 0.013 Msun = 氘聚变下限, 恰好也是行星/褐矮星分界, 一举两得。
+    if (e->massSol > 0) {
+        if (e->massSol >= 0.1)
+            out["massText"] = QStringLiteral("%1 太阳质量").arg(e->massSol, 0, 'g', 3);
+        else if (e->massSol >= 0.008)
+            out["massText"] = QStringLiteral("%1 木星质量").arg(e->massSol * 1047.0, 0, 'g', 3);
+        else
+            out["massText"] = QStringLiteral("%1 地球质量").arg(e->massSol * 333000.0, 0, 'g', 3);
+    }
+    out["desc"] = QString::fromUtf8(e->desc);
+    out["pop"]  = QString::fromUtf8(e->pop);
+    // 没有 photo 字段 -> 卡片走"暂无实景图"分支
+    out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
+    return out;
+}
+
+QVariantMap SolarScene::agnDetail(const QString &id) const
+{
+    QVariantMap out;
+    if (id.isEmpty())
+        return out;
+    const AgnEntry *e = findAgn(id.toUtf8().constData());
+    if (!e)
+        return out;
+    out["id"]     = QString::fromUtf8(e->id);
+    out["nameCn"] = QString::fromUtf8(e->nameCn);
+    out["nameEn"] = QString::fromUtf8(e->nameEn);
+    out["cat"]    = QString::fromUtf8(e->catCn);
+    out["distText"] = e->distMly < 0
+                      ? QStringLiteral("宇宙学距离 (见说明)")
+                      : (e->distMly >= 1000.0
+                         ? QStringLiteral("%1 亿光年").arg(e->distMly / 100.0, 0, 'f', 1)
+                         : QStringLiteral("%1 百万光年").arg(e->distMly, 0, 'f', 0));
+    if (e->redshift >= 0)
+        out["redshift"] = e->redshift;
+    if (e->redshift >= 0)
+        out["redshiftDerived"] = false;   // AGN 红移为实测 (光谱)
+    if (e->massLog10 > 0) {
+        // ★ 星系团质量 10^15.2 这类指数难读 —— >=15 用"千万亿"换算。
+        //   1e15 Msun = 1000 万亿 Msun。
+        if (e->massLog10 >= 15.0)
+            out["massText"] = QStringLiteral("%1 万亿太阳质量")
+                                  .arg(std::pow(10.0, e->massLog10 - 12.0), 0, 'g', 3);
+        else
+            out["massText"] = QStringLiteral("10^%1 太阳质量").arg(e->massLog10, 0, 'f', 1);
+    }
+    out["desc"] = QString::fromUtf8(e->desc);
+    out["pop"]  = QString::fromUtf8(e->pop);
+    out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
 QVariantMap SolarScene::galaxyInfo() const

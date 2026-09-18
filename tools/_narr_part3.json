@@ -1,0 +1,152 @@
+{
+ "evo.pln.s0": {
+  "zh": "II类盘: 气体加尘埃, 质量约恒星的1%。ALMA已经拍到大量环缝结构 —— 行星正在盘里刻痕。",
+  "yue": "II类盘: 气体加尘埃, 质量约恒星嘅1%。ALMA已经影到大量环缝结构 —— 行星喺盘入面刻紧痕。",
+  "ja": "クラスII円盤:気体と塵、質量は恒星の約1%。ALMAは多数のリング構造を撮像済みです——惑星が溝を刻んでいます。",
+  "en": "Class II disk: gas plus dust, ~1% of the star's mass. ALMA has imaged rings and gaps galore — planets carving grooves as they grow."
+ },
+ "evo.pln.s1": {
+  "zh": "尘埃长大: 微米尘埃聚成公里级星子。卵石吸积还是引力不稳定?两种机制还在竞争, 没有定论。",
+  "yue": "尘埃长大: 微米尘埃聚成公里级星子。卵石吸积定系引力不稳定?两种机制仲喺度争, 未有定论。",
+  "ja": "塵の成長:ミクロン塵がkm級微惑星に。ペブル集積か重力不安定か——二つの機構はまだ競合中で未確定です。",
+  "en": "Dust grows up: micron grains clump into kilometer planetesimals. Pebble accretion or gravitational instability? Both mechanisms still compete, undecided."
+ },
+ "evo.pln.s2": {
+  "zh": "寡头生长: 约10倍地球质量的固核触发失控气体吸积 —— 气态巨行星的内核就位了。",
+  "yue": "寡头生长: 约10倍地球质量嘅固核触发失控气体吸积 —— 气态巨行星嘅内核就位喇。",
+  "ja": "寡頭成長:約10地球質量の固体核が暴走的ガス集積を引き起こします——巨大ガス惑星の核が定まります。",
+  "en": "Oligarchic growth: a ~10-Earth-mass solid core triggers runaway gas accretion — the giant planet's heart is set."
+ },
+ "evo.pln.s3": {
+  "zh": "约500万年气体散去。I/II型迁移登场: 留在外侧就是HR 8799, 内移成热木星就是飞马座51b —— 同一起点, 两种命运。",
+  "yue": "约500万年气体散去。I/II型迁移登场: 留喺外侧就系HR 8799, 内移成热木星就系飞马座51b —— 同一起点, 两种命运。",
+  "ja": "約500万年でガスは散逸。I/II型移動が登場します:外に残ればHR 8799、内へ来ればペガスス座51b——同じ起点、二つの運命です。",
+  "en": "Gas disperses by ~5 Myr. Type I/II migration takes over: stay out wide like HR 8799, or spiral in as a hot Jupiter like 51 Peg b — same start, two fates."
+ },
+ "evo.pln.s4": {
+  "zh": "类地行星收尾: 巨撞击阶段。月球就是这么来的 —— 一颗火星大小的天体撞上原地球, 碎片聚成月亮。",
+  "yue": "类地行星收尾: 巨撞击阶段。月球就系咁嚟 —— 一粒火星咁大嘅天体撞上原地球, 碎片聚成月亮。",
+  "ja": "地球型惑星の仕上げ:巨大衝突期。月はこうして生まれました——火星サイズの天体が原始地球に衝突し、破片が集まりました。",
+  "en": "Terrestrial finale: the giant-impact phase. That is how the Moon was born — a Mars-sized body struck the proto-Earth, debris coalescing into our satellite."
+ },
+ "evo.pln.s5": {
+  "zh": "碎屑盘: 残余小天体碰撞级联, 红外超明显 —— 织女星型。太阳系的柯伊伯带就是老年碎屑盘。",
+  "yue": "碎屑盘: 残余小天体碰撞级联, 红外超明显 —— 织女星型。太阳系嘅柯伊伯带就系老年碎屑盘。",
+  "ja": "デブリ円盤:残った小天体の衝突カスケードで赤外超過が顕著——ベガ型。太陽系のカイパーベルトは老齢デブリ円盤です。",
+  "en": "Debris disk: leftover planetesimals grind down in collisional cascade, glowing in infrared — Vega-type. Our Kuiper Belt is one such elderly disk."
+ },
+ "evo.psf.s0": {
+  "zh": "前恒星核: 分子云核, 满足金斯判据量级才坍缩。注意只给量级不给单值 —— 判据依赖几何与磁场假设。",
+  "yue": "前恒星核: 分子云核, 满足金斯判据量级先坍缩。留意只俾量级唔俾单值 —— 判据视几何同磁场假设而定。",
+  "ja": "プレステラー核:分子雲核、ジーンズ条件のオーダーで collapse します。単一値ではなく量級のみ——形状と磁場の仮定に依存します。",
+  "en": "Prestellar core: a molecular cloud core collapses once the Jeans criterion is met in order of magnitude. Order only, no single value — geometry and magnetic fields matter."
+ },
+ "evo.psf.s1": {
+  "zh": "0类原恒星: 深埋包层, 光度低、特征温度低于70开。双极外向流最强 —— 婴儿恒星在打喷嚏。",
+  "yue": "0类原恒星: 深埋包层, 光度低、特征温度低于70度。双极外向流最劲 —— BB恒星喺度打乞嚏。",
+  "ja": "クラス0:厚い外層に埋もれ、光度は低く特性温度70度未満。双極アウトフロー最盛期——赤ちゃん星のくしゃみです。",
+  "en": "Class 0 protostar: buried in envelope, low luminosity, characteristic temperature under 70 K. Bipolar outflows at their fiercest — the baby star sneezes."
+ },
+ "evo.psf.s2": {
+  "zh": "I类: 包层加盘并存, 特征温度70到650开。包层还在, 但盘已经能看见了 —— 典型的过渡形态。",
+  "yue": "I类: 包层加盘并存, 特征温度70到650度。包层仲喺度, 但盘已经睇到 —— 过渡形态。",
+  "ja": "クラスI:外層と円盤が共存、特性温度70〜650度。外層は残るが円盤が見え始めます——移行形態です。",
+  "en": "Class I: envelope plus disk, characteristic temperature 70–650 K. The envelope lingers but the disk shows through — a transitional form."
+ },
+ "evo.psf.s3": {
+  "zh": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积还在继续。",
+  "yue": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积仲继续紧。",
+  "ja": "クラスII、古典的おうし座T型星:円盤主導、Hα強輝線と紫外超過。外層は去り、集積は続きます。",
+  "en": "Class II, the classical T Tauri star: disk-dominated, strong H-alpha plus ultraviolet excess. Envelope gone, accretion ongoing."
+ },
+ "evo.psf.s4": {
+  "zh": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列走完 —— 接下来就是主序前的收缩了。",
+  "yue": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列行完 —— 之后就系主序前嘅收缩喇。",
+  "ja": "クラスIII、弱輝線星:円盤は散逸し、光球が支配します。星形成系列の完走——次は主系列前の収縮です。",
+  "en": "Class III, the weak-line star: disk dispersed, photosphere in charge. The formation sequence is complete — pre-main-sequence contraction comes next."
+ },
+ "evo.bin.s0": {
+  "zh": "宽双星: 两颗O/B主序星, 周期年量级。故事从一对大质量双胞胎开始。",
+  "yue": "宽双星: 两粒O/B主序星, 周期年量级。故事由一对大质量双胞胎开始。",
+  "ja": "広い連星:O/B主系列星が二つ、周期は年オーダー。物語は大質量の双子から始まります。",
+  "en": "Wide binary: two O/B main-sequence stars, period measured in years. The story opens with massive twins."
+ },
+ "evo.bin.s1": {
+  "zh": "包层共有: 第一次超新星后, 伴星膨胀吞没致密星, 轨道在共有包层里大幅收缩。效率参数高度不确定 —— 只定性, 不定量。",
+  "yue": "包层共有: 第一次超新星后, 伴星膨胀吞没致密星, 轨道喺共有包层入面大幅收缩。效率参数高度不确定 —— 只定性, 唔定量。",
+  "ja": "共通外層:最初の超新星後、伴星が膨張してコンパクト星を飲み込み、軌道は大幅に縮小します。効率パラメータは不定性大——定性的にのみ扱います。",
+  "en": "Common envelope: after the first supernova the companion swallows the compact star, and the orbit shrinks drastically inside the shared envelope. Efficiencies deeply uncertain — qualitative only."
+ },
+ "evo.bin.s2": {
+  "zh": "双中子星: 周期小时量级, 引力波缓慢带走角动量 —— 赫尔斯-泰勒式的衰减, 和PSR 1913+16一样。",
+  "yue": "双中子星: 周期小时量级, 引力波慢慢带走角动量 —— 赫尔斯-泰勒式嘅衰减, 同PSR 1913+16一样。",
+  "ja": "二重中性子星:周期は時間オーダー、重力波が角運動量をゆっくり奪います——PSR 1913+16と同じハルス・テイラー型減衰です。",
+  "en": "Double neutron stars: period in hours, gravitational waves bleeding away angular momentum — Hulse–Taylor style decay, as in PSR 1913+16."
+ },
+ "evo.bin.s3": {
+  "zh": "啁啾段, 最后约100秒: 频率扫过LIGO频带, 从数十到数百赫兹。GW170817的啁啾持续了约100秒 —— 人类听到的宇宙声音。",
+  "yue": "啁啾段, 最后约100秒: 频率扫过LIGO频带, 由几十到几百赫兹。GW170817嘅啁啾持续咗约100秒 —— 人类听到嘅宇宙声音。",
+  "ja": "チャープ、最後の約100秒:周波数はLIGO帯を数十〜数百Hzへ掃引します。GW170817のチャープは約100秒続きました——人類が聴いた宇宙の音です。",
+  "en": "The chirp, final ~100 seconds: frequency sweeping through the LIGO band, tens to hundreds of hertz. GW170817 chirped for ~100 seconds — the sound of the cosmos, heard by humans."
+ },
+ "evo.bin.s4": {
+  "zh": "并合, 千新星AT2017gfo: 金、铂等r过程元素起源的直接证据, 外加短伽马暴170817A。多信使天文学元年。",
+  "yue": "并合, 千新星AT2017gfo: 金、铂等r过程元素起源嘅直接证据, 外加短伽马暴170817A。多信使天文学元年。",
+  "ja": "合体、キロノバAT2017gfo:金・白金などr過程元素起源の直接証拠、短ガンマ線バースト170817A付き。マルチメッセンジャー天文学元年です。",
+  "en": "Merger: kilonova AT2017gfo — direct evidence for the r-process origin of gold and platinum, plus short GRB 170817A. Year one of multi-messenger astronomy."
+ },
+ "evo.rmn.s0": {
+  "zh": "年轻残骸, 千年尺度: 蟹状星云脉冲星周期33毫秒; 刚诞生的白矮星光度约百分之一太阳。",
+  "yue": "年轻残骸, 千年尺度: 蟹状星云脉冲星周期33毫秒; 啱啱出世嘅白矮星光度约百分之一太阳。",
+  "ja": "若い残骸、千年スケール:かに星雲パルサー周期33ミリ秒;生まれたての白色矮星の光度は約100分の1太陽です。",
+  "en": "Young remnants on millennial scales: the Crab pulsar spins at 33 ms; a newborn white dwarf glows at ~1% solar luminosity."
+ },
+ "evo.rmn.s1": {
+  "zh": "百万年: 脉冲星周期显著增长 —— 磁偶极辐射制动, 理想情形制动指数为3; 白矮星冷却序列可以定年龄。",
+  "yue": "百万年: 脉冲星周期明显增长 —— 磁偶极辐射制动, 理想情形制动指数系3; 白矮星冷却序列可以定年龄。",
+  "ja": "百万年:パルサー周期は顕著に伸びます——磁気双極子制動、理想的には制動指数3;白色矮星の冷却系列は年齢測定に使えます。",
+  "en": "A million years: pulsar periods lengthen markedly — magnetic-dipole braking with ideal braking index 3; white-dwarf cooling sequences date the population."
+ },
+ "evo.rmn.s2": {
+  "zh": "亿年: 普通脉冲星多已越过死亡线, 不再打灯; 白矮星光度约万分之一太阳, 冷却成老弱残兵。",
+  "yue": "亿年: 普通脉冲星多已越过死亡线, 唔再打灯; 白矮星光度约万分之一太阳, 冷却成老弱残兵。",
+  "ja": "億年:通常のパルサーは大半がデスラインを越えて消灯;白色矮星は光度約1万分の1太陽に冷えます。",
+  "en": "A hundred million years: most ordinary pulsars have crossed the death line and gone dark; white dwarfs fade to ~10⁻⁴ solar luminosity."
+ },
+ "evo.rmn.s3": {
+  "zh": "百亿年: 黑矮星理论存在, 但宇宙年龄内到不了 —— 和低质量链呼应上了。而毫秒脉冲星守时到此时钟精度依然惊人。",
+  "yue": "百亿年: 黑矮星理论存在, 但宇宙年龄内到唔到 —— 同低质量链呼应返。而毫秒脉冲星守时到呢个钟数精度依然惊人。",
+  "ja": "百億年:黒色矮星は理論上存在しますが宇宙年齢内には到達しません——低質量系列と呼応します。一方ミリ秒パルサーの時計精度は驚異的です。",
+  "en": "Ten billion years: black dwarfs exist in theory but remain unreachable within cosmic time — echoing the low-mass track. Millisecond pulsars, meanwhile, still keep astonishing time."
+ },
+ "evo.clu.s0": {
+  "zh": "嵌入团: 仍埋在分子云中, 气体占主导 —— 猎户座梯形那样的婴儿星团。",
+  "yue": "嵌入团: 仲埋喺分子云入面, 气体占主导 —— 猎户座梯形噉样嘅BB星团。",
+  "ja": "埋め込み星団:まだ分子雲に埋もれ、ガスが支配的——オリオン座トラペジウムのような赤ちゃん星団です。",
+  "en": "Embedded cluster: still buried in its molecular cloud, gas-dominated — a baby cluster like the Trapezium."
+ },
+ "evo.clu.s1": {
+  "zh": "约300万年气体排出: 大质量星反馈吹散气体。效率低就团毁人亡 —— 这就是婴儿死亡率, 多数星团活不过这一关。",
+  "yue": "约300万年气体排出: 大质量星反馈吹散气体。效率低就团毁人亡 —— 呢个就系婴儿死亡率, 多数星团活唔过呢关。",
+  "ja": "約300万年でガス放出:大質量星のフィードバックがガスを吹き飛ばします。効率が低ければ星団は瓦解——乳児死亡率、多くはここを越えられません。",
+  "en": "Gas expulsion at ~3 Myr: massive-star feedback blows the gas away. Low efficiency means cluster death — infant mortality, which most clusters do not survive."
+ },
+ "evo.clu.s2": {
+  "zh": "约1亿年弛豫蒸发: 两体弛豫加潮汐剥离, 低质量星优先逃逸 —— 质量分层。昴星团约1亿岁, 正在这一段。",
+  "yue": "约1亿年弛豫蒸发: 两体弛豫加潮汐剥离, 低质量星优先逃逸 —— 质量分层。昴星团约1亿岁, 喺呢段。",
+  "ja": "約1億年で緩和・蒸発:二体緩和と潮汐剥離で低質量星から逃げます——質量分化。プレアデス(約1億歳)はこの段階です。",
+  "en": "Relaxation and evaporation at ~100 Myr: two-body relaxation plus tidal stripping lets low-mass stars escape first — mass segregation. The Pleiades (~100 Myr) live here."
+ },
+ "evo.clu.s3": {
+  "zh": "约10亿年核坍缩或瓦解: 毕星团约7亿岁正在瓦解; 致密球状团可核坍缩, M15式。分岔路口, 或散或缩。",
+  "yue": "约10亿年核坍缩或瓦解: 毕星团约7亿岁瓦解紧; 致密球状团可核坍缩, M15式。分岔路口, 或散或缩。",
+  "ja": "約10億年で核崩壊か瓦解:ヒアデス(約7億歳)は瓦解中;高密度球状星団は核崩壊へ(M15型)。散るか縮むかの分岐点です。",
+  "en": "Core collapse or dissolution at ~1 Gyr: the Hyades (~700 Myr) are dissolving; dense globulars may collapse like M15. Scatter or shrink — the fork in the road."
+ },
+ "evo.clu.s4": {
+  "zh": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就是宇宙年龄下限, 自洽性检查通过。",
+  "yue": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就系宇宙年龄下限, 自洽性检查通过。",
+  "ja": "100億年、球状星団の暮年:生き残りM13は約120億歳——球状星団年齢は宇宙年齢の下限、自洽性チェック合格です。",
+  "en": "Ten billion years, globular twilight: survivors like M13 at ~12 Gyr — globular ages floor the age of the universe. Consistency check passed."
+ }
+}
