@@ -110,6 +110,10 @@ ApplicationWindow {
     // ★ 恒星视图为 UI-only (不新增渲染尺度, 复用太阳系画布):
     //   打开时隐藏三尺度各自面板, 显示恒星列表面板。
     property bool  stellarView: false
+    // ★ 全局专业/科普开关 (选项一): true=专业版 (默认), false=科普版。
+    //   详情卡 + 演化阶段说明 + 教学要点全部跟随此开关。
+    //   解说词 TTS 按需取 zh (专业) 或 zh_pop (科普)。
+    property bool  proMode: true
 
     Component.onCompleted: {
         // 采纳 C++ 侧的初始焦点 —— 它可能被环境变量 SS_FOCUS 覆盖,
@@ -117,6 +121,9 @@ ApplicationWindow {
         currentId = scene.focusId
         bodies = scene.bodyList()
         current = scene.bodyInfo(scene.focusId)
+        // 测试用: SS_POP=1 启动即科普版
+        if (scene.testPop)
+            proMode = false
     }
 
     // ========================================================================
@@ -506,8 +513,8 @@ ApplicationWindow {
     // ========================================================================
     GlassPanel {
         x: 18; y: 18
-        // 加宽以容纳尺度切换控件
-        width: Math.min(parent.width - 36, 840)
+        // 加宽以容纳尺度切换控件 + 专业/科普开关 (6×66+间距约 420px)
+        width: Math.min(parent.width - 36, 910)
         height: 44
 
         RowLayout {
@@ -555,6 +562,30 @@ ApplicationWindow {
 
             Row {
                 spacing: 3
+
+                // ★ 全局专业/科普切换: 与演化/恒星/尺度段并列, 文字按钮。
+                Rectangle {
+                    width: 66; height: 26; radius: 7
+                    color: root.proMode
+                           ? root.cAccentSoft : Qt.rgba(0.55, 0.45, 0.15, 0.25)
+                    border.width: 1
+                    border.color: root.proMode
+                                  ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                  : Qt.rgba(1.0, 0.72, 0.35, 0.55)
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.proMode ? "专业版" : "科普版"
+                        color: root.proMode ? "#bcd9ff" : "#ffd98a"
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.family: root.sansFont
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.proMode = !root.proMode
+                    }
+                }
 
                 Rectangle {
                     width: 66; height: 26; radius: 7
@@ -1574,6 +1605,8 @@ ApplicationWindow {
         visible: scene.scaleLevel === 2 && !root.stellarView
 
         property var notes: scene.cosmosNotes()
+        // ★ 跟随全局开关: 科普版用 cosmosNotesPop (一一对应)。
+        property var notesPop: scene.cosmosNotesPop()
 
         ColumnLayout {
             id: cosNoteCol
@@ -1601,13 +1634,15 @@ ApplicationWindow {
             }
 
             Repeater {
-                model: cosmosNotePanel.notes
+                // ★ 跟随全局开关, 与专业版一一对应
+                model: root.proMode ? cosmosNotePanel.notes
+                                    : cosmosNotePanel.notesPop
 
                 delegate: Text {
                     required property string modelData
                     Layout.fillWidth: true
                     text: "· " + modelData
-                    color: root.cTextDim
+                    color: root.proMode ? root.cTextDim : "#ffd9a0"
                     font.pixelSize: 10
                     wrapMode: Text.WordWrap
                     lineHeight: 1.35
@@ -1626,8 +1661,12 @@ ApplicationWindow {
         visible: scene.scaleLevel === 1 && !root.stellarView
 
         property var notes: []
+        property var notesPop: []
 
-        Component.onCompleted: notes = scene.galaxyNotes()
+        Component.onCompleted: {
+            notes = scene.galaxyNotes()
+            notesPop = scene.galaxyNotesPop()
+        }
 
         ColumnLayout {
             id: noteCol
@@ -1665,7 +1704,9 @@ ApplicationWindow {
             }
 
             Repeater {
-                model: galaxyNotePanel.notes
+                // ★ 跟随全局开关, 与专业版一一对应
+                model: root.proMode ? galaxyNotePanel.notes
+                                    : galaxyNotePanel.notesPop
 
                 RowLayout {
                     required property var modelData
@@ -1680,7 +1721,7 @@ ApplicationWindow {
                     Text {
                         Layout.fillWidth: true
                         text: modelData
-                        color: root.cTextDim
+                        color: root.proMode ? root.cTextDim : "#ffd9a0"
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
                         lineHeight: 1.35
@@ -2052,6 +2093,7 @@ ApplicationWindow {
         id: evoOverlay
         dpr: root.screen ? root.screen.devicePixelRatio : 2.0
         testEvo: scene.testEvo
+        proMode: root.proMode
     }
 
     // ========================================================================
@@ -2076,9 +2118,8 @@ ApplicationWindow {
         color: Qt.rgba(0.02, 0.03, 0.05, 0.72)
 
         // 详情数据 (由列表项点击时填入, 或由 location() 返回)
+        // 文本版本由全局 root.proMode 决定, 卡片自身不再持有开关。
         property var detail: ({})
-        // 通俗/精准切换 (仅 B.1/B.2 有 pop 的条目有效)
-        property bool popMode: false
 
         // 测试用: SS_CARD=<id> 时启动即打开 (供自动化截图验证)
         Component.onCompleted: {
@@ -2522,49 +2563,18 @@ ApplicationWindow {
                     }
                 }
 
-                // ---- 描述 (教科书精准 + 通俗科普切换) ----
+                // ---- 描述 (跟随全局专业/科普开关) ----
                 //
-                // ★ B.1/B.2 新增条目带 pop 字段 (通俗版)。切换选项默认
-                //   显示 desc (精准版); 有 pop 的条目才显示切换按钮。
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
-                    Text {
-                        text: "说明"
-                        color: root.cTextDim
-                        font.pixelSize: 10
-                        font.family: root.sansFont
-                    }
-                    Item { Layout.fillWidth: true }
-                    Rectangle {
-                        visible: galaxyCard.detail.pop !== undefined
-                        width: 118; height: 22; radius: 5
-                        color: galaxyCard.popMode
-                               ? Qt.rgba(0.37, 0.66, 1.0, 0.22)
-                               : Qt.rgba(1, 1, 1, 0.05)
-                        border.width: 1
-                        border.color: Qt.rgba(1, 1, 1, 0.10)
-                        Text {
-                            anchors.centerIn: parent
-                            text: galaxyCard.popMode ? "通俗版" : "精准版"
-                            color: galaxyCard.popMode ? "#bcd9ff" : root.cTextDim
-                            font.pixelSize: 10
-                            font.family: root.sansFont
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: galaxyCard.popMode = !galaxyCard.popMode
-                        }
-                    }
-                }
+                // ★ 选项一: 详情卡不再自带切换按钮, 统一跟随 root.proMode。
+                //   有 pop 的条目才区分显示; 无 pop 的条目 (既有星系/结构)
+                //   两种模式显示同一 desc。
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: (galaxyCard.popMode && galaxyCard.detail.pop !== undefined)
+                    text: (!root.proMode && galaxyCard.detail.pop !== undefined)
                           ? galaxyCard.detail.pop
                           : (galaxyCard.detail.desc || "")
-                    color: root.cText
+                    color: root.proMode ? root.cText : "#ffe6b8"
                     font.pixelSize: 11
                     font.family: root.sansFont
                     lineHeight: 1.45

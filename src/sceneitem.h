@@ -111,6 +111,8 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(QString testEvo READ testEvo CONSTANT)
     // 测试用: SS_STELLAR=1 启动即显示恒星面板
     Q_PROPERTY(bool testStellar READ testStellar CONSTANT)
+    // 测试用: SS_POP=1 启动即科普版 (proMode=false)
+    Q_PROPERTY(bool testPop READ testPop CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
@@ -201,6 +203,10 @@ public:
     Q_INVOKABLE QVariantMap  bodyInfo(const QString &id) const; // 详情面板
     Q_INVOKABLE QVariantMap  galaxyInfo() const;                // 银河系数据面板
     Q_INVOKABLE QVariantList galaxyNotes() const;               // 银河系教学要点
+    // ★ 通俗版教学要点 (选项一: 跟随全局 proMode)。
+    //   与原版一一对应 (同索引), QML 按开关选择展示哪一套。
+    Q_INVOKABLE QVariantList galaxyNotesPop() const;
+    Q_INVOKABLE QVariantList cosmosNotesPop() const;
     Q_INVOKABLE QVariantMap  cosmosInfo() const;                 // 宇宙学参数
     // 粒子数与预估 GPU 耗时 (性能开关的反馈)
     Q_INVOKABLE QVariantMap  cosmosPerf() const;
@@ -244,6 +250,7 @@ public:
     bool testHubble() const { return m_testHubble; }
     QString testEvo() const { return m_testEvo; }
     bool testStellar() const { return m_testStellar; }
+    bool testPop() const { return m_testPop; }
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
@@ -315,6 +322,7 @@ private:
     bool    m_testHubble = false;  // 测试用: 启动即开哈勃图 (SS_HUBBLE)
     QString m_testEvo;             // 测试用: SS_EVO=<id>[:<prog>] 开演化播放器
     bool    m_testStellar = false; // 测试用: SS_STELLAR=1 显示恒星面板
+    bool    m_testPop = false;     // 测试用: SS_POP=1 启动即科普版
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;

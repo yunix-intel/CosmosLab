@@ -27,6 +27,9 @@ Rectangle {
     // 由 Main.qml 传入 (避免跨文件 id 引用)
     property real dpr: 2.0
     property string testEvo: ""
+    // ★ 全局专业/科普开关 (由 Main.qml 的 root.proMode 传入):
+    //   true=专业版 desc, false=科普版 pop (无 pop 的阶段回退到 desc)。
+    property bool proMode: true
 
     // ---- 引擎状态 ----
     property int cur: 0
@@ -53,13 +56,13 @@ Rectangle {
             unit: "Gyr", tMin: 0, tMax: 250, allowLog: false, useLog: false,
             viz: "hr",
             stages: [
-                { t: 0,   label: "零龄主序", desc: "氢聚变点火, 进入主序。0.3 M☉ 全对流, 燃料利用充分。", narr: "evo.low.s0",
+                { t: 0,   label: "零龄主序", desc: "氢聚变点火, 进入主序。0.3 M☉ 全对流, 燃料利用充分。", narr: "evo.low.s0", pop: "一颗小红星点着了, 开始烧氢。它个头小, 烧得慢, 特别省燃料。",
                   track: { teff: 3400, logL: -2.0, rad: 0.30 } },
-                { t: 100, label: "主序中期", desc: "仍在平稳烧氢。红矮星主序寿命可达数千亿年 —— 宇宙年龄内走不完。", narr: "evo.low.s1",
+                { t: 100, label: "主序中期", desc: "仍在平稳烧氢。红矮星主序寿命可达数千亿年 —— 宇宙年龄内走不完。", narr: "evo.low.s1", pop: "一千亿年过去, 它还在不紧不慢地烧。宇宙的年纪都不够它过完一生。",
                   track: { teff: 3350, logL: -2.1, rad: 0.31 } },
-                { t: 200, label: "主序晚期", desc: "氢接近耗尽, 缓慢收缩增温。注意: 这是理论外推, 尚未实测到此类终点。", narr: "evo.low.s2",
+                { t: 200, label: "主序晚期", desc: "氢接近耗尽, 缓慢收缩增温。注意: 这是理论外推, 尚未实测到此类终点。", narr: "evo.low.s2", pop: "两千亿岁, 燃料快见底, 它慢慢缩成一团。注意: 这是算出来的, 没人亲眼见过结局。",
                   track: { teff: 3300, logL: -2.2, rad: 0.33 } },
-                { t: 250, label: "He 白矮星 (理论终点)", desc: "直接塌缩为 He 白矮星 —— 单星通道在宇宙年龄内到不了, 系理论预言。", narr: "evo.low.s3",
+                { t: 250, label: "He 白矮星 (理论终点)", desc: "直接塌缩为 He 白矮星 —— 单星通道在宇宙年龄内到不了, 系理论预言。", narr: "evo.low.s3", pop: "最后缩成一颗氦白矮星 —— 但这只是纸上预言, 宇宙还没老到能见证它。",
                   track: { teff: 6000, logL: -3.0, rad: 0.02 } }
             ]
         },
@@ -68,19 +71,19 @@ Rectangle {
             unit: "Gyr", tMin: 0, tMax: 15, allowLog: false, useLog: false,
             viz: "hr",
             stages: [
-                { t: 0,    label: "零龄主序", desc: "氢聚变点火。有效温度约 5778 K, 光度 1 L☉。", narr: "evo.mid.s0",
+                { t: 0,    label: "零龄主序", desc: "氢聚变点火。有效温度约 5778 K, 光度 1 L☉。", narr: "evo.mid.s0", pop: "一颗和太阳一样的恒星出生了, 一切从这里开始。",
                   track: { teff: 5778, logL: 0.0, rad: 1.0 } },
-                { t: 4.6,  label: "太阳现在", desc: "46 亿岁。核心氢已消耗约一半, 光度比初生时高约 30%。", narr: "evo.mid.s1",
+                { t: 4.6,  label: "太阳现在", desc: "46 亿岁。核心氢已消耗约一半, 光度比初生时高约 30%。", narr: "evo.mid.s1", pop: "46亿岁, 这就是太阳的今天: 人到中年, 烧掉了一半燃料, 比年轻时亮了三成。",
                   track: { teff: 5778, logL: 0.0, rad: 1.0 } },
-                { t: 10,   label: "红巨星支", desc: "核心氢耗尽, 氢壳层燃烧, 包层膨胀。半径可达上百 R☉。", narr: "evo.mid.s2",
+                { t: 10,   label: "红巨星支", desc: "核心氢耗尽, 氢壳层燃烧, 包层膨胀。半径可达上百 R☉。", narr: "evo.mid.s2", pop: "100亿岁, 燃料烧空, 外壳猛涨, 变成红巨星, 一口能吞掉好几个地球轨道。",
                   track: { teff: 4000, logL: 2.0, rad: 30.0 } },
-                { t: 12,   label: "氦闪 · 水平支", desc: "简并 He 核点火 (氦闪) 后进入平稳氦燃烧, 落在水平支/红团簇。", narr: "evo.mid.s3",
+                { t: 12,   label: "氦闪 · 水平支", desc: "简并 He 核点火 (氦闪) 后进入平稳氦燃烧, 落在水平支/红团簇。", narr: "evo.mid.s3", pop: "核心的氦被点着, 闪了一下, 然后安稳下来, 在赫罗图上找了个新位置。",
                   track: { teff: 5000, logL: 1.7, rad: 10.0 } },
-                { t: 12.25, label: "渐近巨星支", desc: "He/H 双壳层燃烧 + 热脉冲, 强星风抛射包层 (超风可达 1e-4 M☉/yr 量级)。", narr: "evo.mid.s4",
+                { t: 12.25, label: "渐近巨星支", desc: "He/H 双壳层燃烧 + 热脉冲, 强星风抛射包层 (超风可达 1e-4 M☉/yr 量级)。", narr: "evo.mid.s4", pop: "晚年大喘气, 一阵阵往外抛衣服, 风大到一年能吹掉十万分之一太阳。",
                   track: { teff: 3000, logL: 3.7, rad: 300.0 } },
-                { t: 12.3, label: "行星状星云", desc: "包层被剥离、电离发光, 持续约 1 万年 —— 宇宙尺度上一瞬。", narr: "evo.mid.s5",
+                { t: 12.3, label: "行星状星云", desc: "包层被剥离、电离发光, 持续约 1 万年 —— 宇宙尺度上一瞬。", narr: "evo.mid.s5", pop: "抛掉的外衣被照亮, 成了行星状星云 —— 只亮一万年, 转瞬即逝。",
                   track: { teff: 100000, logL: 3.0, rad: 0.1 } },
-                { t: 15,   label: "C-O 白矮星冷却", desc: "剩余约 0.6 M☉ 碳氧核, 无聚变, 靠余热冷却。冷却序列可定年龄。", narr: "evo.mid.s6",
+                { t: 15,   label: "C-O 白矮星冷却", desc: "剩余约 0.6 M☉ 碳氧核, 无聚变, 靠余热冷却。冷却序列可定年龄。", narr: "evo.mid.s6", pop: "最后剩个碳氧内核, 慢慢冷却, 就是白矮星。看它多暗, 就能猜它几岁。",
                   track: { teff: 8000, logL: -3.0, rad: 0.01 } }
             ]
         },
@@ -89,17 +92,17 @@ Rectangle {
             unit: "Myr", tMin: 0, tMax: 12, allowLog: false, useLog: false,
             viz: "hr",
             stages: [
-                { t: 0,   label: "零龄主序 (O 型)", desc: "O7V, 有效温度约 35000 K, 光度约 1e5 L☉。CNO 循环主导。", narr: "evo.mas.s0",
+                { t: 0,   label: "零龄主序 (O 型)", desc: "O7V, 有效温度约 35000 K, 光度约 1e5 L☉。CNO 循环主导。", narr: "evo.mas.s0", pop: "一颗20倍太阳质量的巨星登场, 又亮又烫, 但活不长。",
                   track: { teff: 35000, logL: 5.0, rad: 8.0 } },
-                { t: 8,   label: "主序末", desc: "核心氢耗尽。仅 800 万年 —— 大质量星活得短而亮。", narr: "evo.mas.s1",
+                { t: 8,   label: "主序末", desc: "核心氢耗尽。仅 800 万年 —— 大质量星活得短而亮。", narr: "evo.mas.s1", pop: "才800万年, 燃料烧光。太阳要100亿年走的路, 它几百万年就跑完了。",
                   track: { teff: 30000, logL: 5.2, rad: 12.0 } },
-                { t: 8.8, label: "超巨星 (红/蓝)", desc: "外层膨胀为红超巨星 (或蓝超巨, 依质量损失与金属丰度)。Ne–O–Si 逐级燃烧, 每级更快。", narr: "evo.mas.s2",
+                { t: 8.8, label: "超巨星 (红/蓝)", desc: "外层膨胀为红超巨星 (或蓝超巨, 依质量损失与金属丰度)。Ne–O–Si 逐级燃烧, 每级更快。", narr: "evo.mas.s2", pop: "外壳吹成大气球, 变成超巨星。肚子里烧完一层换一层, 越烧越快。",
                   track: { teff: 3600, logL: 5.5, rad: 800.0 } },
-                { t: 9.3, label: "沃尔夫–拉叶阶段", desc: "强星风剥掉氢包层, 露出 He/C/O 核心 (WC/WN)。质量损失率可达 1e-5–1e-4 M☉/yr。", narr: "evo.mas.s3",
+                { t: 9.3, label: "沃尔夫–拉叶阶段", desc: "强星风剥掉氢包层, 露出 He/C/O 核心 (WC/WN)。质量损失率可达 1e-5–1e-4 M☉/yr。", narr: "evo.mas.s3", pop: "大风把外衣剥光, 露出滚烫的内核 —— 沃尔夫-拉叶阶段, 宇宙里最猛的风。",
                   track: { teff: 60000, logL: 5.3, rad: 5.0 } },
-                { t: 9.5, label: "核坍缩 · 超新星", desc: "铁核坍缩, Ⅱb/Ⅰb 型 (包层已被剥离则无氢线)。中微子带走约 99% 能量。", narr: "evo.mas.s4",
+                { t: 9.5, label: "核坍缩 · 超新星", desc: "铁核坍缩, Ⅱb/Ⅰb 型 (包层已被剥离则无氢线)。中微子带走约 99% 能量。", narr: "evo.mas.s4", pop: "铁核塌了, 大爆炸。因为外衣早没了, 光谱里看不到氢 —— 这就是Ib型。",
                   track: { teff: 20000, logL: 8.0, rad: 50.0 } },
-                { t: 12,  label: "黑洞遗迹", desc: "20 M☉ 太阳金属丰度下大概率成黑洞 (中子星/黑洞分界约 20–25 M☉, 只给区间)。", narr: "evo.mas.s5",
+                { t: 12,  label: "黑洞遗迹", desc: "20 M☉ 太阳金属丰度下大概率成黑洞 (中子星/黑洞分界约 20–25 M☉, 只给区间)。", narr: "evo.mas.s5", pop: "最后剩个黑洞。几倍太阳质量以上就压不住了, 只能给个区间, 给不出精确数。",
                   track: { teff: 0, logL: -6.0, rad: 0.0 } }
             ]
         },
@@ -108,12 +111,12 @@ Rectangle {
             unit: "day", tMin: 0, tMax: 300, allowLog: false, useLog: false,
             viz: "sn",
             stages: [
-                { t: 0,   label: "爆发 · 早期增亮", desc: "热核失控/激波加热, 光度急升。Ⅰa 无氢线是分类判据。", narr: "evo.sn.s0" },
-                { t: 19,  label: "B 波段极大", desc: "约 19 天达峰, M ≈ −19.3。这是标准烛光定标点 (Phillips 关系: 宽–亮相关)。", narr: "evo.sn.s1" },
-                { t: 30,  label: "近红外次极大", desc: "正常 Ⅰa 在红外有二次隆起, 源于 Fe 族元素电离态变化。", narr: "evo.sn.s2" },
-                { t: 60,  label: "过渡段", desc: "光球退入 Fe 核, 颜色转红。", narr: "evo.sn.s3" },
-                { t: 150, label: "钴衰变尾", desc: "⁵⁶Co → ⁵⁶Fe (半衰期 77.2 d) 供能, 光变按指数衰减。", narr: "evo.sn.s4" },
-                { t: 300, label: "遗迹阶段", desc: "抛射物稀薄成星云相, 禁线主导。数百年后成超新星遗迹 (如 Tycho)。", narr: "evo.sn.s5" }
+                { t: 0,   label: "爆发 · 早期增亮", desc: "热核失控/激波加热, 光度急升。Ⅰa 无氢线是分类判据。", narr: "evo.sn.s0", pop: "炸了!亮度猛涨。光谱里没有氢 —— 这是Ia型的身份证。" },
+                { t: 19,  label: "B 波段极大", desc: "约 19 天达峰, M ≈ −19.3。这是标准烛光定标点 (Phillips 关系: 宽–亮相关)。", narr: "evo.sn.s1", pop: "约19天亮到顶, 这是最亮的时刻, 也是量距离的标尺。" },
+                { t: 30,  label: "近红外次极大", desc: "正常 Ⅰa 在红外有二次隆起, 源于 Fe 族元素电离态变化。", narr: "evo.sn.s2", pop: "约30天, 红外又鼓个小包 —— 铁元素变脸留下的指纹, 正常Ia才有。" },
+                { t: 60,  label: "过渡段", desc: "光球退入 Fe 核, 颜色转红。", narr: "evo.sn.s3", pop: "60天, 开始走下坡路, 颜色发红, 亮度指数下降。" },
+                { t: 150, label: "钴衰变尾", desc: "⁵⁶Co → ⁵⁶Fe (半衰期 77.2 d) 供能, 光变按指数衰减。", narr: "evo.sn.s4", pop: "150天, 靠钴衰变撑着发光 —— 光的尾巴就是元素在变身。" },
+                { t: 300, label: "遗迹阶段", desc: "抛射物稀薄成星云相, 禁线主导。数百年后成超新星遗迹 (如 Tycho)。", narr: "evo.sn.s5", pop: "300天后只剩稀薄的烟雾, 几百年后会变成第谷那样的遗迹。" }
             ]
         },
         {
@@ -121,10 +124,10 @@ Rectangle {
             unit: "Gyr", tMin: 0, tMax: 8, allowLog: false, useLog: false,
             viz: "merger",
             stages: [
-                { t: 0, label: "现在", desc: "相距约 770 kpc, 以约 110 km/s 接近。M31 蓝移 z = −0.001 是直接证据。", narr: "evo.mrg.s0" },
-                { t: 4, label: "第一次近心点", desc: "潮汐尾拉出, 星暴被触发。类比触须星系 (Arp 244, Toomre 序列中期)。", narr: "evo.mrg.s1" },
-                { t: 6, label: "并合", desc: "核球合并, 盘结构被打乱, 星暴达峰后淬灭开始。", narr: "evo.mrg.s2" },
-                { t: 8, label: "椭圆遗迹 Milkomeda", desc: "弛豫为大椭圆星系。太阳系届时命运不确定 —— 大概率被甩到外晕。", narr: "evo.mrg.s3" }
+                { t: 0, label: "现在", desc: "相距约 770 kpc, 以约 110 km/s 接近。M31 蓝移 z = −0.001 是直接证据。", narr: "evo.mrg.s0", pop: "现在: 银河系和仙女座隔着77万秒差距靠近, 仙女座的蓝移就是证据。" },
+                { t: 4, label: "第一次近心点", desc: "潮汐尾拉出, 星暴被触发。类比触须星系 (Arp 244, Toomre 序列中期)。", narr: "evo.mrg.s1", pop: "约40亿年后第一次擦肩: 拉出长尾巴, 点燃星暴。触须星系就是现场直播。" },
+                { t: 6, label: "并合", desc: "核球合并, 盘结构被打乱, 星暴达峰后淬灭开始。", narr: "evo.mrg.s2", pop: "约60亿年后撞在一起: 旋臂搅碎, 星暴烧到最旺然后熄火。" },
+                { t: 8, label: "椭圆遗迹 Milkomeda", desc: "弛豫为大椭圆星系。太阳系届时命运不确定 —— 大概率被甩到外晕。", narr: "evo.mrg.s3", pop: "80亿年后变成一个大椭圆星系。太阳大概率被甩到郊区, 但自己没事。" }
             ]
         },
         {
@@ -132,11 +135,11 @@ Rectangle {
             unit: "Myr", tMin: 0, tMax: 120, allowLog: false, useLog: false,
             viz: "agn",
             stages: [
-                { t: 0,   label: "宁静椭圆星系", desc: "中心超大质量黑洞沉睡, 无喷流。M–σ 关系已就位。", narr: "evo.agn.s0" },
-                { t: 8,   label: "并合供气触发", desc: "气体流入核区 (~pc 尺度), 吸积盘点亮, 宽线区出现。", narr: "evo.agn.s1" },
-                { t: 12,  label: "喷流开启", desc: "相对论性喷流打通 kpc 尺度 (M87 喷流约 5 kpc)。视角决定分类: 正对即耀变体。", narr: "evo.agn.s2" },
-                { t: 40,  label: "巨瓣 + 反馈", desc: "瓣达数百 kpc (天鹅座 A 级), 激波加热 circumgalactic 气体 —— AGN 反馈淬灭恒星形成 (候选机制)。", narr: "evo.agn.s3" },
-                { t: 120, label: "遗迹瓣", desc: "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。", narr: "evo.agn.s4" }
+                { t: 0,   label: "宁静椭圆星系", desc: "中心超大质量黑洞沉睡, 无喷流。M–σ 关系已就位。", narr: "evo.agn.s0", pop: "一座安静的椭圆星系, 中心黑洞在睡觉, 没有喷流。" },
+                { t: 8,   label: "并合供气触发", desc: "气体流入核区 (~pc 尺度), 吸积盘点亮, 宽线区出现。", narr: "evo.agn.s1", pop: "撞车送来气体, 黑洞开饭, 盘子点亮 —— 活动星系核开机了。" },
+                { t: 12,  label: "喷流开启", desc: "相对论性喷流打通 kpc 尺度 (M87 喷流约 5 kpc)。视角决定分类: 正对即耀变体。", narr: "evo.agn.s2", pop: "喷流打穿几千秒差距, 和M87的差不多。正对着看, 它就是耀变体 —— 角度决定身份。" },
+                { t: 40,  label: "巨瓣 + 反馈", desc: "瓣达数百 kpc (天鹅座 A 级), 激波加热 circumgalactic 气体 —— AGN 反馈淬灭恒星形成 (候选机制)。", narr: "evo.agn.s3", pop: "瓣长到几十万光年, 把周围气体加热, 星系可能就此停造星。注意: 只是候选解释。" },
+                { t: 120, label: "遗迹瓣", desc: "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。", narr: "evo.agn.s4", pop: "饭吃完, 喷流熄火, 只剩老瓣在射电波段慢慢变暗, 星系重归安静。" }
             ]
         },
         {
@@ -144,13 +147,13 @@ Rectangle {
             unit: "s", tMin: 0.1, tMax: 4.35e17, allowLog: true, useLog: true,
             viz: "cosmic",
             stages: [
-                { t: 1,      label: "太初核合成", desc: "1 秒–3 分钟: ⁴He 质量分数约 25%, D/H 定重子密度 —— 与 CMB 独立一致。", narr: "evo.cos.s0", temp: "1e10 K" },
-                { t: 1.6e12,  label: "物质–辐射相等", desc: "约 5 万年: 物质密度超过辐射, 扰动开始增长 (结构形成的起点)。", narr: "evo.cos.s1", temp: "9000 K" },
-                { t: 1.2e13,  label: "复合 · CMB 退耦", desc: "38 万年, z ≈ 1090, T ≈ 3000 K → 今天 2.7255 K。我们能看到的最古老的光。", narr: "evo.cos.s2", temp: "3000 K" },
-                { t: 6.0e15,  label: "第一代恒星", desc: "约 2 亿年: Pop Ⅲ 点亮 (理论预言为主)。黑暗时代结束。", narr: "evo.cos.s3", temp: "60 K" },
-                { t: 2.5e16,  label: "再电离", desc: "z ~ 6–10: 星系紫外光子电离星系际氢 (Gunn–Peterson 谷为证)。", narr: "evo.cos.s4", temp: "30 K" },
-                { t: 1.7e17,  label: "加速膨胀开始", desc: "z ~ 0.6: 暗能量主导。1998 超新星证据; 本项目哈勃图 Δχ² 实测复现。", narr: "evo.cos.s5", temp: "10 K" },
-                { t: 4.35e17, label: "现在", desc: "138 亿年。Planck 2018: H₀ = 67.4, Ωm = 0.315, 平直宇宙。", narr: "evo.cos.s6", temp: "2.7255 K" }
+                { t: 1,      label: "太初核合成", desc: "1 秒–3 分钟: ⁴He 质量分数约 25%, D/H 定重子密度 —— 与 CMB 独立一致。", narr: "evo.cos.s0", pop: "大爆炸后1秒到3分钟: 造出第一批氦, 分量约25% —— 大爆炸最硬的预言, 和微波背景对得上。", temp: "1e10 K" },
+                { t: 1.6e12,  label: "物质–辐射相等", desc: "约 5 万年: 物质密度超过辐射, 扰动开始增长 (结构形成的起点)。", narr: "evo.cos.s1", pop: "约5万年, 物质超过辐射, 引力说了算, 小疙瘩开始长大 —— 结构形成的起点。", temp: "9000 K" },
+                { t: 1.2e13,  label: "复合 · CMB 退耦", desc: "38 万年, z ≈ 1090, T ≈ 3000 K → 今天 2.7255 K。我们能看到的最古老的光。", narr: "evo.cos.s2", pop: "38万年, 电子和质子牵手, 光终于能跑了 —— 这就是今天2.7度的微波背景, 我们能看到的最老的光。", temp: "3000 K" },
+                { t: 6.0e15,  label: "第一代恒星", desc: "约 2 亿年: Pop Ⅲ 点亮 (理论预言为主)。黑暗时代结束。", narr: "evo.cos.s3", pop: "约2亿年, 第一代恒星点亮, 黑暗时代结束。主要是理论预言, 还没实锤。", temp: "60 K" },
+                { t: 2.5e16,  label: "再电离", desc: "z ~ 6–10: 星系紫外光子电离星系际氢 (Gunn–Peterson 谷为证)。", narr: "evo.cos.s4", pop: "星系的紫外线把星系之间的氢电离, 类星体光谱里的黑谷就是证据。", temp: "30 K" },
+                { t: 1.7e17,  label: "加速膨胀开始", desc: "z ~ 0.6: 暗能量主导。1998 超新星证据; 本项目哈勃图 Δχ² 实测复现。", narr: "evo.cos.s5", pop: "暗能量接管, 膨胀加速。1998年超新星发现的, 本项目的哈勃图也能算出来。", temp: "10 K" },
+                { t: 4.35e17, label: "现在", desc: "138 亿年。Planck 2018: H₀ = 67.4, Ωm = 0.315, 平直宇宙。", narr: "evo.cos.s6", pop: "138亿年后的今天。但两个哈勃常数对不上, 差5个标准差 —— 宇宙学最大的麻烦。", temp: "2.7255 K" }
             ]
         },
         {
@@ -158,12 +161,12 @@ Rectangle {
             unit: "Myr", tMin: 0, tMax: 12, allowLog: false, useLog: false,
             viz: "planet",
             stages: [
-                { t: 0,  label: "Ⅱ类盘", desc: "气体+尘埃盘, 质量约 1% 恒星。ALMA 已成像大量环缝结构。", narr: "evo.pln.s0" },
-                { t: 1,  label: "尘埃生长 · 星子", desc: "微米尘埃聚成 km 级星子 (卵石吸积/引力不稳定, 机制仍在竞争)。", narr: "evo.pln.s1" },
-                { t: 3,  label: "寡头生长 · 巨行星核", desc: "约 10 M⊕ 固核触发 runaway 气体吸积。", narr: "evo.pln.s2" },
-                { t: 5,  label: "气体耗散 · 迁移", desc: "盘气体散去; Ⅰ/Ⅱ型迁移可造热木星 (飞马座 51b) 或大距 (HR 8799)。", narr: "evo.pln.s3" },
-                { t: 8,  label: "类地行星收尾", desc: "巨撞击阶段 (月球形成式)。", narr: "evo.pln.s4" },
-                { t: 12, label: "碎屑盘", desc: "残余小天体碰撞级联, 红外超明显 (织女型)。", narr: "evo.pln.s5" }
+                { t: 0,  label: "Ⅱ类盘", desc: "气体+尘埃盘, 质量约 1% 恒星。ALMA 已成像大量环缝结构。", narr: "evo.pln.s0", pop: "气体尘埃盘, 质量只有恒星的1%。ALMA拍到的环缝, 就是行星在刻痕。" },
+                { t: 1,  label: "尘埃生长 · 星子", desc: "微米尘埃聚成 km 级星子 (卵石吸积/引力不稳定, 机制仍在竞争)。", narr: "evo.pln.s1", pop: "尘埃抱团长大成星子。怎么长的还有争议, 没定论。" },
+                { t: 3,  label: "寡头生长 · 巨行星核", desc: "约 10 M⊕ 固核触发 runaway 气体吸积。", narr: "evo.pln.s2", pop: "长到10倍地球质量, 开始疯狂吸气, 气态巨行星的核就位了。" },
+                { t: 5,  label: "气体耗散 · 迁移", desc: "盘气体散去; Ⅰ/Ⅱ型迁移可造热木星 (飞马座 51b) 或大距 (HR 8799)。", narr: "evo.pln.s3", pop: "约500万年气体散光。有的留在外侧, 有的搬进内侧成热木星 —— 同一起点, 两种人生。" },
+                { t: 8,  label: "类地行星收尾", desc: "巨撞击阶段 (月球形成式)。", narr: "evo.pln.s4", pop: "类地行星收尾靠大撞击, 月球就是这么撞出来的。" },
+                { t: 12, label: "碎屑盘", desc: "残余小天体碰撞级联, 红外超明显 (织女型)。", narr: "evo.pln.s5", pop: "剩下的碎渣互相碰撞, 红外线下很亮。柯伊伯带就是老年的碎屑盘。" }
             ]
         },
         {
@@ -171,11 +174,11 @@ Rectangle {
             unit: "Myr", tMin: 0.01, tMax: 3, allowLog: true, useLog: false,
             viz: "protostar",
             stages: [
-                { t: 0.01, label: "前恒星核", desc: "分子云核, Jeans 判据量级成立才坍缩 (只给量级, 不给单值)。", narr: "evo.psf.s0" },
-                { t: 0.1,  label: "0 类", desc: "深埋包层, L_bol 低、T_bol < 70 K。双极外向流最强。", narr: "evo.psf.s1" },
-                { t: 0.3,  label: "Ⅰ 类", desc: "包层+盘并存, T_bol 70–650 K。", narr: "evo.psf.s2" },
-                { t: 0.8,  label: "Ⅱ 类 (经典金牛T)", desc: "盘主导, Hα 强发射 + 紫外超。", narr: "evo.psf.s3" },
-                { t: 3,    label: "Ⅲ 类 (弱线)", desc: "盘散去, 光球主导。", narr: "evo.psf.s4" }
+                { t: 0.01, label: "前恒星核", desc: "分子云核, Jeans 判据量级成立才坍缩 (只给量级, 不给单值)。", narr: "evo.psf.s0", pop: "分子云核, 够重才塌。只讲量级, 不给精确数 —— 形状和磁场都会影响。" },
+                { t: 0.1,  label: "0 类", desc: "深埋包层, L_bol 低、T_bol < 70 K。双极外向流最强。", narr: "evo.psf.s1", pop: "0类: 包在厚茧里, 又暗又冷, 两头喷流最猛 —— 婴儿在打喷嚏。" },
+                { t: 0.3,  label: "Ⅰ 类", desc: "包层+盘并存, T_bol 70–650 K。", narr: "evo.psf.s2", pop: "I类: 茧还在, 盘露头了, 过渡形态。" },
+                { t: 0.8,  label: "Ⅱ 类 (经典金牛T)", desc: "盘主导, Hα 强发射 + 紫外超。", narr: "evo.psf.s3", pop: "II类: 茧散了, 盘当家, 还在吃料, 发射线很强。" },
+                { t: 3,    label: "Ⅲ 类 (弱线)", desc: "盘散去, 光球主导。", narr: "evo.psf.s4", pop: "III类: 盘也没了, 露出光球, 恒星形成毕业, 接下来慢慢收缩。" }
             ]
         },
         {
@@ -183,11 +186,11 @@ Rectangle {
             unit: "logyr", tMin: -7, tMax: 9, allowLog: false, useLog: false,
             viz: "binary",
             stages: [
-                { t: 9,  label: "宽双星", desc: "两颗 O/B 主序星, 周期年量级。", narr: "evo.bin.s0" },
-                { t: 6,  label: "包层共有", desc: "第一次超新星后 + 包层共有抛射, 轨道大幅收缩 (效率 αλ 高度不确定, 只给定性)。", narr: "evo.bin.s1" },
-                { t: 1,  label: "双中子星", desc: "周期小时量级, 引力波缓慢带走角动量 (Hulse–Taylor 式衰减)。", narr: "evo.bin.s2" },
-                { t: -3, label: "啁啾段 (最后约 100 秒)", desc: "频率扫过 LIGO 带 (数十–数百 Hz)。GW170817 啁啾约 100 秒。", narr: "evo.bin.s3" },
-                { t: -7, label: "并合 · 千新星", desc: "AT2017gfo: r 过程元素 (金、铂) 起源直接证据 + 短 GRB 170817A。", narr: "evo.bin.s4" }
+                { t: 9,  label: "宽双星", desc: "两颗 O/B 主序星, 周期年量级。", narr: "evo.bin.s0", pop: "一对大质量双胞胎, 周期按年算, 故事开场。" },
+                { t: 6,  label: "包层共有", desc: "第一次超新星后 + 包层共有抛射, 轨道大幅收缩 (效率 αλ 高度不确定, 只给定性)。", narr: "evo.bin.s1", pop: "一颗炸了, 另一颗膨胀把伴星吞了, 轨道在共用包层里猛缩。具体缩多少, 算不准, 只讲定性。" },
+                { t: 1,  label: "双中子星", desc: "周期小时量级, 引力波缓慢带走角动量 (Hulse–Taylor 式衰减)。", narr: "evo.bin.s2", pop: "剩双中子星, 周期按小时算, 引力波慢慢偷走能量, 越转越快。" },
+                { t: -3, label: "啁啾段 (最后约 100 秒)", desc: "频率扫过 LIGO 带 (数十–数百 Hz)。GW170817 啁啾约 100 秒。", narr: "evo.bin.s3", pop: "最后100秒啁啾: 频率从几十扫到几百赫兹, GW170817响了约100秒 —— 人类听到的宇宙声音。" },
+                { t: -7, label: "并合 · 千新星", desc: "AT2017gfo: r 过程元素 (金、铂) 起源直接证据 + 短 GRB 170817A。", narr: "evo.bin.s4", pop: "撞上了!炸出金银铂, 还附赠短伽马暴 —— 多信使天文学开张。" }
             ]
         },
         {
@@ -195,10 +198,10 @@ Rectangle {
             unit: "logyr", tMin: 3, tMax: 10, allowLog: false, useLog: false,
             viz: "remnant",
             stages: [
-                { t: 3,  label: "年轻残骸 (千年)", desc: "蟹状星云脉冲星 P = 33 ms; 白矮星刚诞生 L ~ 1e-2 L☉。", narr: "evo.rmn.s0" },
-                { t: 6,  label: "百万年", desc: "脉冲星周期显著增长 (磁偶极辐射制动, n = 3 理想情形); 白矮星冷却序列可定年龄。", narr: "evo.rmn.s1" },
-                { t: 8,  label: "亿年", desc: "普通脉冲星多已越过死亡线; 白矮星 L ~ 1e-4 L☉。", narr: "evo.rmn.s2" },
-                { t: 10, label: "百亿年", desc: "黑矮星理论存在、宇宙年龄内到不了 (与低质量链呼应)。毫秒脉冲星可稳定到此时钟精度。", narr: "evo.rmn.s3" }
+                { t: 3,  label: "年轻残骸 (千年)", desc: "蟹状星云脉冲星 P = 33 ms; 白矮星刚诞生 L ~ 1e-2 L☉。", narr: "evo.rmn.s0", pop: "千年尺度: 蟹状星云那颗每秒转30圈; 新生的白矮星只有百分之一太阳亮。" },
+                { t: 6,  label: "百万年", desc: "脉冲星周期显著增长 (磁偶极辐射制动, n = 3 理想情形); 白矮星冷却序列可定年龄。", narr: "evo.rmn.s1", pop: "百万年: 脉冲星越转越慢; 白矮星越凉越暗, 暗到什么程度能反推年龄。" },
+                { t: 8,  label: "亿年", desc: "普通脉冲星多已越过死亡线; 白矮星 L ~ 1e-4 L☉。", narr: "evo.rmn.s2", pop: "亿年: 多数脉冲星熄火; 白矮星只剩万分之一太阳亮度。" },
+                { t: 10, label: "百亿年", desc: "黑矮星理论存在、宇宙年龄内到不了 (与低质量链呼应)。毫秒脉冲星可稳定到此时钟精度。", narr: "evo.rmn.s3", pop: "百亿年: 黑矮星理论上有, 但宇宙还没老到那份上。毫秒脉冲星倒是稳如钟。" }
             ]
         },
         {
@@ -206,11 +209,11 @@ Rectangle {
             unit: "Myr", tMin: 1, tMax: 10000, allowLog: true, useLog: true,
             viz: "cluster",
             stages: [
-                { t: 1,     label: "嵌入团", desc: "仍埋在分子云中, 气体占主导 (如 Trapezium)。", narr: "evo.clu.s0" },
-                { t: 3,     label: "气体排出", desc: "大质量星反馈吹散气体; 若效率低则团瓦解 (婴儿死亡率)。", narr: "evo.clu.s1" },
-                { t: 100,   label: "弛豫 · 蒸发", desc: "两体弛豫 + 潮汐剥离, 低质量星优先逃逸 (质量分层)。昴星团 (~1 亿年) 在此段。", narr: "evo.clu.s2" },
-                { t: 1000,  label: "核坍缩或瓦解", desc: "毕星团 (~7 亿年) 正在瓦解; 致密球状团可核坍缩 (M15 式)。", narr: "evo.clu.s3" },
-                { t: 10000, label: "球状团暮年", desc: "幸存者如 M13 (~120 亿年): 年龄 = 宇宙年龄下限 (自洽性检查)。", narr: "evo.clu.s4" }
+                { t: 1,     label: "嵌入团", desc: "仍埋在分子云中, 气体占主导 (如 Trapezium)。", narr: "evo.clu.s0", pop: "还埋在云里的婴儿星团, 气体说了算, 和猎户座梯形一样。" },
+                { t: 3,     label: "气体排出", desc: "大质量星反馈吹散气体; 若效率低则团瓦解 (婴儿死亡率)。", narr: "evo.clu.s1", pop: "约300万年吹散气体, 吹不干净就散伙 —— 多数星团死在这一关。" },
+                { t: 100,   label: "弛豫 · 蒸发", desc: "两体弛豫 + 潮汐剥离, 低质量星优先逃逸 (质量分层)。昴星团 (~1 亿年) 在此段。", narr: "evo.clu.s2", pop: "约1亿年, 小星先跑路, 团越蒸发越小。昴星团正在这里。" },
+                { t: 1000,  label: "核坍缩或瓦解", desc: "毕星团 (~7 亿年) 正在瓦解; 致密球状团可核坍缩 (M15 式)。", narr: "evo.clu.s3", pop: "约10亿年, 要么散架(毕星团正在散), 要么缩成一团(M15式)。" },
+                { t: 10000, label: "球状团暮年", desc: "幸存者如 M13 (~120 亿年): 年龄 = 宇宙年龄下限 (自洽性检查)。", narr: "evo.clu.s4", pop: "100亿年, 剩下的老球状团如M13, 它们的年龄就是宇宙年龄的下限。" }
             ]
         }
     ]
@@ -577,8 +580,14 @@ Rectangle {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: scripts[cur].stages[stageIndex()].desc
-                        color: Qt.rgba(0.82, 0.68, 0.50, 1.0)
+                        // ★ 跟随全局开关: 科普版优先 pop, 无 pop 回退 desc。
+                        text: {
+                            const st = scripts[cur].stages[stageIndex()]
+                            return (!evo.proMode && st.pop !== undefined)
+                                   ? st.pop : st.desc
+                        }
+                        color: evo.proMode ? Qt.rgba(0.82, 0.68, 0.50, 1.0)
+                                           : Qt.rgba(1.0, 0.85, 0.60, 1.0)
                         font.pixelSize: 11
                         font.family: "Microsoft YaHei"
                         lineHeight: 1.35
@@ -878,7 +887,7 @@ Rectangle {
         const note = s.useLog ? "对数时间轴 (早期事件被压成一条线是诚实的代价, 见宇宙视图同款说明)"
                               : "线性时间轴 (早期几分钟占不到一个像素 —— 这本身就是教学点)"
         ctx.fillText(note, 24, H - 34)
-        ctx.fillText(st.desc, 24, H - 14)
+        ctx.fillText((!evo.proMode && st.pop !== undefined) ? st.pop : st.desc, 24, H - 14)
     }
 
     function drawPlanet(ctx, W, H, n, t) {

@@ -38,7 +38,6 @@ Rectangle {
     function openDetail(id) {
         const d = root.stellarAgnDetail(id)
         if (d && d.nameCn !== undefined) {
-            galaxyCard.popMode = false
             galaxyCard.detail = d
             galaxyCard.visible = true
         }
