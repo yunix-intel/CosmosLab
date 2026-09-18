@@ -553,6 +553,28 @@ ApplicationWindow {
             Row {
                 spacing: 3
 
+                Rectangle {
+                    width: 66; height: 26; radius: 7
+                    color: evoOverlay.visible
+                           ? root.cAccentSoft : Qt.rgba(1, 1, 1, 0.05)
+                    border.width: 1
+                    border.color: evoOverlay.visible
+                                  ? Qt.rgba(0.37, 0.66, 1.0, 0.55)
+                                  : Qt.rgba(1, 1, 1, 0.08)
+                    Text {
+                        anchors.centerIn: parent
+                        text: "演化"
+                        color: evoOverlay.visible ? "#bcd9ff" : root.cTextDim
+                        font.pixelSize: 11
+                        font.bold: evoOverlay.visible
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: evoOverlay.visible = !evoOverlay.visible
+                    }
+                }
+
                 Repeater {
                     model: [
                         { t: "太阳系", v: 0 },
@@ -1980,6 +2002,15 @@ ApplicationWindow {
                 : "拖动旋转 · 右键拖动平移 · 滚轮缩放"
         color: Qt.rgba(0.45, 0.52, 0.62, 0.85)
         font.pixelSize: 10
+    }
+
+    // ========================================================================
+    //  演化播放器入口 (顶栏分段控件旁) —— 通用时间轴引擎, 12 条剧本
+    // ========================================================================
+    EvoOverlay {
+        id: evoOverlay
+        dpr: root.screen ? root.screen.devicePixelRatio : 2.0
+        testEvo: scene.testEvo
     }
 
     // ========================================================================

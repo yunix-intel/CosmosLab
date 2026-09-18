@@ -27,6 +27,7 @@ qt_add_qml_module(solar_system
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/EvoOverlay.qml
     SOURCES
         src/main.cpp
         src/celestialdata.h    src/celestialdata.cpp

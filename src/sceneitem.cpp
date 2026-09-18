@@ -174,6 +174,10 @@ SolarScene::SolarScene(QQuickItem *parent)
     // 测试用: SS_HUBBLE=1 启动即打开哈勃图面板
     m_testHubble = qEnvironmentVariableIntValue("SS_HUBBLE") > 0;
 
+    // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
+    if (qEnvironmentVariableIsSet("SS_EVO"))
+        m_testEvo = QString::fromUtf8(qgetenv("SS_EVO"));
+
     // 测试用: SS_SDSS=<数量> 指定 SDSS 星系可见数 (-1=关闭, 0=全部)
     // ★ 需要它才能做性能标定: 单独改变 SDSS 数量, 隔离聚集性成本。
     if (qEnvironmentVariableIsSet("SS_SDSS"))

@@ -1,0 +1,23 @@
+{
+  "_note": "演化解说词 ID 清单 (文本待写)。每 ID 四语种: zh(普通话) / yue(粤语) / ja(日语) / en(英语)。命名: evo.<剧本>.<sN>。",
+  "_voice": "原创 TTS 音色接入后填写, 不做真人复刻",
+  "ids": [
+    "evo.low.s0", "evo.low.s1", "evo.low.s2", "evo.low.s3",
+    "evo.mid.s0", "evo.mid.s1", "evo.mid.s2", "evo.mid.s3",
+    "evo.mid.s4", "evo.mid.s5", "evo.mid.s6",
+    "evo.mas.s0", "evo.mas.s1", "evo.mas.s2", "evo.mas.s3",
+    "evo.mas.s4", "evo.mas.s5",
+    "evo.sn.s0", "evo.sn.s1", "evo.sn.s2", "evo.sn.s3",
+    "evo.sn.s4", "evo.sn.s5",
+    "evo.mrg.s0", "evo.mrg.s1", "evo.mrg.s2", "evo.mrg.s3",
+    "evo.agn.s0", "evo.agn.s1", "evo.agn.s2", "evo.agn.s3", "evo.agn.s4",
+    "evo.cos.s0", "evo.cos.s1", "evo.cos.s2", "evo.cos.s3",
+    "evo.cos.s4", "evo.cos.s5", "evo.cos.s6",
+    "evo.pln.s0", "evo.pln.s1", "evo.pln.s2", "evo.pln.s3",
+    "evo.pln.s4", "evo.pln.s5",
+    "evo.psf.s0", "evo.psf.s1", "evo.psf.s2", "evo.psf.s3", "evo.psf.s4",
+    "evo.bin.s0", "evo.bin.s1", "evo.bin.s2", "evo.bin.s3", "evo.bin.s4",
+    "evo.rmn.s0", "evo.rmn.s1", "evo.rmn.s2", "evo.rmn.s3",
+    "evo.clu.s0", "evo.clu.s1", "evo.clu.s2", "evo.clu.s3", "evo.clu.s4"
+  ]
+}

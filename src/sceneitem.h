@@ -107,6 +107,8 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(QString testMarker READ testMarker CONSTANT)
     // 测试用: SS_HUBBLE=1 时启动即打开哈勃图面板 (供自动化截图验证)
     Q_PROPERTY(bool    testHubble READ testHubble CONSTANT)
+    // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
+    Q_PROPERTY(QString testEvo READ testEvo CONSTANT)
 
     Q_PROPERTY(int     cosmosTotal    READ cosmosTotal    NOTIFY cosmosTotalChanged)
     Q_PROPERTY(int     cosmosVisible  READ cosmosVisible  WRITE setCosmosVisible
@@ -233,6 +235,7 @@ public:
     QString testCard() const;
     QString testMarker() const { return m_testMarker; }
     bool testHubble() const { return m_testHubble; }
+    QString testEvo() const { return m_testEvo; }
 
     int  cosmosMapMode() const { return m_cosmosMapMode; }
     void setCosmosMapMode(int m);
@@ -302,6 +305,7 @@ private:
     int     m_lastVis = -1;        // 上次算过的可见数 (避免重复发信号)
     QString m_testMarker;          // 测试用: 模拟点击的标签 (SS_MARKER)
     bool    m_testHubble = false;  // 测试用: 启动即开哈勃图 (SS_HUBBLE)
+    QString m_testEvo;             // 测试用: SS_EVO=<id>[:<prog>] 开演化播放器
     bool    m_showBelts = true;
     bool    m_realScale = false;
     bool    m_snapCamera = true;
