@@ -15,6 +15,7 @@
 #include "cosmosdata.h"
 #include "stellardata.h"
 #include "agndata.h"
+#include "ismdata.h"
 #include "assetroot.h"
 #include "galaxyarms.h"
 #include "scenerenderer.h"
@@ -1226,6 +1227,13 @@ QVariantList SolarScene::cosmosNotes() const
         "\u2605 \u5b87\u5b99\u547d\u8fd0\u662f\u6761\u4ef6\u53e5: LCDM \u9ed8\u8ba4\u70ed\u5bc2; Big Rip \u9700 w<-1 (\u672a\u8bc1\u8ba4); Big Crunch \u9700\u95ed\u5408\u5b87\u5b99 (CMB \u5df2\u6d4b\u5e73\u76f4, \u6392\u9664)\u3002",
         "\u2605 \u7ed3\u6784\u600e\u4e48\u957f\u51fa\u6765: \u7269\u8d28-\u8f90\u5c04\u76f8\u7b49\u540e\u6270\u52a8\u5f00\u59cb\u589e\u957f (Jeans \u4e0d\u7a33\u5b9a\u6027); CMB \u6e29\u5ea6\u8d77\u4f0f\u5373\u4eca\u65e5\u7ed3\u6784\u7684\u79cd\u5b50, \u529f\u7387\u8c31\u89c1\u8bc1\u3002",
         "\u2605 BAO \u6807\u51c6\u5c3a: \u91cd\u5b50\u58f0\u5b66\u632f\u8361\u7559\u4e0b\u7ea6 150 Mpc \u7279\u5f81\u5c3a\u5ea6 (SDSS/BOSS) \u2014\u2014 \u4e0e\u8d85\u65b0\u661f\u3001CMB \u4e09\u8db3\u9f0e\u7acb\u5b9a\u5b87\u5b99\u5b66\u53c2\u6570\u3002",
+        "\u2605 \u661f\u7cfb\u5b9a\u6807\u5173\u7cfb Tully\u2013Fisher: \u65cb\u6da1\u661f\u7cfb\u5149\u5ea6 ~ \u65cb\u8f6c\u901f\u5ea6^4\u3002\u6d4b\u8f6c\u901f\u5f97\u8ddd\u79bb \u2014\u2014 \u6b21\u7ea7\u8ddd\u79bb\u6307\u6807, \u8854\u63a5\u54c8\u52c3\u56fe\u9762\u677f\u7684 SNe Ia\u3002",
+        "\u2605 \u661f\u7cfb\u5b9a\u6807\u5173\u7cfb Faber\u2013Jackson / \u57fa\u672c\u9762: \u692d\u5706\u661f\u7cfb\u5149\u5ea6 ~ \u901f\u5ea6\u5f25\u6563^4 (\u57fa\u672c\u9762\u52a0 Re\u2013\u03c3\u2013Ie \u4e09\u53c2\u6570)\u3002\u540c\u4e3a\u6b21\u7ea7\u8ddd\u79bb\u6307\u6807\u3002",
+        "\u2605 \u97f3\u53c9\u56fe\u662f\u5f62\u6001\u5e8f\u5217, \u4e0d\u662f\u6f14\u5316\u5e8f\u5217: E/S0/S/Irr \u6309\u6838\u7403\u2013\u76d8\u6bd4\u6392\u5217, \u77ee\u661f\u7cfb\u5206\u652f (dE/dSph/dIrr/UCD/LSB) \u5404\u6709\u4ee3\u8868\u3002",
+        "\u2605 \u65e9\u671f\u4e09\u8282\u70b9 (\u65f6\u95f4\u8f74\u753b\u4e0d\u4e0b, \u7eaf\u6587\u672c\u8bb2\u89e3): \u666e\u6717\u514b\u65f6\u671f\u6807\u7406\u8bba\u7a7a\u767d; \u66b4\u80c0\u4e3a\u5047\u8bf4 (B \u6a21\u672a\u63a2\u6d4b); \u7535\u5f31/QCD \u76f8\u53d8\u53ea\u53d6\u91cf\u7ea7\u3002",
+        "\u2605 \u65b9\u6cd5\u8bba 1 \u592a\u9633\u5185\u90e8: \u5149\u7403/\u8272\u7403/\u65e5\u5195 + \u6807\u51c6\u592a\u9633\u6a21\u578b; \u592a\u9633\u4e2d\u5fae\u5b50\u95ee\u9898\u7531 SNO \u89e3\u51b3 (C&O \u7b2c 10 \u7ae0)\u3002",
+        "\u2605 \u65b9\u6cd5\u8bba 2 \u661f\u65cf\u4e0e\u5316\u5b66\u6f14\u5316: \u8584\u76d8/\u539a\u76d8/\u6655\u7684\u5e74\u9f84\u2013\u91d1\u5c5e\u4e30\u5ea6\u5173\u7cfb, \u6052\u661f\u8003\u53e4 (C&O \u7b2c 24 \u7ae0)\u3002",
+        "\u2605 \u65b9\u6cd5\u8bba 3 \u6270\u52a8\u7406\u8bba: Jeans \u4e0d\u7a33\u5b9a\u6027 + \u529f\u7387\u8c31 + Sachs\u2013Wolfe \u6548\u5e94 \u2014\u2014 \u7ed3\u6784\u600e\u4e48\u957f\u51fa\u6765 (Ryden \u7b2c 8\u20139 \u7ae0)\u3002",
 };
     for (const char *n : notes)
         out.append(QString::fromUtf8(n));
@@ -1253,6 +1261,13 @@ QVariantList SolarScene::cosmosNotesPop() const
     out.append(QString::fromUtf8("\u5b87\u5b99\u7ed3\u5c40\u770b\u6761\u4ef6: \u9ed8\u8ba4\u70ed\u5bc2; \u8981\u5927\u6495\u88c2\u5f97\u6697\u80fd\u91cf\u66f4\u90aa\u4e4e(\u6ca1\u8bc1\u636e); \u8981\u5927\u574d\u7f29\u5f97\u5b87\u5b99\u5f2f\u66f2(\u5df2\u6d4b\u662f\u5e73\u7684)\u3002"));
     out.append(QString::fromUtf8("\u7ed3\u6784\u662f\u957f\u51fa\u6765\u7684: 5\u4e07\u5e74\u540e\u5f15\u529b\u8bf4\u4e86\u7b97, \u5fae\u6ce2\u80cc\u666f\u91cc\u7684\u5c0f\u6591\u70b9\u5c31\u662f\u4eca\u5929\u661f\u7cfb\u7684\u79cd\u5b50\u3002"));
     out.append(QString::fromUtf8("\u8fd8\u6709\u4e00\u628a\u5c3a\u5b50: \u58f0\u6ce2\u5728\u65e9\u671f\u5b87\u5b99\u7559\u4e0b150\u5146\u79d2\u5dee\u8ddd\u7684\u523b\u5ea6, \u548c\u8d85\u65b0\u661f\u3001\u5fae\u6ce2\u80cc\u666f\u4e09\u8db3\u9f0e\u7acb\u3002"));
+    out.append(QString::fromUtf8("\u65cb\u6da1\u661f\u7cfb\u8f6c\u5f97\u8d8a\u5feb\u8d8a\u4eae: \u6d4b\u8f6c\u901f\u5c31\u80fd\u63a8\u8ddd\u79bb \u2014\u2014 \u7ed9\u8d85\u65b0\u661f\u5f53\u5c3a\u5b50\u7528\u7684\u3002"));
+    out.append(QString::fromUtf8("\u692d\u5706\u661f\u7cfb\u91cc\u661f\u661f\u4e71\u8dd1\u5f97\u8d8a\u5267\u70c8\u8d8a\u4eae, \u540c\u6837\u80fd\u5f53\u8ddd\u79bb\u5c3a\u3002"));
+    out.append(QString::fromUtf8("\u97f3\u53c9\u56fe\u53ea\u662f\u5206\u7c7b\u67b6, \u4e0d\u662f\u8c01\u53d8\u6210\u8c01: \u692d\u5706\u3001\u65cb\u6da1\u3001\u4e0d\u89c4\u5219\u5404\u5f52\u5404\u4f4d\u3002"));
+    out.append(QString::fromUtf8("\u5927\u7206\u70b8\u4e4b\u524d\u7684\u4e09\u9875: \u6700\u65e9\u7684\u90a3\u9875\u6559\u79d1\u4e66\u6c92\u5199 (\u7406\u8bba\u7a7a\u767d); \u66b4\u80c0\u662f\u5047\u8bf4, \u5173\u952e\u8bc1\u636e\u8fd8\u6ca1\u627e\u5230\u3002"));
+    out.append(QString::fromUtf8("\u592a\u9633\u5185\u90e8\u600e\u4e48\u77e5\u9053: \u5149\u7403\u8272\u7403\u65e5\u5195\u5206\u5c42 + \u6807\u51c6\u6a21\u578b; \u4e2d\u5fae\u5b50\u5c11\u4e86\u7684\u8c1c\u7b54\u5df2\u89e3\u5f00\u3002"));
+    out.append(QString::fromUtf8("\u661f\u661f\u6709\u5e74\u9f84\u6709\u6210\u5206: \u8584\u76d8\u5e74\u8f7b\u5bcc\u91d1\u5c5e, \u6655\u8001\u7a77\u91d1\u5c5e \u2014\u2014 \u6316\u8001\u661f\u5c31\u662f\u8003\u53e4\u3002"));
+    out.append(QString::fromUtf8("\u7ed3\u6784\u600e\u4e48\u957f\u51fa\u6765: \u5c0f\u7599\u75af\u88ab\u5f15\u529b\u653e\u5927, \u5fae\u6ce2\u80cc\u666f\u7684\u82b1\u7eb9\u5c31\u662f\u79cd\u5b50\u3002"));
     return out;
 }
 QVariantList SolarScene::galaxyNotesPop() const
@@ -1485,6 +1500,56 @@ QVariantMap SolarScene::agnDetail(const QString &id) const
         else
             out["massText"] = QStringLiteral("10^%1 太阳质量").arg(e->massLog10, 0, 'f', 1);
     }
+    out["desc"] = QString::fromUtf8(e->desc);
+    out["pop"]  = QString::fromUtf8(e->pop);
+    out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
+    return out;
+}
+
+// ---- B.5 星际介质/星云/星团 (22 条, 复用 galaxyCard 同一字段集) ----
+QVariantList SolarScene::ismList() const
+{
+    QVariantList out;
+    for (int i = 0; i < ISM_COUNT; ++i) {
+        const IsmEntry &e = ISM_ENTRIES[i];
+        QVariantMap m;
+        m["id"]   = QString::fromUtf8(e.id);
+        m["name"] = QString::fromUtf8(e.nameCn);
+        m["en"]   = QString::fromUtf8(e.nameEn);
+        m["cat"]  = QString::fromUtf8(e.catCn);
+        m["dist"] = e.distLy <= 0
+                    ? QStringLiteral("本地 (内部)")
+                    : (e.distLy < 10000.0
+                       ? QStringLiteral("%1 光年").arg(e.distLy, 0, 'f', 0)
+                       : QStringLiteral("%1 万光年").arg(e.distLy / 10000.0, 0, 'f', 1));
+        m["hasPhoto"] = false;
+        out.append(m);
+    }
+    return out;
+}
+
+QVariantMap SolarScene::ismDetail(const QString &id) const
+{
+    QVariantMap out;
+    if (id.isEmpty())
+        return out;
+    const IsmEntry *e = findIsm(id.toUtf8().constData());
+    if (!e)
+        return out;
+    out["id"]     = QString::fromUtf8(e->id);
+    out["nameCn"] = QString::fromUtf8(e->nameCn);
+    out["nameEn"] = QString::fromUtf8(e->nameEn);
+    out["cat"]    = QString::fromUtf8(e->catCn);
+    out["spec"]   = QString::fromUtf8(e->catCn);
+    out["distText"] = e->distLy <= 0
+                      ? QStringLiteral("太阳位于其内部 (本地泡)")
+                      : (e->distLy < 10000.0
+                         ? QStringLiteral("%1 光年").arg(e->distLy, 0, 'f', 0)
+                         : QStringLiteral("%1 万光年").arg(e->distLy / 10000.0, 0, 'f', 1));
+    if (e->sizeLy > 0)
+        out["sizeText"] = e->sizeLy < 1000.0
+                          ? QStringLiteral("尺度约 %1 光年").arg(e->sizeLy, 0, 'g', 3)
+                          : QStringLiteral("尺度约 %1 千光年").arg(e->sizeLy / 1000.0, 0, 'g', 3);
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");

@@ -50,6 +50,7 @@ qt_add_qml_module(solar_system
         src/galaxy.h           src/galaxy.cpp
         src/stellardata.h      src/stellardata.cpp
         src/agndata.h          src/agndata.cpp
+        src/ismdata.h          src/ismdata.cpp
         src/postfx.h           src/postfx.cpp
         src/scenerenderer.h    src/scenerenderer.cpp
         src/sceneitem.h        src/sceneitem.cpp

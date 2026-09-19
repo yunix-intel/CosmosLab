@@ -22,16 +22,19 @@ Rectangle {
 
     property var stellar: []
     property var agns: []
-    property string tab: "star"   // star | agn
+    property var isms: []
+    property string tab: "star"   // star | agn | ism
 
     Component.onCompleted: {
         stellar = scene.stellarList()
         agns = scene.agnList()
+        isms = scene.ismList()
         // 测试用: SS_STELLAR=1 启动即显示恒星面板 (供自动化截图验证)
         if (scene.testStellar) {
             root.stellarView = true
             console.log("[恒星] 已打开: " + stellar.length + " 恒星条目, "
-                        + agns.length + " AGN条目")
+                        + agns.length + " AGN条目, "
+                        + isms.length + " ISM/星团条目")
         }
     }
 
@@ -63,7 +66,8 @@ Rectangle {
             Repeater {
                 model: [
                     { t: "恒星链", v: "star" },
-                    { t: "AGN/星系", v: "agn" }
+                    { t: "AGN/星系", v: "agn" },
+                    { t: "星云星团", v: "ism" }
                 ]
                 delegate: Rectangle {
                     required property var modelData
@@ -98,7 +102,9 @@ Rectangle {
             wrapMode: Text.WordWrap
             text: stellarPanel.tab === "star"
                   ? "B.1 恒星全链 53 条 · 点击查看精准/通俗双说明"
-                  : "B.2/B.3 AGN 与星系 34 条 · 候选与争议已注记"
+                  : (stellarPanel.tab === "agn"
+                     ? "B.2/B.3 AGN 与星系 34 条 · 候选与争议已注记"
+                     : "B.5 星云/星团 22 条 · 发射/反射/暗/行星状/遗迹/星团")
             color: root.cTextDim
             font.pixelSize: 9
             font.family: root.sansFont
@@ -118,7 +124,8 @@ Rectangle {
 
                 Repeater {
                     model: stellarPanel.tab === "star" ? stellarPanel.stellar
-                                                      : stellarPanel.agns
+                           : (stellarPanel.tab === "agn" ? stellarPanel.agns
+                                                         : stellarPanel.isms)
                     delegate: Rectangle {
                         required property var modelData
                         Layout.fillWidth: true

@@ -3395,6 +3395,10 @@ ApplicationWindow {
         d = scene.agnDetail(id)
         if (d && d.nameCn !== undefined)
             return d
+        // ★ B.5 星云/星团: 第三顺位 (id 空间独立, 无冲突)
+        d = scene.ismDetail(id)
+        if (d && d.nameCn !== undefined)
+            return d
         return ({})
     }
 

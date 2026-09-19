@@ -234,6 +234,9 @@ public:
     Q_INVOKABLE QVariantList agnList() const;
     Q_INVOKABLE QVariantMap  stellarDetail(const QString &id) const;
     Q_INVOKABLE QVariantMap  agnDetail(const QString &id) const;
+    // B.5 星际介质/星云/星团。QML 第三个分组展示, 复用同一 galaxyCard。
+    Q_INVOKABLE QVariantList ismList() const;
+    Q_INVOKABLE QVariantMap  ismDetail(const QString &id) const;
     Q_INVOKABLE void focusOn(const QString &id);
 
     // ---- 配音播放 (WinMM mciSendString, 无新增依赖) ----

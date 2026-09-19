@@ -1,5 +1,5 @@
 {
- "_note": "演化解说词 ID 清单。每 ID 五键: zh(专业普通话) / zh_pop(科普通话, TTS 用) / yue(粤语) / ja(日语) / en(英语)。TTS 映射: 专业版=A槽男音读 zh, 科普版=B槽女音读 zh_pop。命名: evo.<剧本>.<sN>。配音见 assets/audio/manifest.json。",
+ "_note": "演化解说词 ID 清单 (78)。每 ID 五键: zh(专业普通话) / zh_pop(科普通话, TTS 用) / yue(粤语) / ja(日语) / en(英语)。TTS 映射: 专业版=A槽男音读 zh, 科普版=B槽女音读 zh_pop。命名: evo.<剧本>.<sN>; 早期三节点 evo.cos.b0-b2 (时间轴画不下, 纯文本讲解); ISM 链 evo.ism.s0-s10。",
  "_voice": {
   "pro": "A(男音·专业讲解)",
   "pop": "B(女音·温暖科普)",
@@ -69,6 +69,20 @@
   "evo.clu.s1",
   "evo.clu.s2",
   "evo.clu.s3",
-  "evo.clu.s4"
+  "evo.clu.s4",
+  "evo.cos.b0",
+  "evo.cos.b1",
+  "evo.cos.b2",
+  "evo.ism.s0",
+  "evo.ism.s1",
+  "evo.ism.s2",
+  "evo.ism.s3",
+  "evo.ism.s4",
+  "evo.ism.s5",
+  "evo.ism.s6",
+  "evo.ism.s7",
+  "evo.ism.s8",
+  "evo.ism.s9",
+  "evo.ism.s10"
  ]
 }

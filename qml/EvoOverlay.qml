@@ -217,6 +217,26 @@ Rectangle {
                 { t: 1000,  label: "核坍缩或瓦解", desc: "毕星团 (~7 亿年) 正在瓦解; 致密球状团可核坍缩 (M15 式)。", narr: "evo.clu.s3", pop: "约10亿年, 要么散架(毕星团正在散), 要么缩成一团。" },
                 { t: 10000, label: "球状团暮年", desc: "幸存者如 M13 (~120 亿年): 年龄 = 宇宙年龄下限 (自洽性检查)。", narr: "evo.clu.s4", pop: "100亿年, 剩下的老年球状团, 它们的年龄就是宇宙年龄的下限。" }
             ]
+        },
+        {
+            // ★ B.5 ISM/星团认知链: 非物理时间, t 为讲解序号 (0-10)。
+            //   发射→反射→暗→行星状→遗迹→分子云/泡→疏散→球状→星协→三裂综合→巴纳德环。
+            id: "ism", title: "星际介质与星团", sub: "认三种光 · 从苗圃到化石",
+            unit: "step", tMin: 0, tMax: 10, allowLog: false, useLog: false,
+            viz: "ism",
+            stages: [
+                { t: 0,  label: "发射星云", desc: "H II 区: 大质量星紫外电离 (M42, 梯形星团为电灯)。", narr: "evo.ism.s0", pop: "发射星云是氢被点亮: 猎户座大星云最近, 梯形星团就是电灯。" },
+                { t: 1,  label: "反射星云", desc: "散射借光 (M45 偶遇尘埃, 非诞生地; 蓝光散射更强)。", narr: "evo.ism.s1", pop: "昴星团蓝汪汪不是自己发光, 是照亮了路过的尘埃。记住, 不是诞生地。" },
+                { t: 2,  label: "暗星云", desc: "致密尘埃剪影 (马头 B33; 煤袋最冷, 无大质量形成)。", narr: "evo.ism.s2", pop: "马头挡住亮星云形成剪影, 煤袋最冷。暗不是空, 是尘埃太密。" },
+                { t: 3,  label: "行星状星云", desc: "AGB 抛射 + 中心星电离 (M57/M27/NGC 7293, 约 1 万年)。", narr: "evo.ism.s3", pop: "指环、哑铃、螺旋都是死星吹的泡泡, 中心白矮星照亮, 只亮一万年。" },
+                { t: 4,  label: "超新星遗迹", desc: "Cas A (IIb, 消光无目击) / 面纱 (2 万年壳层); 成分验尸爆发。", narr: "evo.ism.s4", pop: "仙后座A三百年前炸的, 尘埃挡住没人看见; 面纱是两万年前的涟漪。" },
+                { t: 5,  label: "分子云与泡", desc: "金牛座云 (低质量形成) / 本地泡 (身处其中) / 银心环反常低效。", narr: "evo.ism.s5", pop: "金牛座分子云专生小星; 我们就住在一个古老爆炸吹出的泡泡里。" },
+                { t: 6,  label: "疏散星团", desc: "昴 (1 亿年) / 毕 (7 亿年瓦解中) / 英仙双 (1300 万年); 色星等定年。", narr: "evo.ism.s6", pop: "昴星团一亿岁, 毕星团正在散, 双星团还带着红超巨。" },
+                { t: 7,  label: "球状星团", desc: "M13 (~120 亿年, 年龄下限) / ω Cen (多星族) / 47 Tuc (毫秒脉冲星)。", narr: "evo.ism.s7", pop: "M13一百多亿岁, 半人马座欧米茄可能是被吃掉的矮星系核。" },
+                { t: 8,  label: "星协", desc: "Sco-Cen (最近 OB 协, 心宿二成员; 成协膨胀定年)。", narr: "evo.ism.s8", pop: "天蝎半人马是刚散伙的帮派, 心宿二就是成员, 本地泡可能是它炸的。" },
+                { t: 9,  label: "三裂综合", desc: "M20 一图三光: 发射红 + 反射蓝 + 暗缝 (分类即认光)。", narr: "evo.ism.s9", pop: "三裂星云一张图三种光: 红发光、蓝反光、黑的是尘埃缝。" },
+                { t: 10, label: "巴纳德环", desc: "猎户座 10 度超级泡 (古老 SN + 星风); 泡是反馈化石。", narr: "evo.ism.s10", pop: "巴纳德环是古老爆炸的年轮, 猎户座腰间的超级泡。" }
+            ]
         }
     ]
 
@@ -266,6 +286,10 @@ Rectangle {
             if (v < 6) return (Math.pow(10, v) / 1e3).toPrecision(2) + " kyr"
             if (v < 9) return (Math.pow(10, v) / 1e6).toPrecision(2) + " Myr"
             return (Math.pow(10, v) / 1e9).toPrecision(2) + " Gyr"
+        }
+        if (s.unit === "step") {
+            // ★ B.5 ISM 认知链: 非物理时间, 显示"第 N 站 / 共 11 站"
+            return "第 " + Math.round(v) + " 站 / 共 11 站"
         }
         return v.toPrecision(3) + " " + s.unit
     }
@@ -704,6 +728,7 @@ Rectangle {
         else if (s.viz === "binary") drawBinary(ctx, W, H, n, t)
         else if (s.viz === "remnant") drawRemnant(ctx, W, H, n, t)
         else if (s.viz === "cluster") drawCluster(ctx, W, H, n, t)
+        else if (s.viz === "ism") drawISM(ctx, W, H, s, t)
         // 边框
         ctx.strokeStyle = "rgba(120,150,190,0.4)"
         ctx.lineWidth = 1
@@ -1086,5 +1111,40 @@ Rectangle {
         ctx.fillStyle = "rgba(160,180,205,0.9)"
         ctx.font = "11px 'Microsoft YaHei'"
         ctx.fillText("低质量星优先逃逸 (质量分层) · M13 年龄即宇宙年龄下限", 24, H - 14)
+    }
+
+    function drawISM(ctx, W, H, s, t) {
+        // ★ B.5 三色示意: 红=发射(H II) / 蓝=反射(散射) / 暗=尘埃剪影。
+        //   当前站高亮, 其余压暗 —— "认三种光"的视觉锚点。
+        const k = stageIndex()
+        const cx = W / 2, cy = H / 2 - 8
+        // 背景星场
+        for (let i = 0; i < 90; ++i) {
+            const a = (i * 2.39996) % 6.2832
+            const r = 60 + ((i * 0.618034) % 1) * (Math.min(W, H) * 0.38)
+            const b = 100 + ((i * 37) % 120)
+            ctx.fillStyle = "rgba(" + b + "," + b + "," + b + ",0.35)"
+            ctx.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, 1.5, 1.5)
+        }
+        // 三团: 发射(红) / 反射(蓝) / 暗(黑幕+描边)
+        const cols = [["255,120,120", "发射 H II"], ["140,180,255", "反射 散射"], ["20,22,30", "暗 剪影"]]
+        for (let j = 0; j < 3; ++j) {
+            const x = cx + (j - 1) * 130
+            const on = (k <= 2 && j === k) || (k > 2)  // 前3站逐一点亮, 之后全亮
+            ctx.fillStyle = "rgba(" + cols[j][0] + "," + (on ? "0.55" : "0.14") + ")"
+            ctx.beginPath(); ctx.ellipse(x, cy, 52, 40, 0, 0, 6.2832); ctx.fill()
+            ctx.strokeStyle = on ? "rgba(255,255,255,0.5)" : "rgba(160,180,205,0.25)"
+            ctx.lineWidth = on ? 2 : 1
+            ctx.beginPath(); ctx.ellipse(x, cy, 52, 40, 0, 0, 6.2832); ctx.stroke()
+            ctx.fillStyle = on ? "rgba(220,232,255,0.95)" : "rgba(160,180,205,0.5)"
+            ctx.font = "11px 'Microsoft YaHei'"
+            ctx.fillText(cols[j][1], x - 30, cy + 58)
+        }
+        ctx.fillStyle = "rgba(220,232,255,0.95)"
+        ctx.font = "12px 'Microsoft YaHei'"
+        ctx.fillText("第 " + k + " 站 · " + s.stages[k].label, 24, H - 34)
+        ctx.fillStyle = "rgba(160,180,205,0.9)"
+        ctx.font = "11px 'Microsoft YaHei'"
+        ctx.fillText("红发光 · 蓝反光 · 黑是尘埃缝", 24, H - 14)
     }
 }
