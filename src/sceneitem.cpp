@@ -831,6 +831,48 @@ void SolarScene::focusOn(const QString &id)
 }
 
 // ---------------------------------------------------------------------------
+//  配音播放 —— WinMM mciSendString (MinGW 自带 winmm, 无新增依赖)
+//
+//  ★ 路径走 assetPath("audio/<id>_<pro|pop>.mp3"), 与绿色包三级回退一致。
+//  ★ 同一 alias 复用 ("ssnarr"): 先 close 再 open, 天然"打断重播"。
+// ---------------------------------------------------------------------------
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <mmsystem.h>
+#endif
+
+QString SolarScene::playNarration(const QString &narrId, bool usePop)
+{
+    if (narrId.isEmpty()) {
+#ifdef Q_OS_WIN
+        mciSendStringW(L"close ssnarr", nullptr, 0, nullptr);
+#endif
+        return QString();
+    }
+    const QString suffix = usePop ? QStringLiteral("_pop.mp3")
+                                  : QStringLiteral("_pro.mp3");
+    const QString path = assetPath(QStringLiteral("audio/") + narrId + suffix);
+    if (!QFile::exists(path)) {
+        qWarning() << "[配音] 缺失:" << path;
+        return QString();
+    }
+#ifdef Q_OS_WIN
+    mciSendStringW(L"close ssnarr", nullptr, 0, nullptr);
+    const QString cmd = QStringLiteral("open \"%1\" alias ssnarr").arg(path);
+    if (mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()),
+                       nullptr, 0, nullptr) != 0) {
+        qWarning() << "[配音] 打开失败:" << path;
+        return QString();
+    }
+    mciSendStringW(L"play ssnarr", nullptr, 0, nullptr);
+#else
+    qWarning() << "[配音] 非 Windows 平台暂不支持本地播放";
+    return QString();
+#endif
+    return path;
+}
+
+// ---------------------------------------------------------------------------
 //  宇宙视图可见粒子数 —— 性能开关
 //
 //  ★ 这是**零成本**的: 顶点数据在 build() 时一次性上传, 此处只改

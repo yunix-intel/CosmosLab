@@ -30,6 +30,8 @@ Rectangle {
     // ★ 全局专业/科普开关 (由 Main.qml 的 root.proMode 传入):
     //   true=专业版 desc, false=科普版 pop (无 pop 的阶段回退到 desc)。
     property bool proMode: true
+    // ★ 配音调用的 scene 对象 (由 Main.qml 传入 scene 本体, 同 testEvo 模式)。
+    property var sceneObj: null
 
     // ---- 引擎状态 ----
     property int cur: 0
@@ -100,7 +102,7 @@ Rectangle {
                   track: { teff: 3600, logL: 5.5, rad: 800.0 } },
                 { t: 9.3, label: "沃尔夫–拉叶阶段", desc: "强星风剥掉氢包层, 露出 He/C/O 核心 (WC/WN)。质量损失率可达 1e-5–1e-4 M☉/yr。", narr: "evo.mas.s3", pop: "大风把外衣剥光, 露出滚烫的内核 —— 沃尔夫-拉叶阶段, 宇宙里最猛的风。",
                   track: { teff: 60000, logL: 5.3, rad: 5.0 } },
-                { t: 9.5, label: "核坍缩 · 超新星", desc: "铁核坍缩, Ⅱb/Ⅰb 型 (包层已被剥离则无氢线)。中微子带走约 99% 能量。", narr: "evo.mas.s4", pop: "铁核塌了, 大爆炸。因为外衣早没了, 光谱里看不到氢 —— 这就是Ib型。",
+                { t: 9.5, label: "核坍缩 · 超新星", desc: "铁核坍缩, Ⅱb/Ⅰb 型 (包层已被剥离则无氢线)。中微子带走约 99% 能量。", narr: "evo.mas.s4", pop: "铁核塌了, 大爆炸。因为外衣早没了, 光谱里看不到氢 —— 这就是一b型。",
                   track: { teff: 20000, logL: 8.0, rad: 50.0 } },
                 { t: 12,  label: "黑洞遗迹", desc: "20 M☉ 太阳金属丰度下大概率成黑洞 (中子星/黑洞分界约 20–25 M☉, 只给区间)。", narr: "evo.mas.s5", pop: "最后剩个黑洞。几倍太阳质量以上就压不住了, 只能给个区间, 给不出精确数。",
                   track: { teff: 0, logL: -6.0, rad: 0.0 } }
@@ -111,9 +113,9 @@ Rectangle {
             unit: "day", tMin: 0, tMax: 300, allowLog: false, useLog: false,
             viz: "sn",
             stages: [
-                { t: 0,   label: "爆发 · 早期增亮", desc: "热核失控/激波加热, 光度急升。Ⅰa 无氢线是分类判据。", narr: "evo.sn.s0", pop: "炸了!亮度猛涨。光谱里没有氢 —— 这是Ia型的身份证。" },
+                { t: 0,   label: "爆发 · 早期增亮", desc: "热核失控/激波加热, 光度急升。Ⅰa 无氢线是分类判据。", narr: "evo.sn.s0", pop: "炸了!亮度猛涨。光谱里没有氢 —— 这是一a型的身份证。" },
                 { t: 19,  label: "B 波段极大", desc: "约 19 天达峰, M ≈ −19.3。这是标准烛光定标点 (Phillips 关系: 宽–亮相关)。", narr: "evo.sn.s1", pop: "约19天亮到顶, 这是最亮的时刻, 也是量距离的标尺。" },
-                { t: 30,  label: "近红外次极大", desc: "正常 Ⅰa 在红外有二次隆起 (B 极大后约 15–20 天), 源于 Fe 族元素电离态变化。", narr: "evo.sn.s2", pop: "约30天, 红外又鼓个小包 —— 铁元素变脸留下的指纹, 正常Ia才有。" },
+                { t: 30,  label: "近红外次极大", desc: "正常 Ⅰa 在红外有二次隆起 (B 极大后约 15–20 天), 源于 Fe 族元素电离态变化。", narr: "evo.sn.s2", pop: "约30天, 红外又鼓个小包 —— 铁元素变脸留下的指纹, 正常一a才有。" },
                 { t: 60,  label: "过渡段", desc: "光球退入 Fe 核, 颜色转红。", narr: "evo.sn.s3", pop: "60天, 开始走下坡路, 颜色发红, 亮度指数下降。" },
                 { t: 150, label: "钴衰变尾", desc: "⁵⁶Co → ⁵⁶Fe (半衰期 77.2 d) 供能, 光变按指数衰减。", narr: "evo.sn.s4", pop: "150天, 靠钴衰变撑着发光 —— 光的尾巴就是元素在变身。" },
                 { t: 300, label: "遗迹阶段", desc: "抛射物稀薄成星云相, 禁线主导。光变进入 ⁵⁶Co+⁵⁷Co 混合尾 (比纯 ⁵⁶Co 慢); 数百年后成超新星遗迹 (如 Tycho)。", narr: "evo.sn.s5", pop: "300天后只剩稀薄的烟雾, 几百年后会变成第谷那样的遗迹。" }
@@ -124,7 +126,7 @@ Rectangle {
             unit: "Gyr", tMin: 0, tMax: 8, allowLog: false, useLog: false,
             viz: "merger",
             stages: [
-                { t: 0, label: "现在", desc: "相距约 770 kpc, 以约 110 km/s 接近。M31 蓝移 z = −0.001 是直接证据。", narr: "evo.mrg.s0", pop: "现在: 银河系和仙女座隔着77万秒差距靠近, 仙女座的蓝移就是证据。" },
+                { t: 0, label: "现在", desc: "相距约 770 kpc, 以约 110 km/s 接近。M31 蓝移 z = −0.001 是直接证据。", narr: "evo.mrg.s0", pop: "现在: 银河系和仙女座隔着77万秒差距靠近, 仙女座正朝我们来, 这就是证据。" },
                 { t: 4, label: "第一次近心点", desc: "潮汐尾拉出, 星暴被触发。类比触须星系 (Arp 244, Toomre 序列中期)。", narr: "evo.mrg.s1", pop: "约40亿年后第一次擦肩: 拉出长尾巴, 点燃星暴。触须星系就是现场直播。" },
                 { t: 6, label: "并合", desc: "核球合并, 盘结构被打乱, 星暴达峰后淬灭开始。", narr: "evo.mrg.s2", pop: "约60亿年后撞在一起: 旋臂搅碎, 星暴烧到最旺然后熄火。" },
                 { t: 8, label: "椭圆遗迹 Milkomeda", desc: "弛豫为大椭圆星系。太阳系届时命运不确定 —— 大概率被甩到外晕。", narr: "evo.mrg.s3", pop: "80亿年后变成一个大椭圆星系。太阳大概率被甩到郊区, 但自己没事。" }
@@ -137,7 +139,7 @@ Rectangle {
             stages: [
                 { t: 0,   label: "宁静椭圆星系", desc: "中心超大质量黑洞沉睡, 无喷流。M–σ 关系已就位。", narr: "evo.agn.s0", pop: "一座安静的椭圆星系, 中心黑洞在睡觉, 没有喷流。" },
                 { t: 8,   label: "并合供气触发", desc: "气体流入核区 (~pc 尺度), 吸积盘点亮, 宽线区出现。", narr: "evo.agn.s1", pop: "撞车送来气体, 黑洞开饭, 盘子点亮 —— 活动星系核开机了。" },
-                { t: 12,  label: "喷流开启", desc: "相对论性喷流打通 kpc 尺度 (M87 喷流约 5 kpc)。视角决定分类: 正对即耀变体。", narr: "evo.agn.s2", pop: "喷流打穿几千秒差距, 和M87的差不多。正对着看, 它就是耀变体 —— 角度决定身份。" },
+                { t: 12,  label: "喷流开启", desc: "相对论性喷流打通 kpc 尺度 (M87 喷流约 5 kpc)。视角决定分类: 正对即耀变体。", narr: "evo.agn.s2", pop: "喷流打穿几千秒差距, 和梅西耶八七的差不多。正对着看, 它就是耀变体 —— 角度决定身份。" },
                 { t: 40,  label: "巨瓣 + 反馈", desc: "瓣达百 kpc 级 (天鹅座 A 级约 120 kpc), 激波加热星系周气体 —— AGN 反馈淬灭恒星形成 (候选机制)。", narr: "evo.agn.s3", pop: "瓣长到几十万光年, 把周围气体加热, 星系可能就此停造星。注意: 只是候选解释。" },
                 { t: 120, label: "遗迹瓣", desc: "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。", narr: "evo.agn.s4", pop: "饭吃完, 喷流熄火, 只剩老瓣在射电波段慢慢变暗, 星系重归安静。" }
             ]
@@ -161,7 +163,7 @@ Rectangle {
             unit: "Myr", tMin: 0, tMax: 12, allowLog: false, useLog: false,
             viz: "planet",
             stages: [
-                { t: 0,  label: "Ⅱ类盘", desc: "气体+尘埃盘, 质量约 1% 恒星。ALMA 已成像大量环缝结构。", narr: "evo.pln.s0", pop: "气体尘埃盘, 质量只有恒星的1%。ALMA拍到的环缝, 就是行星在刻痕。" },
+                { t: 0,  label: "Ⅱ类盘", desc: "气体+尘埃盘, 质量约 1% 恒星。ALMA 已成像大量环缝结构。", narr: "evo.pln.s0", pop: "气体尘埃盘, 质量只有恒星的百分之一。毫米波望远镜拍到的环缝, 就是行星在刻痕。" },
                 { t: 1,  label: "尘埃生长 · 星子", desc: "微米尘埃聚成 km 级星子 (卵石吸积/引力不稳定, 机制仍在竞争)。", narr: "evo.pln.s1", pop: "尘埃抱团长大成星子。怎么长的还有争议, 没定论。" },
                 { t: 3,  label: "寡头生长 · 巨行星核", desc: "约 10 M⊕ 固核触发 runaway 气体吸积。", narr: "evo.pln.s2", pop: "长到10倍地球质量, 开始疯狂吸气, 气态巨行星的核就位了。" },
                 { t: 5,  label: "气体耗散 · 迁移", desc: "盘气体散去; Ⅰ/Ⅱ型迁移可造热木星 (飞马座 51b) 或大距 (HR 8799)。", narr: "evo.pln.s3", pop: "约500万年气体散光。有的留在外侧, 有的搬进内侧成热木星 —— 同一起点, 两种人生。" },
@@ -177,8 +179,8 @@ Rectangle {
                 { t: 0.01, label: "前恒星核", desc: "分子云核, Jeans 判据量级成立才坍缩 (只给量级, 不给单值)。", narr: "evo.psf.s0", pop: "分子云核, 够重才塌。只讲量级, 不给精确数 —— 形状和磁场都会影响。" },
                 { t: 0.1,  label: "0 类", desc: "深埋包层, L_bol 低、T_bol < 70 K。双极外向流最强。", narr: "evo.psf.s1", pop: "0类: 包在厚茧里, 又暗又冷, 两头喷流最猛 —— 婴儿在打喷嚏。" },
                 { t: 0.3,  label: "Ⅰ 类", desc: "包层+盘并存, T_bol 70–650 K。", narr: "evo.psf.s2", pop: "I类: 茧还在, 盘露头了, 过渡形态。" },
-                { t: 0.8,  label: "Ⅱ 类 (经典金牛T)", desc: "盘主导, Hα 强发射 + 紫外超。", narr: "evo.psf.s3", pop: "II类: 茧散了, 盘当家, 还在吃料, 发射线很强。" },
-                { t: 3,    label: "Ⅲ 类 (弱线)", desc: "盘散去, 恒星表面主导。", narr: "evo.psf.s4", pop: "III类: 盘也没了, 露出恒星表面, 恒星形成毕业, 接下来慢慢收缩。" }
+                { t: 0.8,  label: "Ⅱ 类 (经典金牛T)", desc: "盘主导, Hα 强发射 + 紫外超。", narr: "evo.psf.s3", pop: "二类: 茧散了, 盘当家, 还在吃料, 发射线很强。" },
+                { t: 3,    label: "Ⅲ 类 (弱线)", desc: "盘散去, 恒星表面主导。", narr: "evo.psf.s4", pop: "三类: 盘也没了, 露出恒星表面, 恒星形成毕业, 接下来慢慢收缩。" }
             ]
         },
         {
@@ -189,7 +191,7 @@ Rectangle {
                 { t: 9,  label: "宽双星", desc: "两颗 O/B 主序星, 周期年量级。", narr: "evo.bin.s0", pop: "一对大质量双胞胎, 周期按年算, 故事开场。" },
                 { t: 6,  label: "包层共有", desc: "第一次超新星后 + 包层共有抛射, 轨道大幅收缩 (效率 αλ 高度不确定, 只给定性)。", narr: "evo.bin.s1", pop: "一颗炸了, 另一颗膨胀把伴星吞了, 轨道在共用包层里猛缩。具体缩多少, 算不准, 只讲定性。" },
                 { t: 1,  label: "双中子星", desc: "周期小时量级, 引力波缓慢带走角动量 (Hulse–Taylor 式衰减)。", narr: "evo.bin.s2", pop: "剩双中子星, 周期按小时算, 引力波慢慢偷走能量, 越转越快。" },
-                { t: -5.5, label: "啁啾段 (最后约 100 秒)", desc: "频率扫过 LIGO 带 (数十–数百 Hz)。GW170817 啁啾约 100 秒。", narr: "evo.bin.s3", pop: "最后100秒啁啾: 频率从几十扫到几百赫兹, GW170817响了约100秒 —— 人类听到的宇宙声音。" },
+                { t: -5.5, label: "啁啾段 (最后约 100 秒)", desc: "频率扫过 LIGO 带 (数十–数百 Hz)。GW170817 啁啾约 100 秒。", narr: "evo.bin.s3", pop: "最后100秒啁啾: 频率从几十扫到几百赫兹, 那次并合响了约100秒 —— 人类听到的宇宙声音。" },
                 { t: -7, label: "并合 · 千新星", desc: "AT2017gfo: r 过程元素 (金、铂) 起源直接证据 + 短 GRB 170817A。", narr: "evo.bin.s4", pop: "撞上了!炸出金银铂, 还附赠短伽马暴 —— 多信使天文学开张。" }
             ]
         },
@@ -212,8 +214,8 @@ Rectangle {
                 { t: 1,     label: "嵌入团", desc: "仍埋在分子云中, 气体占主导 (如 Trapezium)。", narr: "evo.clu.s0", pop: "还埋在云里的婴儿星团, 气体说了算, 和猎户座梯形一样。" },
                 { t: 3,     label: "气体排出", desc: "大质量星反馈吹散气体; 若效率低则团瓦解 (婴儿死亡率)。", narr: "evo.clu.s1", pop: "约300万年吹散气体, 吹不干净就散伙 —— 多数星团死在这一关。" },
                 { t: 100,   label: "弛豫 · 蒸发", desc: "两体弛豫 + 潮汐剥离, 低质量星优先逃逸 (质量分层)。昴星团 (~1 亿年) 在此段。", narr: "evo.clu.s2", pop: "约1亿年, 小星先跑路, 团越蒸发越小。昴星团正在这里。" },
-                { t: 1000,  label: "核坍缩或瓦解", desc: "毕星团 (~7 亿年) 正在瓦解; 致密球状团可核坍缩 (M15 式)。", narr: "evo.clu.s3", pop: "约10亿年, 要么散架(毕星团正在散), 要么缩成一团(M15式)。" },
-                { t: 10000, label: "球状团暮年", desc: "幸存者如 M13 (~120 亿年): 年龄 = 宇宙年龄下限 (自洽性检查)。", narr: "evo.clu.s4", pop: "100亿年, 剩下的老球状团如M13, 它们的年龄就是宇宙年龄的下限。" }
+                { t: 1000,  label: "核坍缩或瓦解", desc: "毕星团 (~7 亿年) 正在瓦解; 致密球状团可核坍缩 (M15 式)。", narr: "evo.clu.s3", pop: "约10亿年, 要么散架(毕星团正在散), 要么缩成一团。" },
+                { t: 10000, label: "球状团暮年", desc: "幸存者如 M13 (~120 亿年): 年龄 = 宇宙年龄下限 (自洽性检查)。", narr: "evo.clu.s4", pop: "100亿年, 剩下的老年球状团, 它们的年龄就是宇宙年龄的下限。" }
             ]
         }
     ]
@@ -596,12 +598,50 @@ Rectangle {
                         font.family: "Microsoft YaHei"
                         lineHeight: 1.35
                     }
-                    Text {
-                        text: "解说词 " + scripts[cur].stages[stageIndex()].narr
-                              + "（普通话/粤语/日语/英语待接入）"
-                        color: evo.txDim
-                        font.pixelSize: 10
-                        font.family: "Consolas, monospace"
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Text {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            text: "解说词 " + scripts[cur].stages[stageIndex()].narr
+                                  + (evo.proMode ? " · 男音专业版" : " · 女音科普版")
+                            color: evo.txDim
+                            font.pixelSize: 10
+                            font.family: "Consolas, monospace"
+                        }
+                        // ★ 配音播放: proMode=true->A男音_ pro.mp3,
+                        //   false->B女音 _pop.mp3。文件缺失时 C++ 返回空串,
+                        //   按钮置灰一次(下次切换阶段恢复)。
+                        Rectangle {
+                            Layout.preferredWidth: 64
+                            Layout.preferredHeight: 22
+                            radius: 5
+                            color: narrBtnMa.containsMouse
+                                   ? Qt.rgba(0.37, 0.66, 1.0, 0.30)
+                                   : Qt.rgba(1, 1, 1, 0.06)
+                            border.width: 1
+                            border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
+                            Text {
+                                anchors.centerIn: parent
+                                text: "▶ 播放"
+                                color: "#d7e6ff"
+                                font.pixelSize: 10
+                                font.family: "Microsoft YaHei"
+                            }
+                            MouseArea {
+                                id: narrBtnMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    const st = scripts[cur].stages[stageIndex()]
+                                    if (evo.sceneObj)
+                                        evo.sceneObj.playNarration(st.narr,
+                                                                   !evo.proMode)
+                                }
+                            }
+                        }
                     }
                 }
             }

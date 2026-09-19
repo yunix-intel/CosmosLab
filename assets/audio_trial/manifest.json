@@ -1,0 +1,62 @@
+{
+  "engine": "narration-engine",
+  "engine_version": "0.2.0",
+  "generated_at": "2026-09-19T11:28:36+08:00",
+  "out_dir": "D:\\tmp\\solar-system-cpp\\assets\\audio_trial",
+  "count": {
+    "total": 4,
+    "generated": 4,
+    "skipped": 0,
+    "failed": 0
+  },
+  "items": [
+    {
+      "id": "evo.mid.s1_pro",
+      "file": "evo.mid.s1_pro.mp3",
+      "voice": "A",
+      "lang": "zh",
+      "voice_id": "zhaozhongxiang",
+      "format": "mp3",
+      "chars": 39,
+      "digest": "de03f7a7bff16e29",
+      "duration_sec": 8.76,
+      "status": "generated"
+    },
+    {
+      "id": "evo.mid.s1_pop",
+      "file": "evo.mid.s1_pop.mp3",
+      "voice": "B",
+      "lang": "zh",
+      "voice_id": "linzhiling",
+      "format": "mp3",
+      "chars": 40,
+      "digest": "5e6f22d1cd72325e",
+      "duration_sec": 8.84,
+      "status": "generated"
+    },
+    {
+      "id": "evo.cos.s2_pro",
+      "file": "evo.cos.s2_pro.mp3",
+      "voice": "A",
+      "lang": "zh",
+      "voice_id": "zhaozhongxiang",
+      "format": "mp3",
+      "chars": 72,
+      "digest": "7bf01794bff16e29",
+      "duration_sec": 15.98,
+      "status": "generated"
+    },
+    {
+      "id": "evo.cos.s2_pop",
+      "file": "evo.cos.s2_pop.mp3",
+      "voice": "B",
+      "lang": "zh",
+      "voice_id": "linzhiling",
+      "format": "mp3",
+      "chars": 52,
+      "digest": "932120becd72325e",
+      "duration_sec": 12.0,
+      "status": "generated"
+    }
+  ]
+}

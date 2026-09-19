@@ -77,9 +77,9 @@ put("evo.agn.s3",
 "ローブは数百kpcに成長し、衝撃波が銀河周囲ガスを加熱します——AGNフィードバック、星形成停止の候補メカニズムです(未確定)。",
 "Lobes spanning hundreds of kiloparsecs shock-heat circumgalactic gas — AGN feedback, a candidate cause of quenching. Candidate, not verdict.")
 put("evo.agn.s4",
-"燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。只剩遗迹瓣在射电波段慢慢 fading —— 巨椭圆星系重归宁静。",
+"燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。只剩遗迹瓣在射电波段慢慢变暗 —— 巨椭圆星系重归宁静。",
 "燃料烧完, 喷流熄灭, 瓣辐射老化变陡。净返遗迹瓣喺射电波段慢慢变暗 —— 巨椭圆星系重归宁静。",
-"燃料が尽き、ジェットは消え、ローブの放射は老化します。残骸ローブが電波で静かに fading します——巨大楕円銀河は静けさに戻ります。",
+"燃料が尽き、ジェットは消え、ローブの放射は老化します。残骸ローブが電波で静かに減衰します——巨大楕円銀河は静けさに戻ります。",
 "Fuel exhausted, jets die, lobes fade and steepen. Only relic lobes linger in radio — the giant elliptical returns to quiet.")
 put("evo.cos.s0",
 "大爆炸后1秒到3分钟: 太初核合成。氦4质量分数约25%, 氘氢比锁定重子密度 —— 与宇宙微波背景独立一致, 大爆炸最硬的预言之一。",

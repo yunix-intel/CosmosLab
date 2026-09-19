@@ -62,6 +62,11 @@ target_link_libraries(solar_system PRIVATE
     Qt6::Qml Qt6::Quick Qt6::QuickControls2
     Qt6::OpenGL)
 
+# 配音播放走 WinMM mciSendString (系统库, 无新增依赖)
+if(WIN32)
+    target_link_libraries(solar_system PRIVATE winmm)
+endif()
+
 # 静态链接 GCC 运行库。
 # 注意: 这**不能**免除 libstdc++-6.dll 依赖 —— MSYS2 的 Qt DLL 自身会拉进来,
 # 部署时仍须把 ucrt64/bin 下的那一批 DLL 一并拷走 (见 skill 文档)。

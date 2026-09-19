@@ -178,7 +178,7 @@
    "yue": "铁核坍缩, 核坍缩超新星爆发。因为包层已经剥走, 光谱入面冇氢线 —— 呢个就系Ib型。中微子带走咗约99%嘅能量。",
    "ja": "鉄核が崩壊し、重力崩壊型超新星が爆発します。外層は既に剥がれているためスペクトルに水素線はありません——Ib型です。エネルギーの約99%はニュートリノが持ち去ります。",
    "en": "The iron core collapses. With the envelope already gone, no hydrogen lines appear — a Type Ib supernova. Some 99 percent of the energy escapes as neutrinos.",
-   "zh_pop": "铁核塌了, 大爆炸。因为外衣早没了, 光谱里看不到氢 —— 这就是Ib型。"
+   "zh_pop": "铁核塌了, 大爆炸。因为外衣早没了, 光谱里看不到氢 —— 这就是一b型。"
   },
   "evo.mas.s5": {
    "zh": "遗迹是一个黑洞。20倍太阳质量、太阳金属丰度下大概率成黑洞 —— 中子星与黑洞的分界约在20到25倍太阳质量, 只能给区间。",
@@ -192,7 +192,7 @@
    "yue": "爆发开始, 光度急升。留意光谱入面冇氢线 —— 呢个就系Ia型嘅分类判据, 亦系佢可以当标准烛光嘅前提。",
    "ja": "爆発開始、光度は急上昇します。スペクトルに水素線がないことに注意——これがIa型の分類基準であり、標準光源たり得る前提です。",
    "en": "Eruption begins, luminosity surges. Note the absence of hydrogen lines — the defining criterion of Type Ia, and what qualifies it as a standard candle.",
-   "zh_pop": "炸了!亮度猛涨。光谱里没有氢 —— 这是Ia型的身份证。"
+   "zh_pop": "炸了!亮度猛涨。光谱里没有氢 —— 这是一a型的身份证。"
   },
   "evo.sn.s1": {
    "zh": "约19天达到B波段极大, 绝对星等约负19.3。这是标准烛光的定标点 —— 更宽的光变对应更亮的峰值, 即宽亮关系。",
@@ -206,7 +206,7 @@
    "yue": "约30日, 近红外出现二次隆起 —— 铁族元素电离态变化嘅指纹。唔系粒粒超新星都有, 正常Ia先有。",
    "ja": "約30日、近赤外に二度目の盛り上がり——鉄族元素の電離状態変化の指紋です。正常なIa型に特有の現象です。",
    "en": "Around day 30 a secondary bump rises in the near-infrared — the fingerprint of changing iron-group ionization, seen only in normal Type Ia.",
-   "zh_pop": "约30天, 红外又鼓个小包 —— 铁元素变脸留下的指纹, 正常Ia才有。"
+   "zh_pop": "约30天, 红外又鼓个小包 —— 铁元素变脸留下的指纹, 正常一a才有。"
   },
   "evo.sn.s3": {
    "zh": "60天, 过渡段。光球退入铁核, 颜色转红, 光变开始指数衰减。",
@@ -234,7 +234,7 @@
    "yue": "而家: 银河系同仙女座相距约77万秒差距, 以约110公里每秒接近。仙女座嘅蓝移就系直接证据。",
    "ja": "現在:銀河系とアンドロメダは約77万パーセク離れ、秒速約110kmで接近中です。アンドロメダの青方偏移が直接の証拠です。",
    "en": "Today: the Milky Way and Andromeda lie 770 kiloparsecs apart, closing at 110 km/s. Andromeda's blueshift is the direct evidence.",
-   "zh_pop": "现在: 银河系和仙女座隔着77万秒差距靠近, 仙女座的蓝移就是证据。"
+   "zh_pop": "现在: 银河系和仙女座隔着77万秒差距靠近, 仙女座正朝我们来, 这就是证据。"
   },
   "evo.mrg.s1": {
    "zh": "约40亿年后第一次近心点: 潮汐尾被拉出, 星暴触发。可以对照触须星系 —— 那就是现在进行时的并合。",
@@ -276,7 +276,7 @@
    "yue": "相对论性喷流打通千秒差距尺度 —— M87嘅喷流约5千秒差距。留意: 正对喷流睇, 佢就系耀变体。视角决定分类, 呢个系统一模型嘅核心。",
    "ja": "相対論的ジェットがキロパーセク級を貫きます(M87で約5kpc)。正面から見ればブレーザーです。見かけの分類を決めるのは視角——統一モデルの核心です。",
    "en": "Relativistic jets punch through kiloparsec scales — M87's spans ~5 kpc. Seen head-on, this same object is a blazar. Viewing angle decides classification: the heart of the unified model.",
-   "zh_pop": "喷流打穿几千秒差距, 和M87的差不多。正对着看, 它就是耀变体 —— 角度决定身份。"
+   "zh_pop": "喷流打穿几千秒差距, 和梅西耶八七的差不多。正对着看, 它就是耀变体 —— 角度决定身份。"
   },
   "evo.agn.s3": {
    "zh": "喷流瓣长到数百千秒差距, 激波加热星系周气体 —— 这就是AGN反馈, 可能是星系停止形成恒星的原因之一。注意: 候选机制, 不是定论。",
@@ -286,9 +286,9 @@
    "zh_pop": "瓣长到几十万光年, 把周围气体加热, 星系可能就此停造星。注意: 只是候选解释。"
   },
   "evo.agn.s4": {
-   "zh": "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。只剩遗迹瓣在射电波段慢慢 fading —— 巨椭圆星系重归宁静。",
+   "zh": "燃料耗尽, 喷流熄灭, 瓣辐射老化变陡。只剩遗迹瓣在射电波段慢慢变暗 —— 巨椭圆星系重归宁静。",
    "yue": "燃料烧完, 喷流熄灭, 瓣辐射老化变陡。净返遗迹瓣喺射电波段慢慢变暗 —— 巨椭圆星系重归宁静。",
-   "ja": "燃料が尽き、ジェットは消え、ローブの放射は老化します。残骸ローブが電波で静かに fading します——巨大楕円銀河は静けさに戻ります。",
+   "ja": "燃料が尽き、ジェットは消え、ローブの放射は老化します。残骸ローブが電波で静かに減衰します——巨大楕円銀河は静けさに戻ります。",
    "en": "Fuel exhausted, jets die, lobes fade and steepen. Only relic lobes linger in radio — the giant elliptical returns to quiet.",
    "zh_pop": "饭吃完, 喷流熄火, 只剩老瓣在射电波段慢慢变暗, 星系重归安静。"
   },
@@ -346,7 +346,7 @@
    "yue": "II类盘: 气体加尘埃, 质量约恒星嘅1%。ALMA已经影到大量环缝结构 —— 行星喺盘入面刻紧痕。",
    "ja": "クラスII円盤:気体と塵、質量は恒星の約1%。ALMAは多数のリング構造を撮像済みです——惑星が溝を刻んでいます。",
    "en": "Class II disk: gas plus dust, ~1% of the star's mass. ALMA has imaged rings and gaps galore — planets carving grooves as they grow.",
-   "zh_pop": "气体尘埃盘, 质量只有恒星的1%。ALMA拍到的环缝, 就是行星在刻痕。"
+   "zh_pop": "气体尘埃盘, 质量只有恒星的百分之一。毫米波望远镜拍到的环缝, 就是行星在刻痕。"
   },
   "evo.pln.s1": {
    "zh": "尘埃长大: 微米尘埃聚成公里级星子。卵石吸积还是引力不稳定?两种机制还在竞争, 没有定论。",
@@ -409,14 +409,14 @@
    "yue": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积仲继续紧。",
    "ja": "クラスII、古典的おうし座T型星:円盤主導、Hα強輝線と紫外超過。外層は去り、集積は続きます。",
    "en": "Class II, the classical T Tauri star: disk-dominated, strong H-alpha plus ultraviolet excess. Envelope gone, accretion ongoing.",
-   "zh_pop": "II类: 茧散了, 盘当家, 还在吃料, 发射线很强。"
+   "zh_pop": "二类: 茧散了, 盘当家, 还在吃料, 发射线很强。"
   },
   "evo.psf.s4": {
    "zh": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列走完 —— 接下来就是主序前的收缩了。",
    "yue": "III类, 弱线金牛T星: 盘散去, 光球主导。恒星形成序列行完 —— 之后就系主序前嘅收缩喇。",
    "ja": "クラスIII、弱輝線星:円盤は散逸し、光球が支配します。星形成系列の完走——次は主系列前の収縮です。",
    "en": "Class III, the weak-line star: disk dispersed, photosphere in charge. The formation sequence is complete — pre-main-sequence contraction comes next.",
-   "zh_pop": "III类: 盘也没了, 露出恒星表面, 恒星形成毕业, 接下来慢慢收缩。"
+   "zh_pop": "三类: 盘也没了, 露出恒星表面, 恒星形成毕业, 接下来慢慢收缩。"
   },
   "evo.bin.s0": {
    "zh": "宽双星: 两颗O/B主序星, 周期年量级。故事从一对大质量双胞胎开始。",
@@ -444,7 +444,7 @@
    "yue": "啁啾段, 最后约100秒: 频率扫过LIGO频带, 由几十到几百赫兹。GW170817嘅啁啾持续咗约100秒 —— 人类听到嘅宇宙声音。",
    "ja": "チャープ、最後の約100秒:周波数はLIGO帯を数十〜数百Hzへ掃引します。GW170817のチャープは約100秒続きました——人類が聴いた宇宙の音です。",
    "en": "The chirp, final ~100 seconds: frequency sweeping through the LIGO band, tens to hundreds of hertz. GW170817 chirped for ~100 seconds — the sound of the cosmos, heard by humans.",
-   "zh_pop": "最后100秒啁啾: 频率从几十扫到几百赫兹, GW170817响了约100秒 —— 人类听到的宇宙声音。"
+   "zh_pop": "最后100秒啁啾: 频率从几十扫到几百赫兹, 那次并合响了约100秒 —— 人类听到的宇宙声音。"
   },
   "evo.bin.s4": {
    "zh": "并合, 千新星AT2017gfo: 金、铂等r过程元素起源的直接证据, 外加短伽马暴170817A。多信使天文学元年。",
@@ -507,14 +507,14 @@
    "yue": "约10亿年核坍缩或瓦解: 毕星团约7亿岁瓦解紧; 致密球状团可核坍缩, M15式。分岔路口, 或散或缩。",
    "ja": "約10億年で核崩壊か瓦解:ヒアデス(約7億歳)は瓦解中;高密度球状星団は核崩壊へ(M15型)。散るか縮むかの分岐点です。",
    "en": "Core collapse or dissolution at ~1 Gyr: the Hyades (~700 Myr) are dissolving; dense globulars may collapse like M15. Scatter or shrink — the fork in the road.",
-   "zh_pop": "约10亿年, 要么散架(毕星团正在散), 要么缩成一团(M15式)。"
+   "zh_pop": "约10亿年, 要么散架(毕星团正在散), 要么缩成一团。"
   },
   "evo.clu.s4": {
    "zh": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就是宇宙年龄下限, 自洽性检查通过。",
    "yue": "100亿年球状团暮年: 幸存者如M13约120亿岁 —— 球状星团年龄就系宇宙年龄下限, 自洽性检查通过。",
    "ja": "100億年、球状星団の暮年:生き残りM13は約120億歳——球状星団年齢は宇宙年齢の下限、自洽性チェック合格です。",
    "en": "Ten billion years, globular twilight: survivors like M13 at ~12 Gyr — globular ages floor the age of the universe. Consistency check passed.",
-   "zh_pop": "100亿年, 剩下的老球状团如M13, 它们的年龄就是宇宙年龄的下限。"
+   "zh_pop": "100亿年, 剩下的老年球状团, 它们的年龄就是宇宙年龄的下限。"
   }
  }
 }

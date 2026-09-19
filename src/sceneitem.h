@@ -236,6 +236,15 @@ public:
     Q_INVOKABLE QVariantMap  agnDetail(const QString &id) const;
     Q_INVOKABLE void focusOn(const QString &id);
 
+    // ---- 配音播放 (WinMM mciSendString, 无新增依赖) ----
+    //
+    //  ★ 调用方显式传 usePop (QML 侧取 !proMode), C++ 不持有版本状态,
+    //    避免两边状态不同步: true -> <narr>_pop.mp3 (B 女音读 zh_pop),
+    //    false -> <narr>_pro.mp3 (A 男音读 zh)。
+    //    文件缺失时返回空串并警告, 不崩溃 (配音包可选安装)。
+    //  ★ 停止: 传空 id 即停。
+    Q_INVOKABLE QString playNarration(const QString &narrId, bool usePop);
+
     // ---- 测试/自检专用: 一次设定全套视角参数 ----
     // 供 main.cpp 的批量渲染调用, 避免逐个属性设值时遗漏。
     // 传 -1 / 空 表示"沿用当前值"。立即到位, 不走平滑动画。

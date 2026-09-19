@@ -2094,6 +2094,7 @@ ApplicationWindow {
         dpr: root.screen ? root.screen.devicePixelRatio : 2.0
         testEvo: scene.testEvo
         proMode: root.proMode
+        sceneObj: scene
     }
 
     // ========================================================================
