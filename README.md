@@ -1,6 +1,6 @@
-# 太阳系模拟器 (C++ / QML / OpenGL)
+# 宇宙实验室 CosmosLab (C++ / QML / OpenGL)
 
-从太阳系到可观测宇宙的三尺度教学可视化，外加恒星全链、哈勃图实测、12 条演化播放器。
+从太阳系到可观测宇宙的三尺度教学可视化，外加恒星全链、哈勃图实测、13 条演化播放器。
 
 ## 运行
 
@@ -8,7 +8,7 @@
 # 构建 (MinGW + Qt6, 见记忆 2026-09-14)
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j4
-./build/solar_system.exe
+./build/cosmoslab.exe
 ```
 
 ## 界面一览
@@ -37,7 +37,7 @@ cmake --build build -j4
 ## 自检
 
 ```bash
-SS_SELFTEST=out.png SS_CARD=vega ./build/solar_system.exe     # 详情卡
+SS_SELFTEST=out.png SS_CARD=vega ./build/cosmoslab.exe     # 详情卡
 SS_SELFTEST=out.png SS_EVO=midmass:0.55 ...                   # 演化剧本
 SS_SELFTEST=out.png SS_STELLAR=1 ...                          # 恒星面板
 SS_SELFTEST=out.png SS_HUBBLE=1 ...                           # 哈勃图

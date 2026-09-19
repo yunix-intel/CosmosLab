@@ -1,12 +1,12 @@
 // ============================================================================
-//  太阳系模拟器 · C++ + QML + OpenGL
+//  宇宙实验室 CosmosLab · C++ + QML + OpenGL
 //
 //  main.cpp 只负责启动 —— 渲染在 scenerenderer.cpp, 界面在 qml/Main.qml,
 //  星历在 ephemeris.cpp, 天体数据在 celestialdata.cpp (由脚本生成)。
 //
 //  用法:
-//      太阳系模拟器.exe                          正常启动
-//      SS_SELFTEST=<png路径> 太阳系模拟器.exe     无头自检抓帧后退出
+//      cosmoslab.exe                          正常启动
+//      SS_SELFTEST=<png路径> cosmoslab.exe     无头自检抓帧后退出
 // ============================================================================
 
 #include <QGuiApplication>
@@ -73,9 +73,9 @@ int main(int argc, char **argv)
         f.setHintingPreference(QFont::PreferFullHinting);
         app.setFont(f);
     }
-    app.setApplicationName(QStringLiteral("太阳系模拟器"));
+    app.setApplicationName(QStringLiteral("宇宙实验室"));
     app.setApplicationVersion(QStringLiteral("2.0.0"));
-    app.setOrganizationName(QStringLiteral("SolarSystem"));
+    app.setOrganizationName(QStringLiteral("CosmosLab"));
 
     // 控件样式: FluentWinUI3 是 Qt 6.11 新增的 Windows 11 原生风格
     const QByteArray style = qEnvironmentVariableIsSet("SS_STYLE")
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     QObject *root = engine.rootObjects().first();
     qInfo() << "[启动] 5 QML 加载完成";
 
-    qInfo().noquote() << "太阳系模拟器启动 (C++ / QML / OpenGL)"
+    qInfo().noquote() << "宇宙实验室 CosmosLab 启动 (C++ / QML / OpenGL)"
                       << "根对象:" << root->metaObject()->className();
 
     // ---- 自检模式: 让窗口对用户不可见, 但保持正常渲染 ----

@@ -21,6 +21,9 @@ qt_add_executable(solar_system)
 # 保留控制台窗口, 便于观察自检与调试日志。
 # (注意: 这不是 qt_add_executable 的关键字 —— 写成关键字会被当作源文件路径。)
 set_target_properties(solar_system PROPERTIES WIN32_EXECUTABLE FALSE)
+# ★ 产品名: 宇宙实验室 CosmosLab。target 名保持 solar_system 不动
+#   (QML 模块 URI 联动风险), 只改输出文件名 -> cosmoslab.exe。
+set_target_properties(solar_system PROPERTIES OUTPUT_NAME cosmoslab)
 
 qt_add_qml_module(solar_system
     URI SolarSystem

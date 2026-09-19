@@ -1,5 +1,5 @@
 // ============================================================================
-//  太阳系模拟器 —— QML 界面
+//  宇宙实验室 CosmosLab —— QML 界面
 //
 //  C++ 侧提供 SolarScene (原生 OpenGL 渲染节点 + 天体数据);
 //  QML 侧负责全部界面与交互, 这是 Qt 官方推荐的现代组合。
@@ -27,7 +27,7 @@ ApplicationWindow {
     //   (不能改成 visible: false: 窗口不可见时 Qt 会跳过场景图渲染,
     //    grabWindow() 只能抓到空白。)
     opacity: ssHeadless ? 0 : 1
-    title: "太阳系模拟器 · Solar System Simulator (C++ / QML / OpenGL)"
+    title: "宇宙实验室 · CosmosLab (C++ / QML / OpenGL)"
     color: "#05070d"
 
 
