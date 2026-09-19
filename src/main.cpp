@@ -10,6 +10,7 @@
 // ============================================================================
 
 #include <QGuiApplication>
+#include <QCoreApplication>
 #include <QFont>
 #include <QFile>
 #include <QFileInfo>
@@ -89,6 +90,13 @@ int main(int argc, char **argv)
 
     qInfo() << "[启动] 3 构造 QML 引擎";
     QQmlApplicationEngine engine;
+
+    // ★ 绿色包: exe 旁的 qml/ 即 QML import 路径。
+    //   主 QML 已编译进 qrc, 但 QtQuick.Layouts/Controls 等是外部插件 DLL,
+    //   不加这句, 脱离开发环境 (无 QT_QML_IMPORT_PATH) 即报
+    //   module "QtQuick.Layouts" is not installed。
+    engine.addImportPath(
+        QCoreApplication::applicationDirPath() + QStringLiteral("/qml"));
 
     // ---- ★★ 自检模式必须"从第一帧就透明" ----
     //

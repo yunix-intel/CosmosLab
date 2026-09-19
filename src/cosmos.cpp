@@ -4,6 +4,7 @@
 
 #include "cosmos.h"
 #include "cosmosdata.h"
+#include "assetroot.h"
 
 #include <QDebug>
 #include <QOpenGLFunctions_3_3_Core>
@@ -556,7 +557,7 @@ void Cosmos::build()
     //    所以距离映射仍在着色器里做 —— SDSS 数据自动支持两种映射模式。
     {
         const QVector<SdssGalaxy> cat = loadSdssCatalog(
-            QStringLiteral("D:/tmp/solar-system-cpp/assets/lss/lrg.bin"));
+            assetPath(QStringLiteral("lss/lrg.bin")));
         m_sdssCount = cat.size();
         for (const SdssGalaxy &g : cat) {
             // 亮度按权重微调: 权重高的区域观测更完整, 不必额外提亮,

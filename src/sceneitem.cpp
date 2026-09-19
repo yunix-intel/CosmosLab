@@ -15,6 +15,7 @@
 #include "cosmosdata.h"
 #include "stellardata.h"
 #include "agndata.h"
+#include "assetroot.h"
 #include "galaxyarms.h"
 #include "scenerenderer.h"
 #include "scene.h"
@@ -1037,7 +1038,7 @@ QVariantMap SolarScene::galaxyDetail(const QString &id) const
     if (id.isEmpty())
         return out;
 
-    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+    const QString dir = assetDir(QStringLiteral("galaxy"));
     const QString photo = dir + id + QStringLiteral(".jpg");
 
     // 从数据表里找该天体
@@ -1088,7 +1089,7 @@ QVariantMap SolarScene::hubbleData() const
         return m_hubbleCache;
 
     const QString path =
-        QStringLiteral("D:/tmp/solar-system-cpp/assets/sn/hubble.json");
+        assetPath(QStringLiteral("sn/hubble.json"));
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) {
         qWarning() << "[哈勃图] 无法打开" << path;
@@ -1108,7 +1109,7 @@ QVariantMap SolarScene::hubbleData() const
 
 QStringList SolarScene::galaxiesWithPhoto() const
 {    QStringList out;
-    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+    const QString dir = assetDir(QStringLiteral("galaxy"));
     for (int i = 0; i < LOCAL_GROUP_COUNT; ++i) {
         const QString id = QString::fromUtf8(LOCAL_GROUP[i].id);
         if (QFile::exists(dir + id + QStringLiteral(".jpg")))
@@ -1237,7 +1238,7 @@ QVariantList SolarScene::cosmosStructures() const
     //       没图的点开后明确提示"暂无实景图"。
     //       不用假图冒充, 是"只做能确定真实的"这一原则的直接体现。
     QVariantList out;
-    const QString dir = QStringLiteral("D:/tmp/solar-system-cpp/assets/galaxy/");
+    const QString dir = assetDir(QStringLiteral("galaxy"));
 
     const auto fromGalaxy = [&](const GalaxyData &g, int kind) {
         QVariantMap m;
