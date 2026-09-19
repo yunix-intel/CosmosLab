@@ -527,8 +527,8 @@ ApplicationWindow {
                 spacing: -1
                 Text {
                     text: scene.scaleLevel === 2 ? "宇宙大尺度结构"
-                    : scene.scaleLevel === 1 ? "银河系模拟器"
-                    : "太阳系模拟器"
+                    : scene.scaleLevel === 1 ? "银河系"
+                    : "太阳系"
                     color: root.cText
                     font.pixelSize: 14
                     font.bold: true
