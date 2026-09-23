@@ -1,0 +1,53 @@
+# 宇宙视图具名天体的真实观测图像
+#
+# ★★ 每一张都经过**目视确认**。这不是多余的步骤 ——
+#    实测发现 ESO 图库的 eso####a 编号完全不可信: 同一批编号里
+#    混有望远镜照片、会议海报、人物合影、宇宙演化示意图。
+#    例如按 "Sombrero" 搜到的 eso0001a 实际是 ESO 海报墙,
+#    eso0438a 是两位天文学家的合影。
+#
+# 选取原则: 完整星系形态清晰 + 权威观测 + 无标注文字
+
+lmc.jpg         = NASA PIA07136  Spitzer 红外 — 大麦哲伦云 (Our Chaotic Neighbor)
+smc.jpg         = NASA PIA12485  Spitzer/WISE — 小麦哲伦云 (Little Galaxy Explored)
+triangulum.jpg  = ESO  eso1037a  VLT 巡天 — 三角座星系 (M33) 完整盘面
+m87.jpg         = ESO  eso1820a  VLT — M87 星系与相对论性喷流
+m104.jpg        = NASA PIA07899  Spitzer 红外 — 草帽星系 (M104) 尘埃环
+
+# ---- 暂无实景图的天体 (由 UI 明确提示, 不用假图冒充) ----
+andromeda       下载到的 GALEX 图有圆形拼接缝且为紫蓝伪彩, 不合适
+                → 已解决, 见下方 2026-09-17 新增记录
+m86, m49        室女座团中的普通椭圆星系, 无单独的高分辨率观测
+                → 已解决, 见下方 2026-09-17 新增记录
+virgo_center    室女座团本身是"成员星系的集合", 单张照片难以表意
+                → 已解决, 见下方 2026-09-17 新增记录
+```
+
+# ---- 物理上不存在"单张照片"的结构 ----
+拉尼亚凯亚超星系团 (Tully 2014 从速度场推算的水流域边界)
+斯隆巨壁 / 武仙-北冕座巨壁 (SDSS 巡天数据的星系分布统计)
+牧夫座空洞 (空洞的定义就是"几乎没有星系", 无法拍摄)
+
+# ============================================================
+# 2026-09-17 新增 5 张 (每张下载后均用看图工具目视确认过,
+# 已弃用搜索标题/图库 ID 推断, 只认画面内容; 统一压缩到
+# 长边 <=1400px, JPEG quality 88)
+# ============================================================
+
+andromeda.jpg    = Wikimedia Commons "Andromeda Galaxy (with h-alpha).jpg" — Adam Evans 摄影作品
+                   (CC BY 2.5), 原图 3000x1971 取 1280px 缩略图 — 目视: M31 完整倾斜盘面,
+                   自然色, 尘埃带清晰, 画面中可见伴星系 M32 与 M110, 无文字无接缝
+virgo_center.jpg = Wikimedia Commons "Virgo Cluster taken by Vera C. Rubin (noirlab2521a).jpg" —
+                   Rubin Observatory / NOIRLab, 原图 25000x13154 取 1280px 缩略图 —
+                   目视: 团心核心区广域实拍, 数十个形态各异的星系 (含带潮汐尾的相互作用对),
+                   自然色, 无标注无接缝
+m86.jpg          = Wikimedia Commons "Beacon of Light Messier 86.jpg" — ESA/Hubble,
+                   原图 3883x3464 取 1280px 缩略图 — 目视: 明亮椭圆星系 + 弥漫光晕,
+                   左侧小伴星系与左下方侧向旋涡星系 (NGC 4402) 与 M86 真实星场一致
+m49.jpg          = Wikimedia Commons "Messier 49-Rubin Observatory.png" — Rubin Observatory /
+                   NOIRLab, 原图 2001x2001 取 1280px 缩略图转 JPEG — 目视: 巨大金色椭圆星系
+                   居中, 四周密布背景星系与恒星, 自然色, 无标注
+sgra.jpg         = Wikimedia Commons "Sag A*.jpg" — EHT 事件视界望远镜 2017 数据 2022 发布
+                   ★ 射电图 (1.3mm VLBI 伪彩), 人马座A* 无可见光照片 (尘埃遮挡),
+                   原图 4076x4076 取 1280px 缩略图 — 目视: 橙金色发光环环绕中央黑色阴影,
+                   纯黑背景, 无文字

@@ -1386,6 +1386,17 @@ QVariantList SolarScene::cosmosStructures() const
 //  ★ 距离显示规则: distLy<0 → 河外/不适用, 显示 desc 中的说明,
 //    列表 dist 栏固定为 "—"。QML 不得自行换算。
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+//  AI/实拍配图: assets/ai/<id>.jpg (真实照片, 版权见 SOURCES.txt)。
+//  stellar/agn/ism 详情卡共用。缺图返回空串, UI 走"暂无实景图"分支。
+// ---------------------------------------------------------------------------
+static QString aiPhotoPath(const QString &id)
+{
+    const QString p =
+        assetPath(QStringLiteral("ai/") + id + QStringLiteral(".jpg"));
+    return QFile::exists(p) ? p : QString();
+}
+
 QVariantList SolarScene::stellarList() const
 {
     QVariantList out;
@@ -1404,7 +1415,7 @@ QVariantList SolarScene::stellarList() const
                         : (e.distLy < 10000.0
                            ? QStringLiteral("%1 光年").arg(e.distLy, 0, 'f', 0)
                            : QStringLiteral("%1 万光年").arg(e.distLy / 10000.0, 0, 'f', 1)));
-        m["hasPhoto"] = false;   // B.1/B.2 暂无实景图, 统一走无图分支
+        m["hasPhoto"] = !aiPhotoPath(QString::fromUtf8(e.id)).isEmpty();
         out.append(m);
     }
     return out;
@@ -1425,7 +1436,7 @@ QVariantList SolarScene::agnList() const
                      : (e.distMly >= 1000.0
                         ? QStringLiteral("%1 亿光年").arg(e.distMly / 100.0, 0, 'f', 1)
                         : QStringLiteral("%1 百万光年").arg(e.distMly, 0, 'f', 0));
-        m["hasPhoto"] = false;
+        m["hasPhoto"] = !aiPhotoPath(QString::fromUtf8(e.id)).isEmpty();
         out.append(m);
     }
     return out;
@@ -1465,7 +1476,8 @@ QVariantMap SolarScene::stellarDetail(const QString &id) const
     }
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
-    // 没有 photo 字段 -> 卡片走"暂无实景图"分支
+    // ★ 配图: assets/ai/<id>.jpg (真实照片)；缺图走"暂无实景图"分支
+    out["photo"] = aiPhotoPath(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
@@ -1502,6 +1514,7 @@ QVariantMap SolarScene::agnDetail(const QString &id) const
     }
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
+    out["photo"] = aiPhotoPath(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
@@ -1522,7 +1535,7 @@ QVariantList SolarScene::ismList() const
                     : (e.distLy < 10000.0
                        ? QStringLiteral("%1 光年").arg(e.distLy, 0, 'f', 0)
                        : QStringLiteral("%1 万光年").arg(e.distLy / 10000.0, 0, 'f', 1));
-        m["hasPhoto"] = false;
+        m["hasPhoto"] = !aiPhotoPath(QString::fromUtf8(e.id)).isEmpty();
         out.append(m);
     }
     return out;
@@ -1552,6 +1565,7 @@ QVariantMap SolarScene::ismDetail(const QString &id) const
                           : QStringLiteral("尺度约 %1 千光年").arg(e->sizeLy / 1000.0, 0, 'g', 3);
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
+    out["photo"] = aiPhotoPath(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
@@ -1748,6 +1762,16 @@ QVariantMap SolarScene::bodyInfo(const QString &id) const
     } else {
         m["distLabel"] = QStringLiteral("日心距");
         m["speedLabel"] = QStringLiteral("轨道速度");
+    }
+
+    // ★ 太阳系详情卡照片: 直接复用 3D 球体用的 albedo 纹理
+    //   (assets/tex/albedo_<id>.jpg, 18 天体 17 有 + triton 已补)。
+    //   galaxyCard 的 Image 写法不变 (file:/// 前缀), 这里只给路径。
+    {
+        const QString texPhoto =
+            assetPath(QStringLiteral("tex/albedo_") + id
+                      + QStringLiteral(".jpg"));
+        m["photo"] = QFile::exists(texPhoto) ? texPhoto : QString();
     }
 
     return m;

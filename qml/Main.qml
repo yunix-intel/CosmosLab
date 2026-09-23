@@ -127,6 +127,66 @@ ApplicationWindow {
     }
 
     // ========================================================================
+    //  开机加载遮罩 —— 资源初始化约 3 秒, 之前是黑屏傻等 (#60)
+    //
+    //  消失条件: scene.cosmosTotal > 0 (渲染线程 build 完, onTick 已发信号)
+    //  或兜底 6 秒超时。隐藏带淡出。自检模式 (ssHeadless) 下永不显示,
+    //  不污染截图。
+    // ========================================================================
+    property int bootStage: 0
+
+    Timer {
+        id: bootTimer
+        interval: 500; repeat: true
+        running: !ssHeadless && bootMask.visible
+        onTriggered: root.bootStage += 1
+    }
+
+    Rectangle {
+        id: bootMask
+        anchors.fill: parent
+        z: 500
+        color: "#05070d"
+        visible: !ssHeadless
+                 && scene.cosmosTotal <= 0
+                 && root.bootStage < 12
+        opacity: visible ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 350 } }
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 10
+
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "宇宙实验室 · CosmosLab"
+                color: root.cText
+                font.pixelSize: 26
+                font.bold: true
+                font.family: root.sansFont
+            }
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: ["正在加载行星纹理…",
+                       "正在构建银河系粒子…",
+                       "正在载入宇宙大尺度结构…",
+                       "正在载入超新星数据…"][Math.min(root.bootStage >> 1, 3)]
+                color: root.cTextDim
+                font.pixelSize: 13
+                font.family: root.sansFont
+            }
+            // 省略号动画
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: ".".repeat(1 + (root.bootStage % 3))
+                color: root.cAccent
+                font.pixelSize: 16
+                font.family: root.monoFont
+            }
+        }
+    }
+
+    // ========================================================================
     //  主视口 —— C++ 原生 OpenGL 渲染
     // ========================================================================
     SolarScene {
@@ -324,6 +384,19 @@ ApplicationWindow {
                 lineHeight: 1.3
             }
 
+            // ★ 默认视图的轨道经过幂次压缩 (kOrbitExag=0.6), 相邻行星
+            //   看起来比真实更近 —— 如金星 0.72 AU 与地球 1.0 AU。
+            //   真实距离以右面板"日心距"数字为准, 勾选真实比例可直观对比。
+            Text {
+                Layout.fillWidth: true
+                visible: !scene.realScale
+                text: "当前为艺术压缩视图：轨道间距经压缩以便同框，真实距离以右侧「日心距」数字为准。勾选「真实比例」可看 1:1 间距。"
+                color: root.cTextDim
+                font.pixelSize: 10
+                wrapMode: Text.WordWrap
+                lineHeight: 1.3
+            }
+
             Rectangle {
                 Layout.fillWidth: true; height: 1
                 color: Qt.rgba(1, 1, 1, 0.07)
@@ -471,6 +544,19 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true; height: 1
                 color: Qt.rgba(1, 1, 1, 0.08)
+            }
+
+            // ★ 太阳系详情照片: 复用 3D 球体 albedo 纹理 (bodyInfo.photo)。
+            //   缺图时整块隐藏, 不留"暂无实景图"占位 —— 右面板是常驻面板,
+            //   占位框会挤压数据行；galaxyCard 弹窗才用占位提示。
+            Image {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 150
+                visible: root.current.photo !== undefined
+                         && root.current.photo.length > 0
+                source: visible ? "file:///" + root.current.photo : ""
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
             }
 
             Repeater {
@@ -2135,8 +2221,11 @@ ApplicationWindow {
                 // ★ B.1/B.2 新增条目: SS_CARD 同样直达 (与面板点击同路径)
                 if (!d || d.nameCn === undefined)
                     d = root.stellarAgnDetail(t)
+                // ★ 太阳系天体: SS_CARD 直达右面板同款数据, 字段对齐
+                //   到 galaxyCard (nameCn/desc/photo/distText/rows)。
+                //   之前缺这一路, SS_CARD=earth 只弹出空卡片。
                 if (!d || d.nameCn === undefined)
-                    d = root.stellarAgnDetail(t)
+                    d = root.solarDetail(t)
                 galaxyCard.detail = d
                 galaxyCard.visible = true
             }
@@ -2591,7 +2680,16 @@ ApplicationWindow {
                         const p = galaxyCard.detail.photo
                         return (p !== undefined && p !== null && p.length > 0)
                     }
-                    text: "图片来源: ESO / NASA 公开图库 (详见 assets/galaxy/SOURCES.txt)"
+                    text: {
+                        const p = galaxyCard.detail.photo || ""
+                        // ai/ 为本次补的真实照片 (NASA/ESA 公有领域或 CC-BY),
+                        // tex/ 为 3D 球体 albedo 纹理复用, galaxy/ 为星系照片。
+                        if (p.indexOf("/ai/") >= 0)
+                            return "图片来源: NASA / ESA 公开图像 (详见 assets/ai/SOURCES.txt)"
+                        if (p.indexOf("/tex/") >= 0)
+                            return "示意纹理: 行星表面贴图 (与 3D 球体同源)"
+                        return "图片来源: ESO / NASA 公开图库 (详见 assets/galaxy/SOURCES.txt)"
+                    }
                     color: Qt.rgba(0.56, 0.64, 0.75, 0.60)
                     font.pixelSize: 9
                     font.family: root.sansFont
@@ -3400,6 +3498,35 @@ ApplicationWindow {
         if (d && d.nameCn !== undefined)
             return d
         return ({})
+    }
+
+    // ★ 太阳系天体详情 -> galaxyCard 字段对齐。
+    //   bodyInfo 给的是 name/en/desc/photo + radius/mass/… + distAu/speed；
+    //   这里搬运为卡片字段 (distText/sizeText 无则不设, 数据行自动跳过)。
+    function solarDetail(id) {
+        if (!id || id.length === 0)
+            return ({})
+        const b = scene.bodyInfo(id)
+        if (!b || b.name === undefined)
+            return ({})
+        const d = {
+            nameCn: b.name,
+            nameEn: b.en,
+            desc: b.desc,
+            photo: b.photo
+        }
+        if (b.distAu !== undefined)
+            d.distText = (b.distLabel || "日心距") + " " + b.distAu
+        if (b.radius !== undefined)
+            d.sizeText = "半径 " + b.radius
+        if (b.mass !== undefined)
+            d.massText = b.mass
+        if (b.kind !== undefined)
+            d.spec = { star: "恒星", earth: "岩质行星·宜居",
+                       mars: "岩质行星·沙漠", venus: "岩质行星·温室",
+                       moon: "卫星", cratered: "撞击坑天体",
+                       dwarf: "矮行星" }[b.kind] || b.kind
+        return d
     }
 
     // 3D 场景里的标签 -> 详情卡数据

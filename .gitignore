@@ -9,9 +9,14 @@ shots/
 /*.log
 /*.exr
 # 大资源走 GitHub Release 附件，不进 git（见 docs/BUILD.md 第 3 节）
-assets/tex/
-assets/galaxy/
+assets/tex/*
+assets/galaxy/*
 assets/audio/*
+assets/ai/*
 !assets/audio/manifest.json
-# 例外：图源说明进仓
+# 例外：图源说明 + 小体积配图进仓（ai 6.6MB/triton 329KB，免 Release 加包）
 !assets/galaxy/SOURCES.txt
+!assets/tex/SOURCES_TRITON.txt
+!assets/ai/SOURCES.txt
+!assets/ai/*.jpg
+!assets/tex/albedo_triton.jpg
