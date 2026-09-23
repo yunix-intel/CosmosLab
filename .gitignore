@@ -1,5 +1,17 @@
 build/
 _shots/
+shots/
 *.o
 *.obj
 *.exe
+# 根目录构建副产品（自检截图/日志/EXR，不进仓）
+/*.png
+/*.log
+/*.exr
+# 大资源走 GitHub Release 附件，不进 git（见 docs/BUILD.md 第 3 节）
+assets/tex/
+assets/galaxy/
+assets/audio/*
+!assets/audio/manifest.json
+# 例外：图源说明进仓
+!assets/galaxy/SOURCES.txt
