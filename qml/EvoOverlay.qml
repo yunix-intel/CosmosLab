@@ -354,8 +354,18 @@ Rectangle {
         vizCv.requestPaint()
     }
     function togglePlay() { playing = !playing }
+    // ★ 停止配音: playNarration 传空 id 即停 (见 sceneitem.cpp)。
+    //   sceneObj 为空时静默跳过, 绝不抛异常 —— 之前这里缺定义,
+    //   点阶段按钮抛 ReferenceError, 后续 setProg 直接不执行。
+    function stopNarr() {
+        try {
+            if (evo.sceneObj)
+                evo.sceneObj.playNarration("", false)
+        } catch (e) { console.warn("[演化] 停配音失败: " + e) }
+    }
     function selectScript(i) {
         cur = i; prog = 0; playing = false
+        stopNarr()
         const s = scripts[i]
         logMode = s.useLog
         vizCv.requestPaint()
@@ -396,7 +406,7 @@ Rectangle {
     // 点背景关闭
     MouseArea {
         anchors.fill: parent
-        onClicked: { evo.playing = false; evo.visible = false }
+        onClicked: { evo.playing = false; evo.stopNarr(); evo.visible = false }
     }
 
     // ---- 主卡片 ----
@@ -443,7 +453,7 @@ Rectangle {
                         anchors.fill: parent
                         anchors.margins: -8
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { evo.playing = false; evo.visible = false }
+                        onClicked: { evo.playing = false; evo.stopNarr(); evo.visible = false }
                     }
                 }
             }
