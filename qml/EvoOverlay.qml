@@ -700,6 +700,7 @@ Rectangle {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 evo.playing = false
+                                evo.stopNarr()
                                 evo.setProg(evo.progOf(modelData.t))
                             }
                         }
