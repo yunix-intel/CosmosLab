@@ -30,6 +30,31 @@ Rectangle {
     // ★ 全局专业/科普开关 (由 Main.qml 的 root.proMode 传入):
     //   true=专业版 desc, false=科普版 pop (无 pop 的阶段回退到 desc)。
     property bool proMode: true
+    // ★ 配音语种 (v1.1): auto=跟随专业/科普开关 (专业->普通话男音,
+    //   科普->普通话女音), 其余强制指定语种音频 (yue/ja/en 需配音包支持,
+    //   无文件时播放按钮置灰, 不崩)。注意语种只切换配音音频,
+    //   解说词文本仍跟 proMode 走 (desc/pop)。
+    property string narrLang: "auto"
+    function narrEffLang() {
+        if (evo.narrLang !== "auto") return evo.narrLang
+        return evo.proMode ? "zh" : "pop"
+    }
+    function narrLangName(l) {
+        if (l === "zh") return "男音·普通话"
+        if (l === "pop") return "女音·科普"
+        if (l === "yue") return "粤语"
+        if (l === "ja") return "日语"
+        if (l === "en") return "英语"
+        return l
+    }
+    // ★ 当前阶段目标音频是否存在 (按钮置灰用; 缺文件只播不了, 不崩)。
+    function narrOk() {
+        try {
+            if (!evo.sceneObj) return false
+            return evo.sceneObj.hasNarration(
+                scripts[cur].stages[stageIndex()].narr, evo.narrEffLang())
+        } catch (e) { return false }
+    }
     // ★ 配音调用的 scene 对象 (由 Main.qml 传入 scene 本体, 同 testEvo 模式)。
     property var sceneObj: null
 
@@ -638,27 +663,60 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             elide: Text.ElideRight
+                            // ★ 语种只切换配音音频; 文本仍跟 proMode 走 desc/pop。
                             text: "解说词 " + scripts[cur].stages[stageIndex()].narr
-                                  + (evo.proMode ? " · 男音专业版" : " · 女音科普版")
+                                  + " · " + evo.narrLangName(evo.narrEffLang())
                             color: evo.txDim
                             font.pixelSize: 10
                             font.family: "Consolas, monospace"
                         }
-                        // ★ 配音播放: proMode=true->A男音_ pro.mp3,
-                        //   false->B女音 _pop.mp3。文件缺失时 C++ 返回空串,
-                        //   按钮置灰一次(下次切换阶段恢复)。
+                        // ★ 语种切换 (v1.1): auto 跟随专业/科普开关,
+                        //   其余强制指定。无音频文件时播放按钮置灰。
+                        Repeater {
+                            model: [
+                                { t: "跟随", v: "auto" },
+                                { t: "普", v: "zh" },
+                                { t: "粤", v: "yue" },
+                                { t: "日", v: "ja" },
+                                { t: "英", v: "en" }
+                            ]
+                            delegate: Rectangle {
+                                required property var modelData
+                                width: 38; height: 22; radius: 5
+                                color: evo.narrLang === modelData.v
+                                       ? Qt.rgba(0.37, 0.66, 1.0, 0.30)
+                                       : Qt.rgba(1, 1, 1, 0.06)
+                                border.width: 1
+                                border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.t
+                                    color: "#d7e6ff"
+                                    font.pixelSize: 10
+                                    font.family: "Microsoft YaHei"
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: evo.narrLang = modelData.v
+                                }
+                            }
+                        }
+                        // ★ 配音播放: 音频 = <narr>_<lang>.mp3, 见 playNarrationLang。
+                        //   文件缺失时 C++ 返回空串, 按钮按 narrOk() 置灰。
                         Rectangle {
                             Layout.preferredWidth: 64
                             Layout.preferredHeight: 22
                             radius: 5
-                            color: narrBtnMa.containsMouse
+                            opacity: evo.narrOk() ? 1.0 : 0.35
+                            color: narrBtnMa.containsMouse && evo.narrOk()
                                    ? Qt.rgba(0.37, 0.66, 1.0, 0.30)
                                    : Qt.rgba(1, 1, 1, 0.06)
                             border.width: 1
                             border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
                             Text {
                                 anchors.centerIn: parent
-                                text: "▶ 播放"
+                                text: evo.narrOk() ? "▶ 播放" : "无音频"
                                 color: "#d7e6ff"
                                 font.pixelSize: 10
                                 font.family: "Microsoft YaHei"
@@ -669,10 +727,11 @@ Rectangle {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
+                                    if (!evo.narrOk()) return
                                     const st = scripts[cur].stages[stageIndex()]
                                     if (evo.sceneObj)
-                                        evo.sceneObj.playNarration(st.narr,
-                                                                   !evo.proMode)
+                                        evo.sceneObj.playNarrationLang(
+                                            st.narr, evo.narrEffLang())
                                 }
                             }
                         }

@@ -246,7 +246,13 @@ public:
     //    false -> <narr>_pro.mp3 (A 男音读 zh)。
     //    文件缺失时返回空串并警告, 不崩溃 (配音包可选安装)。
     //  ★ 停止: 传空 id 即停。
+    //  ★ 多语种 (v1.1): playNarrationLang(narrId, lang), lang ∈
+    //    {zh, pop, yue, ja, en}, 文件 <narr>_<lang>.mp3
+    //    (zh 复用 _pro.mp3, pop 复用 _pop.mp3, 其余 _yue/_ja/_en)。
+    //    hasNarration 供 QML 置灰按钮 (无音频不崩, 只播不了)。
     Q_INVOKABLE QString playNarration(const QString &narrId, bool usePop);
+    Q_INVOKABLE QString playNarrationLang(const QString &narrId, const QString &lang);
+    Q_INVOKABLE bool hasNarration(const QString &narrId, const QString &lang) const;
 
     // ---- 测试/自检专用: 一次设定全套视角参数 ----
     // 供 main.cpp 的批量渲染调用, 避免逐个属性设值时遗漏。

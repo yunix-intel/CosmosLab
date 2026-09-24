@@ -844,14 +844,34 @@ void SolarScene::focusOn(const QString &id)
 
 QString SolarScene::playNarration(const QString &narrId, bool usePop)
 {
+    return playNarrationLang(narrId, usePop ? QStringLiteral("pop")
+                                           : QStringLiteral("zh"));
+}
+
+// ---------------------------------------------------------------------------
+//  多语种配音 (v1.1): <narrId>_<lang>.mp3, lang ∈ {zh, pop, yue, ja, en}。
+//  缺文件返回空串 + 置灰由 QML hasNarration 预判, 这里只警告不崩。
+// ---------------------------------------------------------------------------
+QString SolarScene::playNarrationLang(const QString &narrId, const QString &lang)
+{
     if (narrId.isEmpty()) {
 #ifdef Q_OS_WIN
         mciSendStringW(L"close ssnarr", nullptr, 0, nullptr);
 #endif
         return QString();
     }
-    const QString suffix = usePop ? QStringLiteral("_pop.mp3")
-                                  : QStringLiteral("_pro.mp3");
+    // ★ 白名单: 防路径穿越 (lang 来自 QML, 理论上可控, 但守一下不花钱)。
+    QString suffix;
+    if (lang == QLatin1String("pop"))
+        suffix = QStringLiteral("_pop.mp3");
+    else if (lang == QLatin1String("yue"))
+        suffix = QStringLiteral("_yue.mp3");
+    else if (lang == QLatin1String("ja"))
+        suffix = QStringLiteral("_ja.mp3");
+    else if (lang == QLatin1String("en"))
+        suffix = QStringLiteral("_en.mp3");
+    else
+        suffix = QStringLiteral("_pro.mp3");   // zh + 未知一律走专业版
     const QString path = assetPath(QStringLiteral("audio/") + narrId + suffix);
     if (!QFile::exists(path)) {
         qWarning() << "[配音] 缺失:" << path;
@@ -871,6 +891,24 @@ QString SolarScene::playNarration(const QString &narrId, bool usePop)
     return QString();
 #endif
     return path;
+}
+
+bool SolarScene::hasNarration(const QString &narrId, const QString &lang) const
+{
+    if (narrId.isEmpty())
+        return false;
+    QString suffix;
+    if (lang == QLatin1String("pop"))
+        suffix = QStringLiteral("_pop.mp3");
+    else if (lang == QLatin1String("yue"))
+        suffix = QStringLiteral("_yue.mp3");
+    else if (lang == QLatin1String("ja"))
+        suffix = QStringLiteral("_ja.mp3");
+    else if (lang == QLatin1String("en"))
+        suffix = QStringLiteral("_en.mp3");
+    else
+        suffix = QStringLiteral("_pro.mp3");
+    return QFile::exists(assetPath(QStringLiteral("audio/") + narrId + suffix));
 }
 
 // ---------------------------------------------------------------------------
