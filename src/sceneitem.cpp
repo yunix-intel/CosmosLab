@@ -911,6 +911,13 @@ bool SolarScene::hasNarration(const QString &narrId, const QString &lang) const
     return QFile::exists(assetPath(QStringLiteral("audio/") + narrId + suffix));
 }
 
+QString SolarScene::bootBgPath() const
+{
+    // ★ 开机背景 (AI 生成深空图)。缺文件返回空串, QML 回退纯色。
+    const QString p = assetPath(QStringLiteral("ai/boot_bg.jpg"));
+    return QFile::exists(p) ? p : QString();
+}
+
 // ---------------------------------------------------------------------------
 //  宇宙视图可见粒子数 —— 性能开关
 //

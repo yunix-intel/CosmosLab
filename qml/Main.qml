@@ -127,19 +127,31 @@ ApplicationWindow {
     }
 
     // ========================================================================
-    //  开机加载遮罩 —— 资源初始化约 3 秒, 之前是黑屏傻等 (#60)
+    //  开机 splash —— AI 深空背景 + 缓慢推近 + 四阶段加载进度 (#60 升级)
     //
     //  消失条件: scene.cosmosTotal > 0 (渲染线程 build 完, onTick 已发信号)
     //  或兜底 6 秒超时。隐藏带淡出。自检模式 (ssHeadless) 下永不显示,
-    //  不污染截图。
+    //  不污染截图。背景图缺失时回退纯色 (bootBgPath 为空串)。
     // ========================================================================
     property int bootStage: 0
+    // 推近动画进度 0..1, 6 秒一次 (背景图缓慢放大, 营造纵深感)
+    property real bootZoom: 0.0
 
     Timer {
         id: bootTimer
         interval: 500; repeat: true
         running: !ssHeadless && bootMask.visible
         onTriggered: root.bootStage += 1
+    }
+
+    NumberAnimation {
+        id: bootZoomAnim
+        target: root
+        property: "bootZoom"
+        from: 0.0; to: 1.0
+        duration: 6000
+        running: !ssHeadless && bootMask.visible
+        onStopped: if (running !== true && bootMask.visible) { root.bootZoom = 0.0; start() }
     }
 
     Rectangle {
@@ -153,34 +165,98 @@ ApplicationWindow {
         opacity: visible ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: 350 } }
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: 10
+        // 背景深空图 (缓慢推近 1.00 -> 1.08)
+        Image {
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            source: scene.bootBgPath.length > 0
+                    ? "file:///" + scene.bootBgPath : ""
+            scale: 1.0 + root.bootZoom * 0.08
+            // transformOrigin 默认中心, 推近即向画面中心纵深, 符合直觉
+        }
 
+        // 左侧渐隐罩 —— 保证标题在亮星系背景上可读
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: Qt.rgba(0.01, 0.02, 0.05, 0.82) }
+                GradientStop { position: 0.45; color: Qt.rgba(0.01, 0.02, 0.05, 0.45) }
+                GradientStop { position: 0.75; color: Qt.rgba(0.01, 0.02, 0.05, 0.05) }
+                GradientStop { position: 1.0; color: Qt.rgba(0.01, 0.02, 0.05, 0.0) }
+            }
+        }
+        // 底部渐隐罩 —— 进度条区域可读
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                orientation: Gradient.Vertical
+                GradientStop { position: 0.62; color: Qt.rgba(0.01, 0.02, 0.05, 0.0) }
+                GradientStop { position: 1.0; color: Qt.rgba(0.01, 0.02, 0.05, 0.78) }
+            }
+        }
+
+        // 标题区 (左上, 与背景左侧留白对齐)
+        ColumnLayout {
+            x: 72; y: 120
+            width: 460
+            spacing: 8
             Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "宇宙实验室 · CosmosLab"
-                color: root.cText
-                font.pixelSize: 26
+                text: "宇宙实验室"
+                color: "#f2f6ff"
+                font.pixelSize: 44
                 font.bold: true
                 font.family: root.sansFont
+                font.letterSpacing: 6
             }
             Text {
-                Layout.alignment: Qt.AlignHCenter
+                text: "COSMOSLAB · 从太阳系到可观测宇宙"
+                color: Qt.rgba(0.62, 0.74, 0.92, 0.9)
+                font.pixelSize: 13
+                font.family: root.sansFont
+                font.letterSpacing: 2
+            }
+            Rectangle {
+                Layout.topMargin: 6
+                width: 64; height: 2
+                color: root.cAccent
+            }
+        }
+
+        // 加载区 (左下)
+        ColumnLayout {
+            x: 72
+            y: parent.height - 150
+            width: 380
+            spacing: 8
+            Text {
                 text: ["正在加载行星纹理…",
                        "正在构建银河系粒子…",
                        "正在载入宇宙大尺度结构…",
                        "正在载入超新星数据…"][Math.min(root.bootStage >> 1, 3)]
-                color: root.cTextDim
+                color: "#dbe6f7"
                 font.pixelSize: 13
                 font.family: root.sansFont
             }
-            // 省略号动画
+            // 进度条 (按阶段估算, 真实完成由 cosmosTotal 信号决定)
+            Rectangle {
+                Layout.fillWidth: true
+                height: 4
+                radius: 2
+                color: Qt.rgba(1, 1, 1, 0.12)
+                Rectangle {
+                    width: parent.width * Math.min((root.bootStage + 1) / 12, 1.0)
+                    height: parent.height
+                    radius: 2
+                    color: root.cAccent
+                    Behavior on width { NumberAnimation { duration: 400 } }
+                }
+            }
             Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: ".".repeat(1 + (root.bootStage % 3))
-                color: root.cAccent
-                font.pixelSize: 16
+                text: "v2.0 · C++ / QML / OpenGL"
+                color: Qt.rgba(0.55, 0.63, 0.75, 0.7)
+                font.pixelSize: 10
                 font.family: root.monoFont
             }
         }
@@ -358,11 +434,13 @@ ApplicationWindow {
                 text: "行星环"
                 checked: scene.showRings
                 onToggled: scene.showRings = checked
+                palette.windowText: root.cText
             }
             CheckBox {
                 text: "大气层"
                 checked: scene.showAtmo
                 onToggled: scene.showAtmo = checked
+                palette.windowText: root.cText
             }
 
             // ---- 真实比例 ----
@@ -372,6 +450,7 @@ ApplicationWindow {
                 text: "真实比例 (1:1)"
                 checked: scene.realScale
                 onToggled: scene.realScale = checked
+                palette.windowText: root.cText
             }
 
             Text {

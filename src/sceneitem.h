@@ -254,6 +254,12 @@ public:
     Q_INVOKABLE QString playNarrationLang(const QString &narrId, const QString &lang);
     Q_INVOKABLE bool hasNarration(const QString &narrId, const QString &lang) const;
 
+    // ---- 开机背景图 (AI 生成深空 splash, assets/ai/boot_bg.jpg) ----
+    //   QML 的 Image 读不到 qrc 外的相对路径, 这里给绝对路径。
+    //   文件缺失时返回空串, QML 回退纯色背景, 不崩。
+    Q_PROPERTY(QString bootBgPath READ bootBgPath CONSTANT)
+    QString bootBgPath() const;
+
     // ---- 测试/自检专用: 一次设定全套视角参数 ----
     // 供 main.cpp 的批量渲染调用, 避免逐个属性设值时遗漏。
     // 传 -1 / 空 表示"沿用当前值"。立即到位, 不走平滑动画。
