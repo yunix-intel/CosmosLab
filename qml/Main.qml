@@ -428,19 +428,45 @@ ApplicationWindow {
                 text: "轨道线"
                 checked: scene.showOrbits
                 onToggled: scene.showOrbits = checked
-                palette.windowText: root.cText
+                // ★ FluentWinUI3 下 palette.windowText 不生效, 文字黑底看不见。
+                //   直接覆盖 contentItem 指定颜色 (indicator 保持原生样式)。
+                contentItem: Text {
+                    text: parent.text
+                    color: root.cText
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: parent.indicator.width + parent.spacing
+                    elide: Text.ElideRight
+                }
             }
             CheckBox {
                 text: "行星环"
                 checked: scene.showRings
                 onToggled: scene.showRings = checked
-                palette.windowText: root.cText
+                contentItem: Text {
+                    text: parent.text
+                    color: root.cText
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: parent.indicator.width + parent.spacing
+                    elide: Text.ElideRight
+                }
             }
             CheckBox {
                 text: "大气层"
                 checked: scene.showAtmo
                 onToggled: scene.showAtmo = checked
-                palette.windowText: root.cText
+                contentItem: Text {
+                    text: parent.text
+                    color: root.cText
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: parent.indicator.width + parent.spacing
+                    elide: Text.ElideRight
+                }
             }
 
             // ---- 真实比例 ----
@@ -450,7 +476,15 @@ ApplicationWindow {
                 text: "真实比例 (1:1)"
                 checked: scene.realScale
                 onToggled: scene.realScale = checked
-                palette.windowText: root.cText
+                contentItem: Text {
+                    text: parent.text
+                    color: root.cText
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: parent.indicator.width + parent.spacing
+                    elide: Text.ElideRight
+                }
             }
 
             Text {
