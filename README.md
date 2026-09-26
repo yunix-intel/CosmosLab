@@ -4,14 +4,14 @@
 
 ## 下载（推荐：开箱即用）
 
-- **直接用**：[Release v1.0](https://github.com/yunix-intel/CosmosLab/releases/tag/v1.0) 下载 `CosmosLab-v1.0-win64.zip`，解压双击 `cosmoslab.exe`（含全部资源与 156 条配音）。
+- **直接用**：[Release v1.1](https://github.com/yunix-intel/CosmosLab/releases/tag/v1.1) 下载 `CosmosLab-v1.1-win64.zip`，解压双击 `cosmoslab.exe`（含全部资源与 390 条五语种配音）。
 - **从源码构建**：`git clone https://github.com/yunix-intel/CosmosLab.git`，再按需下载下方资源包，**在仓库根目录解压**（包内路径已是 `assets/...`，解压即对齐）：
 
 | 资源包 | 内容 | 说明 |
 |---|---|---|
-| `CosmosLab-v1.0-assets-textures.zip` | 贴图（tex/galaxy，58MB） | 缺失时对应天体显示占位提示，不崩 |
-| `CosmosLab-v1.0-assets-audio.zip` | 配音 156 条（9.6MB） | 缺失时播放按钮置灰，不崩 |
-| `CosmosLab-v1.0-assets-data.zip` | lss/sn/evo 数据（2.4MB） | `assets/lss` 已在仓内，覆盖无妨 |
+| `CosmosLab-v1.1-assets-textures.zip` | 贴图（tex/galaxy，58MB） | 缺失时对应天体显示占位提示，不崩 |
+| `CosmosLab-v1.1-assets-audio.zip` | 配音 390 条·五语种（27MB） | 缺失时播放按钮置灰，不崩 |
+| `CosmosLab-v1.1-assets-data.zip` | lss/sn/evo 数据（2.4MB） | `assets/lss` 已在仓内，覆盖无妨 |
 
 ## 运行
 
