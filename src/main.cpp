@@ -30,6 +30,10 @@
 #include <QImage>
 #include <QDir>
 #include <QDebug>
+#include <QPixmap>
+
+#include "bootsplash.h"
+#include "assetroot.h"
 
 int main(int argc, char **argv)
 {
@@ -77,6 +81,25 @@ int main(int argc, char **argv)
     app.setApplicationVersion(QStringLiteral("2.0.0"));
     app.setOrganizationName(QStringLiteral("CosmosLab"));
 
+    // ---- ★★ C++ 原生开机闪屏 (先于 QML/GL, 毫秒级出现) ----
+    //
+    //   QML 的 bootMask 在部分机器上到不了首帧 (卡在引擎加载或 GL
+    //   上下文之前, 窗口全白)。本闪屏用 QRasterWindow + QPainter,
+    //   只需 QGuiApplication, 各阶段 setStage 推进文案, 主窗口首帧
+    //   frameSwapped 后 finish() 淡出。自检/基准模式下保持隐藏。
+    const bool headless =
+        !qEnvironmentVariable("SS_SELFTEST").isEmpty()
+        || qEnvironmentVariableIntValue("SS_BENCH") > 0;
+    QPixmap bootBg;
+    {
+        const QString p =
+            assetPath(QStringLiteral("ai/boot_bg.jpg"));
+        if (QFile::exists(p))
+            bootBg.load(p);
+    }
+    auto *splash = new BootSplash(bootBg, headless);
+    splash->setStage(QStringLiteral("正在加载界面…"));
+
     // 控件样式: FluentWinUI3 是 Qt 6.11 新增的 Windows 11 原生风格
     const QByteArray style = qEnvironmentVariableIsSet("SS_STYLE")
                                  ? qgetenv("SS_STYLE")
@@ -120,6 +143,7 @@ int main(int argc, char **argv)
 
 
     qInfo() << "[启动] 4 加载 QML";
+    splash->setStage(QStringLiteral("正在构建银河系粒子…"));
     engine.load(QUrl(QStringLiteral("qrc:/SolarSystem/qml/Main.qml")));
 
     if (engine.rootObjects().isEmpty()) {
@@ -129,6 +153,7 @@ int main(int argc, char **argv)
 
     QObject *root = engine.rootObjects().first();
     qInfo() << "[启动] 5 QML 加载完成";
+    splash->setStage(QStringLiteral("正在载入宇宙大尺度结构…"));
 
     qInfo().noquote() << "宇宙实验室 CosmosLab 启动 (C++ / QML / OpenGL)"
                       << "根对象:" << root->metaObject()->className();
@@ -216,8 +241,22 @@ int main(int argc, char **argv)
     // ---- 无头自检 ----
     // 只给 SS_BENCH 时也走正常事件循环 (基准需要窗口真的在跑),
     // 退出由上面的基准定时器负责。
-    if (outPath.isEmpty())
+    // ★ 正常启动: 主窗口首帧 frameSwapped 后关闭 C++ 闪屏。
+    //   这是"开机动画"的真正终点 —— QML 的 bootMask 是第二层
+    //   (资源就绪后消失), 闪屏是第一层 (首帧前即存在, 杜绝白屏)。
+    if (outPath.isEmpty()) {
+        if (auto *w = qobject_cast<QQuickWindow *>(root)) {
+            QObject::connect(w, &QQuickWindow::frameSwapped, &app,
+                             [splash] { splash->finish(); },
+                             Qt::SingleShotConnection);
+            // ★ 兜底: 万一首帧信号迟迟不来 (驱动黑名单等), 15 秒强制关,
+            //   不让闪屏永久挡住主窗口。
+            QTimer::singleShot(15000, &app, [splash] { splash->finish(); });
+        } else {
+            splash->finish();
+        }
         return app.exec();
+    }
 
     // ---- 批量渲染: 一次进程出多张图 ----
     //

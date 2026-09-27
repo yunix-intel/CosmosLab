@@ -57,6 +57,7 @@ qt_add_qml_module(solar_system
         src/postfx.h           src/postfx.cpp
         src/scenerenderer.h    src/scenerenderer.cpp
         src/sceneitem.h        src/sceneitem.cpp
+        src/bootsplash.h       src/bootsplash.cpp
 )
 
 target_include_directories(solar_system PRIVATE src)
