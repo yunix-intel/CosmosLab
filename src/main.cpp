@@ -99,6 +99,10 @@ int main(int argc, char **argv)
     }
     auto *splash = new BootSplash(bootBg, headless);
     splash->setStage(QStringLiteral("正在加载界面…"));
+    // ★ show() 后必须立刻 processEvents, 否则后继的 engine.load()
+    //   是同步阻塞, 闪屏收不到 paint 事件, 用户什么都看不到
+    //   (实测: 不加这行, 闪屏从未绘制)。
+    app.processEvents();
 
     // 控件样式: FluentWinUI3 是 Qt 6.11 新增的 Windows 11 原生风格
     const QByteArray style = qEnvironmentVariableIsSet("SS_STYLE")
@@ -144,6 +148,7 @@ int main(int argc, char **argv)
 
     qInfo() << "[启动] 4 加载 QML";
     splash->setStage(QStringLiteral("正在构建银河系粒子…"));
+    app.processEvents();
     engine.load(QUrl(QStringLiteral("qrc:/SolarSystem/qml/Main.qml")));
 
     if (engine.rootObjects().isEmpty()) {
@@ -154,6 +159,7 @@ int main(int argc, char **argv)
     QObject *root = engine.rootObjects().first();
     qInfo() << "[启动] 5 QML 加载完成";
     splash->setStage(QStringLiteral("正在载入宇宙大尺度结构…"));
+    app.processEvents();
 
     qInfo().noquote() << "宇宙实验室 CosmosLab 启动 (C++ / QML / OpenGL)"
                       << "根对象:" << root->metaObject()->className();
