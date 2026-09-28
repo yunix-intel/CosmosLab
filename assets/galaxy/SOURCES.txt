@@ -11,7 +11,13 @@
 lmc.jpg         = NASA PIA07136  Spitzer 红外 — 大麦哲伦云 (Our Chaotic Neighbor)
 smc.jpg         = NASA PIA12485  Spitzer/WISE — 小麦哲伦云 (Little Galaxy Explored)
 triangulum.jpg  = ESO  eso1037a  VLT 巡天 — 三角座星系 (M33) 完整盘面
-m87.jpg         = ESO  eso1820a  VLT — M87 星系与相对论性喷流
+m87.jpg         = NASA/ESA Hubble (STScI, opus 2000/20, PD-Hubble 公有领域)
+                   — M87 椭圆星系 + 蓝色相对论性喷流, 黄色球状星团点缀
+                   目视: 金黄椭圆星系居中, 蓝色喷流向右延伸, 自然色, 无文字
+                   ★ 2026-09-28 替换: 旧文件实为奥陌陌小行星艺术图 (eso1820a
+                   标注错误), 已弃用。候选之二为 ESA/Hubble 2024 年 M87 全貌
+                   (ESA501596, CC-BY 4.0), 因版权不如 PD-Hubble 干净而未用,
+                   存档于 D:/tmp/m87_cand2.jpg
 m104.jpg        = NASA PIA07899  Spitzer 红外 — 草帽星系 (M104) 尘埃环
 
 # ---- 暂无实景图的天体 (由 UI 明确提示, 不用假图冒充) ----
