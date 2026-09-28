@@ -676,6 +676,7 @@ Rectangle {
                             model: [
                                 { t: "跟随", v: "auto" },
                                 { t: "普", v: "zh" },
+                                { t: "女", v: "pop" },
                                 { t: "粤", v: "yue" },
                                 { t: "日", v: "ja" },
                                 { t: "英", v: "en" }

@@ -28,7 +28,10 @@ public:
     // 阶段文案推进 (QML 加载各阶段调用, 每调一次重绘)。
     void setStage(const QString &text);
 
-    // 淡出关闭 (主窗口 frameSwapped 首帧后调用)。
+    // 加载进度 0..1 (各阶段调用; 显示值平滑追踪目标值, 条带动画持续重绘)。
+    void setProgress(double v);
+
+    // 淡出关闭 (场景真正就绪后调用; 重复调用安全)。
     void finish();
 
 protected:
@@ -38,5 +41,11 @@ private:
     QPixmap m_bg;
     QString m_stage = QStringLiteral("正在启动…");
     double  m_opacity = 1.0;
+    // 进度条: 目标值 (外部设) + 显示值 (每 100ms 追踪) +  marching 高光计时。
+    double  m_prog = 0.0;
+    double  m_target = 0.0;
+    int     m_tick = 0;
+    bool    m_finishing = false;
     QTimer *m_fadeTimer = nullptr;
+    QTimer *m_animTimer = nullptr;
 };

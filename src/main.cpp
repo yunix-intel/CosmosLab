@@ -31,6 +31,7 @@
 #include <QDir>
 #include <QDebug>
 #include <QPixmap>
+#include <QColor>
 
 #include "bootsplash.h"
 #include "assetroot.h"
@@ -247,17 +248,35 @@ int main(int argc, char **argv)
     // ---- 无头自检 ----
     // 只给 SS_BENCH 时也走正常事件循环 (基准需要窗口真的在跑),
     // 退出由上面的基准定时器负责。
-    // ★ 正常启动: 主窗口首帧 frameSwapped 后关闭 C++ 闪屏。
-    //   这是"开机动画"的真正终点 —— QML 的 bootMask 是第二层
-    //   (资源就绪后消失), 闪屏是第一层 (首帧前即存在, 杜绝白屏)。
+    // ★ 正常启动: 场景真正就绪 (宇宙粒子总数已上报, cosmosTotal>0)
+    //   才关 C++ 闪屏 —— 首帧 frameSwapped 可能早于资源就绪, 关早了
+    //   主窗口还没内容, 中间露白 (实测故障)。QML 的 bootMask 是第二层
+    //   (同一条件消失), 与闪屏首尾相接, 全程无白。
     if (outPath.isEmpty()) {
         if (auto *w = qobject_cast<QQuickWindow *>(root)) {
-            QObject::connect(w, &QQuickWindow::frameSwapped, &app,
-                             [splash] { splash->finish(); },
-                             Qt::SingleShotConnection);
-            // ★ 兜底: 万一首帧信号迟迟不来 (驱动黑名单等), 15 秒强制关,
-            //   不让闪屏永久挡住主窗口。
-            QTimer::singleShot(15000, &app, [splash] { splash->finish(); });
+            // ★ 主窗口底色先置深: 万一哪一帧在闪屏之外露出来,
+            //   也是深空底而不是系统白底。
+            w->setColor(QColor(0x05, 0x07, 0x0d));
+            auto *readyTimer = new QTimer(&app);
+            readyTimer->setInterval(200);
+            QObject::connect(readyTimer, &QTimer::timeout, &app,
+                             [readyTimer, splash, root] {
+                QObject *scene = root->findChild<QObject *>(
+                    QStringLiteral("scene"));
+                const int total = scene
+                    ? scene->property("cosmosTotal").toInt() : 0;
+                if (total > 0) {
+                    readyTimer->stop();
+                    splash->setProgress(1.0);
+                    // 进度条走满肉眼可见后再淡出 (450ms), 不闪。
+                    QTimer::singleShot(450, splash, [splash] {
+                        splash->finish();
+                    });
+                }
+            });
+            readyTimer->start();
+            // ★ 兜底: 30 秒强制关, 不让闪屏永久挡住主窗口。
+            QTimer::singleShot(30000, &app, [splash] { splash->finish(); });
         } else {
             splash->finish();
         }
