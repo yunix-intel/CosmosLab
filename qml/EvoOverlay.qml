@@ -30,21 +30,29 @@ Rectangle {
     // ★ 全局专业/科普开关 (由 Main.qml 的 root.proMode 传入):
     //   true=专业版 desc, false=科普版 pop (无 pop 的阶段回退到 desc)。
     property bool proMode: true
-    // ★ 配音语种 (v1.1): auto=跟随专业/科普开关 (专业->普通话男音,
-    //   科普->普通话女音), 其余强制指定语种音频 (yue/ja/en 需配音包支持,
-    //   无文件时播放按钮置灰, 不崩)。注意语种只切换配音音频,
-    //   解说词文本仍跟 proMode 走 (desc/pop)。
+    // ★ 配音: 先选语言, 再选男女 (仅普通话有男女声, 见下)。
+    //   音色事实 (manifest 实测 390 条):
+    //     普通话 pro=A男 / pop=B女; 粤语=B女; 日/英语=A男。
+    //   auto=跟随专业/科普开关 (专业->普通话男, 科普->普通话女)。
+    //   注意语种只切换配音音频, 解说词文本仍跟 proMode 走 (desc/pop)。
     property string narrLang: "auto"
+    // 普通话音色: zh=男声(pro), pop=女声(pop)。仅普通话有效,
+    // 其他语言只有一种音色 (粤=女, 日/英=男), 不给点不动的选项。
+    property string zhVoice: "zh"
     function narrEffLang() {
-        if (evo.narrLang !== "auto") return evo.narrLang
+        if (evo.narrLang !== "auto") {
+            if (evo.narrLang === "zh")
+                return evo.zhVoice   // 普通话 -> 按男女细分
+            return evo.narrLang
+        }
         return evo.proMode ? "zh" : "pop"
     }
     function narrLangName(l) {
-        if (l === "zh") return "男音·普通话"
-        if (l === "pop") return "女音·科普"
-        if (l === "yue") return "粤语"
-        if (l === "ja") return "日语"
-        if (l === "en") return "英语"
+        if (l === "zh") return "普通话·男声"
+        if (l === "pop") return "普通话·女声"
+        if (l === "yue") return "粤语·女声"
+        if (l === "ja") return "日语·男声"
+        if (l === "en") return "英语·男声"
         return l
     }
     // ★ 当前阶段目标音频是否存在 (按钮置灰用; 缺文件只播不了, 不崩)。
@@ -631,9 +639,11 @@ Rectangle {
             }
 
             // ---- 阶段说明 + 解说词接口 ----
+            // ★ 高度 116: 解说词文本 + 语言行 + 音色行, 两行按钮需要空间。
+            //   之前 86px 只够一行, 第二行会被裁掉一半。
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 86
+                Layout.preferredHeight: 116
                 radius: 6
                 color: Qt.rgba(1, 1, 1, 0.04)
                 border.width: 1
@@ -657,6 +667,10 @@ Rectangle {
                         font.family: "Microsoft YaHei"
                         lineHeight: 1.35
                     }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+                    // ---- 第一行: 解说词 + 语言 + 播放 ----
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 8
@@ -670,13 +684,12 @@ Rectangle {
                             font.pixelSize: 10
                             font.family: "Consolas, monospace"
                         }
-                        // ★ 语种切换 (v1.1): auto 跟随专业/科普开关,
-                        //   其余强制指定。无音频文件时播放按钮置灰。
+                        // ★ 语言 (跟随/普/粤/日/英)。
+                        //   无音频文件时播放按钮置灰。
                         Repeater {
                             model: [
                                 { t: "跟随", v: "auto" },
                                 { t: "普", v: "zh" },
-                                { t: "女", v: "pop" },
                                 { t: "粤", v: "yue" },
                                 { t: "日", v: "ja" },
                                 { t: "英", v: "en" }
@@ -737,6 +750,64 @@ Rectangle {
                             }
                         }
                     }
+                    // ---- 第二行: 音色男女 (仅普通话有效; 其他语言只有一种
+                    //   音色, 此时两按钮置灰不可点, 不给点不动的选项)。
+                    //   普通话: 男=pro(A)/女=pop(B); 粤=女; 日/英=男。
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Text {
+                            text: "音色"
+                            color: evo.txDim
+                            font.pixelSize: 10
+                            font.family: "Microsoft YaHei"
+                        }
+                        Repeater {
+                            model: [
+                                { t: "男", v: "zh" },
+                                { t: "女", v: "pop" }
+                            ]
+                            delegate: Rectangle {
+                                required property var modelData
+                                width: 38; height: 22; radius: 5
+                                // ★ 只有 narrLang 落在普通话系 (zh/auto)
+                                //   时男女排才有效; 选粤/日/英时置灰。
+                                readonly property bool langIsZh:
+                                    evo.narrLang === "zh"
+                                    || evo.narrLang === "auto"
+                                readonly property bool active:
+                                    langIsZh && evo.narrEffLang() === modelData.v
+                                opacity: langIsZh ? 1.0 : 0.35
+                                color: active
+                                       ? Qt.rgba(0.37, 0.66, 1.0, 0.30)
+                                       : Qt.rgba(1, 1, 1, 0.06)
+                                border.width: 1
+                                border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData.t
+                                    color: "#d7e6ff"
+                                    font.pixelSize: 10
+                                    font.family: "Microsoft YaHei"
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        // ★ 非普通话系不响应 (已置灰)。
+                                        if (evo.narrLang !== "zh"
+                                                && evo.narrLang !== "auto")
+                                            return
+                                        // ★ 点男女 = 切到普通话 + 定音色。
+                                        evo.narrLang = "zh"
+                                        evo.zhVoice = modelData.v
+                                    }
+                                }
+                            }
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+                    } // 内层 ColumnLayout (语言行 + 音色行)
                 }
             }
 
