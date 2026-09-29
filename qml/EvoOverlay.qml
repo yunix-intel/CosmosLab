@@ -1086,7 +1086,7 @@ Rectangle {
         grd.addColorStop(1, "rgba(120,180,255,0.18)")
         ctx.fillStyle = grd
         ctx.fillRect(mx, my - 34, pw, 96)
-        // 事件 ticks
+        // 事件 ticks (标签奇偶错行, 避免早期密集事件重叠)
         ctx.font = "10px 'Microsoft YaHei'"
         for (let i = 0; i < s.stages.length; ++i) {
             const x = X(s.stages[i].t)
@@ -1095,7 +1095,8 @@ Rectangle {
             ctx.lineWidth = hit ? 2.5 : 1.5
             ctx.beginPath(); ctx.moveTo(x, my - 30); ctx.lineTo(x, my + 44); ctx.stroke()
             ctx.fillStyle = hit ? "#bcd9ff" : "rgba(160,180,205,0.75)"
-            ctx.fillText(s.stages[i].label, Math.min(x - 24, mx + pw - 90), my + 60)
+            const ly = (i % 2 === 0) ? my + 60 : my + 76
+            ctx.fillText(s.stages[i].label, Math.min(x - 24, mx + pw - 90), ly)
         }
         // 当前 marker
         const nx = X(Math.max(t, s.tMin))
