@@ -183,5 +183,6 @@ void BootSplash::paintEvent(QPaintEvent *)
     p.setFont(v);
     p.setPen(QColor(140, 161, 191, 180));
     p.drawText(72, H - 50, 380, 20, Qt::AlignLeft | Qt::AlignVCenter,
-               QStringLiteral("v2.0 · C++ / QML / OpenGL"));
+               // ★ 版本号与发布包一致 (P1-2 修复: 曾硬编码 v2.0 与 Release v1.2 分裂)。
+               QStringLiteral("v1.3 · C++ / QML / OpenGL"));
 }

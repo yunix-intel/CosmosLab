@@ -342,7 +342,7 @@
    "zh_pop": "星系的紫外线把星系之间的氢电离, 类星体光谱里的黑谷就是证据。"
   },
   "evo.cos.s5": {
-   "zh": "红移约0.6, 暗能量接管, 膨胀开始加速。1998年超新星证据; 本项目的哈勃图面板用Δ卡方实测复现了这一结论。",
+   "zh": "红移约0.6（约79亿年）：宇宙加速膨胀的起点，暗能量主导则在更晚（约103亿年）。1998年超新星证据；本项目的哈勃图面板用Δ卡方实测复现了这一结论。",
    "yue": "红移约0.6, 暗能量接管, 膨胀开始加速。1998年超新星证据; 本项目嘅哈勃图面板用Δ卡方实测复现咗呢个结论。",
    "ja": "赤方偏移約0.6、ダークエネルギーが支配し、膨張は加速に転じます。1998年超新星の証拠;本プロジェクトのハッブル図もΔχ²で再現しています。",
    "en": "At redshift ~0.6 dark energy takes over and expansion accelerates. The 1998 supernova evidence — reproduced in this project's Hubble panel via Δχ².",
@@ -416,7 +416,7 @@
    "yue": "I类: 包层加盘并存, 特征温度70到650度。包层仲喺度, 但盘已经睇到 —— 过渡形态。",
    "ja": "クラスI:外層と円盤が共存、特性温度70〜650度。外層は残るが円盤が見え始めます——移行形態です。",
    "en": "Class I: envelope plus disk, characteristic temperature 70–650 K. The envelope lingers but the disk shows through — a transitional form.",
-   "zh_pop": "I类: 茧还在, 盘露头了, 过渡形态。"
+   "zh_pop": "一类: 茧还在, 盘露头了, 过渡形态。"
   },
   "evo.psf.s3": {
    "zh": "II类, 经典金牛T星: 盘主导, 氢阿尔法强发射加紫外超。包层散去, 吸积还在继续。",
@@ -605,7 +605,7 @@
    "yue": "球状星团系活化石: M13约120亿岁, 半人马座欧米茄可能系被食咗嘅矮星系核, 杜鹃座47收埋二十几粒毫秒脉冲星。球状星团年龄就系宇宙年龄下限。",
    "ja": "球状星団は生きた化石です:M13は約120億歳、オメガ星団は飲み込まれた矮小銀河の核かもしれず、きょしちょう座47には20個超のミリ秒パルサーが潜みます。球状星団年齢は宇宙年齢の下限です。",
    "en": "Globulars are living fossils: M13 at ~12 Gyr, Omega Centauri possibly a devoured dwarf nucleus, 47 Tuc hiding 20+ millisecond pulsars. Globular ages floor the universe's age.",
-   "zh_pop": "M13一百多亿岁, 半人马座欧米茄可能是被吃掉的矮星系核。"
+   "zh_pop": "梅西耶十三一百多亿岁, 半人马座欧米茄可能是被吃掉的矮星系核。"
   },
   "evo.ism.s8": {
    "zh": "星协是刚散伙的帮派: 天蝎半人马星协最近, 心宿二就是成员。成协膨胀能定年龄, 本地泡可能就是它炸出来的。",

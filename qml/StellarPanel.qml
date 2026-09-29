@@ -104,7 +104,7 @@ Rectangle {
                   ? "B.1 恒星全链 53 条 · 点击查看精准/通俗双说明"
                   : (stellarPanel.tab === "agn"
                      ? "B.2/B.3 AGN 与星系 34 条 · 候选与争议已注记"
-                     : "B.5 星云/星团 22 条 · 发射/反射/暗/行星状/遗迹/星团")
+                     : "B.5 星云/星团 25 条 · 发射/反射/暗/行星状/遗迹/星团")
             color: root.cTextDim
             font.pixelSize: 9
             font.family: root.sansFont

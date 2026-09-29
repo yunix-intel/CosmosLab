@@ -254,7 +254,9 @@ ApplicationWindow {
                 }
             }
             Text {
-                text: "v2.0 · C++ / QML / OpenGL"
+                // ★ 版本号与发布包一致 (P1-2 修复: 曾硬编码 v2.0 与 Release v1.2 分裂)。
+                //   发版时同步改这里 + bootsplash.cpp + CMakeLists + main.cpp。
+                text: "v1.3 · C++ / QML / OpenGL"
                 color: Qt.rgba(0.55, 0.63, 0.75, 0.7)
                 font.pixelSize: 10
                 font.family: root.monoFont

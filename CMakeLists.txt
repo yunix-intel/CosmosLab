@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(solar_system VERSION 2.0.0 LANGUAGES CXX)
+# ★ 版本号单一来源 (P1-2 修复): 发版时只改这里 + Main.qml/bootSplash 文案。
+#   历史包袱: 2.0.0 曾是内部应用版本, 与 Release v1.x 分裂。现统一用 Release 号。
+project(solar_system VERSION 1.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

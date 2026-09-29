@@ -79,7 +79,7 @@ int main(int argc, char **argv)
         app.setFont(f);
     }
     app.setApplicationName(QStringLiteral("宇宙实验室"));
-    app.setApplicationVersion(QStringLiteral("2.0.0"));
+    app.setApplicationVersion(QStringLiteral("1.3.0"));
     app.setOrganizationName(QStringLiteral("CosmosLab"));
 
     // ---- ★★ C++ 原生开机闪屏 (先于 QML/GL, 毫秒级出现) ----

@@ -57,8 +57,15 @@ static QStringList candidateDirs()
     dirs << appDir + QStringLiteral("/cache/tex")
          << appDir + QStringLiteral("/../cache/tex");
 
-    // 最后的回退: Python 版烘焙的旧纹理 (法线贴图仍只有这里有)
+#ifdef QT_DEBUG
+    // ★ P1-1 修复 (2026-09-28): 旧版此处硬编码
+    //   "D:/tmp/solar-system-qt/cache/tex" (Python 版旧纹理), Release 下
+    //   会读取包外资源。仅 Debug 保留, Release 移除。
+    //   (注意: 这是另一套查找逻辑, 与 assetPath 的回退相互独立 ——
+    //    DeepSeek 报告 14.1 节已证实"贴图不走 assetPath 回退",
+    //    两处必须同时收敛, 否则降级测试仍有一半是假通过。)
     dirs << QStringLiteral("D:/tmp/solar-system-qt/cache/tex");
+#endif
 
     return dirs;
 }
