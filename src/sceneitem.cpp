@@ -113,6 +113,11 @@ void SolarSceneRenderer::render()
     vs.cosmosVisible = m_snapshot.cosmosVisible;
     vs.cosmosMapMode  = m_snapshot.cosmosMapMode;
     vs.sdssVisible    = m_snapshot.sdssVisible;
+    vs.evoScript = m_snapshot.evoScript;
+    vs.evoTeff = m_snapshot.evoTeff;
+    vs.evoLogL = m_snapshot.evoLogL;
+    vs.evoRad = m_snapshot.evoRad;
+    vs.evoAge = m_snapshot.evoAge;
 
     m_renderer->render(vs);
 }
@@ -1339,6 +1344,35 @@ void SolarScene::setSdssVisible(int n)
     update();
 }
 
+// ---- 演化主星推送 (v1.3): QML 每帧把 trackAt() 解算值送过来 ----
+//
+//  ★ Q_PROPERTY(WRITE) 形式: v = [script, teff, logL, rad, age]。
+//    长度不足 5 直接忽略 (QML 传参失误不崩渲染)。
+//  ★ 只在值变化时才 update(): 否则每帧 requestPaint 会连带整个
+//    QQuickFramebufferObject 重绘 —— 演化播放时本来就在重绘,
+//    此处不额外加压。
+void SolarScene::pushEvoStar(const QVariantList &v)
+{
+    if (v.size() < 5)
+        return;
+    const int script = v[0].toInt();
+    const double teff = v[1].toDouble();
+    const double logL = v[2].toDouble();
+    const double rad = v[3].toDouble();
+    const double age = v[4].toDouble();
+    if (script == m_evoScript && qFuzzyCompare(teff + 1.0, m_evoTeff + 1.0)
+        && qFuzzyCompare(logL + 100.0, m_evoLogL + 100.0)
+        && qFuzzyCompare(rad + 1.0, m_evoRad + 1.0))
+        return;
+    m_evoScript = script;
+    m_evoTeff = teff;
+    m_evoLogL = logL;
+    m_evoRad = rad;
+    m_evoAge = age;
+    emit evoStarChanged();
+    update();
+}
+
 QVariantMap SolarScene::cosmosPerf() const
 {
     QVariantMap m;
@@ -1844,6 +1878,11 @@ ViewState SolarScene::takeSnapshot() const
     s.cosmosVisible = m_cosmosVisible;
     s.cosmosMapMode = m_cosmosMapMode;
     s.sdssVisible   = m_sdssVisible;
+    s.evoScript = m_evoScript;
+    s.evoTeff = m_evoTeff;
+    s.evoLogL = m_evoLogL;
+    s.evoRad = m_evoRad;
+    s.evoAge = m_evoAge;
 
     // snap 是一次性标志: 取走即清除。
     // takeSnapshot 是 const 的, 故用 mutable 成员。

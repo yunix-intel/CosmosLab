@@ -59,4 +59,14 @@ struct ViewState
 
     // SDSS 真实星系可见数 (0=全部)
     int    sdssVisible = 0;
+
+    // ---- 演化主星 (v1.3): HR 三剧本 (lowmass/midmass/massive) 在演化
+    //   视图中央的 3D 发光球。QML 侧每帧经 Q_INVOKABLE 推送当前解算值,
+    //   render() 内直接取用 —— 跨线程用 double/float 纯数据, 无锁。
+    //   script: 0=无 1=lowmass 2=midmass 3=massive
+    int    evoScript = 0;
+    double evoTeff = 5778.0;   // K
+    double evoLogL = 0.0;      // log10(L/Lsun)
+    double evoRad = 1.0;       // Rsun
+    double evoAge = 0.0;       // 当前物理时间 (剧本单位, 仅读数用)
 };

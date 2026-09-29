@@ -51,6 +51,10 @@ private:
     void drawRings(const ViewState &vs, const QMatrix4x4 &viewProj);
     void drawAtmospheres(const ViewState &vs, const QMatrix4x4 &viewProj);
 
+    // ★ 演化主星 (v1.3): HR 三剧本的 3D 发光球, 由 vs.evo* 驱动。
+    //   复用 m_planet 管线 + m_sphere 网格, 无纹理纯黑体色自发光。
+    void drawEvoStar(const ViewState &vs, const QMatrix4x4 &viewProj);
+
     // 银河系尺度视图 (与太阳系完全独立的一套绘制流程)
     void renderGalaxy(const ViewState &vs, const QMatrix4x4 &viewProj, GLint targetFbo);
 

@@ -151,6 +151,21 @@ class SolarScene : public QQuickFramebufferObject
     // 视野宽度 (光年) —— 用于显示标尺
     Q_PROPERTY(double  galaxyViewWidthLy READ galaxyViewWidthLy          NOTIFY galaxyLabelsChanged)
 
+    // ---- 演化主星推送 (v1.3, QML -> C++ 每帧) ----
+    //
+    //  ★ 为什么是"推"而不是 QML 直接算好传 uniform:
+    //    C++ 渲染线程与 QML GUI 线程隔着 synchronize() —— QML 侧只有
+    //    Q_PROPERTY 能把值送过去。QML 的 trackAt() 解算 (teff/logL/rad)
+    //    沿用已有逻辑, C++ 只负责按值画球, 两边公式零重复。
+    //  ★ script 映射: 0=无 1=lowmass 2=midmass 3=massive; 非 HR 剧本传 0。
+    //  ★ 为什么用 Q_PROPERTY 而不用 Q_INVOKABLE (2026-09-29 实测教训):
+    //    新加的 Q_INVOKABLE 在 QML 侧 typeof 为 undefined (同对象旧方法
+    //    正常) —— moc 元数据明明有, 但 QML 引擎的方法解析缺席, 原因未明。
+    //    Q_PROPERTY + NOTIFY 是本项目注释确认的"唯一可靠跨线程机制",
+    //    改用 evoStar 属性写入: QML 侧 scene.evoStar = [sid,teff,logL,rad,age]。
+    Q_PROPERTY(QVariantList evoStar WRITE pushEvoStar NOTIFY evoStarChanged)
+    void pushEvoStar(const QVariantList &v);
+
 public:
     explicit SolarScene(QQuickItem *parent = nullptr);
 
@@ -317,6 +332,7 @@ signals:
     void cosmosMapModeChanged();
     void sunMarkChanged();
     void galaxyLabelsChanged();
+    void evoStarChanged();
 
 private slots:
     void onTick();
@@ -372,6 +388,16 @@ private:
     QVariantList m_galaxyLabels;        // 银河系标注 (位置 + 名称)
     mutable QVariantMap m_hubbleCache;  // 哈勃图数据 (首次读取后缓存)
     double       m_galaxyViewWidthLy = 0.0;
+
+    // ---- 演化主星推送缓存 (v1.3, QML 每帧经 pushEvoStar 写入) ----
+    //  ★ mutable: takeSnapshot() 是 const, 但推送值必须能被取走。
+    //    double 读写在 x86-64 上天然原子, 跨线程无锁安全 (旧值至多
+    //    延迟一帧, 演化时间轴上不可见)。
+    mutable int    m_evoScript = 0;
+    mutable double m_evoTeff = 5778.0;
+    mutable double m_evoLogL = 0.0;
+    mutable double m_evoRad = 1.0;
+    mutable double m_evoAge = 0.0;
 
     // 渲染分辨率缩放。默认按屏幕 DPR 自适应:
     //   dpr >= 2 (高分辨率屏) -> 0.72  (像素太多, 降一点肉眼无感)

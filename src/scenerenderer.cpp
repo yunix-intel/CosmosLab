@@ -441,9 +441,12 @@ void SceneRenderer::render(const ViewState &vs)
         const float pointScaleE =
             float(m_h) * 0.5f / qMax(std::tan(halfFovE), 1e-4f);
 
-        m_f->glDisable(GL_DEPTH_TEST);
         m_f->glDisable(GL_CULL_FACE);
 
+        // ★ 主星球写深度, 粒子做深度测试 —— 主星正确遮挡身后粒子。
+        m_f->glEnable(GL_DEPTH_TEST);
+        m_f->glDepthFunc(GL_LEQUAL);
+        drawEvoStar(vs, viewProj);
         m_evoStars.render(viewProj, pointScaleE);
 
         if (!m_postfx.ready())
@@ -906,4 +909,71 @@ void SceneRenderer::drawAtmospheres(const ViewState &vs, const QMatrix4x4 &viewP
     m_atmo->release();
     m_f->glDepthMask(GL_TRUE);
     m_f->glDisable(GL_BLEND);
+}
+
+// ---------------------------------------------------------------------------
+//  演化主星 (v1.3): HR 三剧本的 3D 发光球
+//
+//  复用 m_planet 管线 + m_sphere 网格, 无纹理纯黑体色自发光 ——
+//  与太阳同款"高倍环境项代替光照"做法 (见 drawBodies 的 isStar 分支),
+//  本体颜色进 ACES + Bloom 后自然带光晕, 无需新着色器。
+//  半径映射 rad(Rsun, 0.01~800) -> 场景单位: 1.2·rad^0.35, 钳 0.5~6。
+//  黑洞 (rad<=0): 暗球 + 红色临边辉光。
+// ---------------------------------------------------------------------------
+void SceneRenderer::drawEvoStar(const ViewState &vs, const QMatrix4x4 &viewProj)
+{
+    if (!m_planet || !m_sphere)
+        return;
+    if (vs.evoScript < 1 || vs.evoScript > 3)
+        return;
+
+    const bool isBH = (vs.evoRad <= 0.0 || vs.evoTeff <= 0.0);
+    QVector3D col = EvoStars::starColor(vs.evoTeff);
+    if (isBH)
+        col = QVector3D(0.02f, 0.02f, 0.03f);
+
+    double dispR = 1.2 * std::pow(std::max(vs.evoRad, 0.01), 0.35);
+    dispR = qBound(0.5, dispR, 6.0);
+    if (isBH)
+        dispR = 0.9;
+
+    const QVector3D hp = EvoStars::heroPos();
+
+    m_planet->bind();
+    m_planet->setUniformValue("uViewProj", viewProj);
+    m_planet->setUniformValue("uCamPos", m_camera.eye());
+    m_planet->setUniformValue("uSunPos", hp);
+    m_planet->setUniformValue("uNormalScale", 0.28f);
+
+    const float halfFov = float(vs.fov) * 0.5f * float(M_PI) / 180.0f;
+    const float projScale = float(m_h) / (2.0f * qMax(std::tan(halfFov), 1e-4f));
+    m_planet->setUniformValue("uProjScale", projScale);
+    m_planet->setUniformValue("uMinPixelR", 6.0f);
+    m_planet->setUniformValue("uBodyCenter", hp);
+    m_planet->setUniformValue("uBodyRadius", float(dispR));
+
+    // 自发光: 不接收光源, 高倍环境项即本体 (太阳同款)
+    m_planet->setUniformValue("uSunColor", QVector3D(1.0f, 0.93f, 0.76f));
+    m_planet->setUniformValue("uSunIntensity", 0.0f);
+    m_planet->setUniformValue("uAmbientColor", col);
+    m_planet->setUniformValue("uAmbientStrength", isBH ? 0.6f : 2.2f);
+
+    QMatrix4x4 m;
+    m.translate(hp);
+    m.scale(float(dispR));
+    m_planet->setUniformValue("uModel", m);
+
+    m_planet->setUniformValue("uHasTexture", 0.0f);
+    m_planet->setUniformValue("uHasNormalMap", 0.0f);
+    m_planet->setUniformValue("uHasNoData", 0.0f);
+    m_planet->setUniformValue("uBaseColor", col);
+    m_planet->setUniformValue("uNoDataColor", col);
+    m_planet->setUniformValue("uEmissive", 0.0f);
+    // 临边辉光: 恒星同色弱辉光, 黑洞红色强辉光 (吸积 hint)
+    m_planet->setUniformValue("uAtmoRim", isBH ? 1.2f : 0.35f);
+    m_planet->setUniformValue("uAtmoColor",
+        isBH ? QVector3D(1.0f, 0.35f, 0.30f) : col);
+
+    m_sphere->draw();
+    m_planet->release();
 }

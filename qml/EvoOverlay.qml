@@ -390,8 +390,31 @@ Rectangle {
     }
 
     // ---- 播放控制 ----
+    // ★ 演化主星推送 (v1.3): 每次进度变化把 trackAt() 解算值经
+    //   scene.pushEvoStar() 送往渲染线程, 3D 主星球实时跟随。
+    //   非 HR 剧本 (无 track) 传 script=0, 主星球隐藏。
+    function pushStar() {
+        try {
+            if (!evo.sceneObj)
+                return
+            // ★ Q_PROPERTY 写入形式 (v1.3): scene.evoStar = [sid,teff,logL,rad,age]。
+            //   Q_INVOKABLE 新方法在 QML 侧解析缺席 (实测 undefined), 改走
+            //   本项目验证过的"唯一可靠跨线程机制" Q_PROPERTY + NOTIFY。
+            const s = scripts[cur]
+            const sid = s.id === "lowmass" ? 1
+                      : s.id === "midmass" ? 2
+                      : s.id === "massive" ? 3 : 0
+            if (sid === 0) {
+                evo.sceneObj.evoStar = [0, 5778, 0, 1, tNow()]
+                return
+            }
+            const tr = trackAt(s.stages, tNow())
+            evo.sceneObj.evoStar = [sid, tr.teff, tr.logL, tr.rad, tNow()]
+        } catch (e) { console.warn("[演化推送] pushStar 失败: " + e) }
+    }
     function setProg(v) {
         prog = Math.max(0, Math.min(1, v))
+        pushStar()
         vizCv.requestPaint()
     }
     function togglePlay() { playing = !playing }
@@ -409,6 +432,7 @@ Rectangle {
         stopNarr()
         const s = scripts[i]
         logMode = s.useLog
+        pushStar()
         vizCv.requestPaint()
     }
 
@@ -418,6 +442,7 @@ Rectangle {
         onTriggered: {
             let np = evo.prog + (0.05 / evo.baseDur) * evo.speed
             if (np >= 1) { np = 1; evo.playing = false }
+            // ★ setProg 内已含 pushStar (3D 主星跟随), 此处不重复调。
             evo.setProg(np)
         }
     }
@@ -437,6 +462,12 @@ Rectangle {
             if (parts.length > 1) evo.setProg(parseFloat(parts[1]))
             else evo.setProg(0.5)
             evo.visible = true
+            // ★ 自检模式且当前尺度为演化视图时, 自动隐藏面板 ——
+            //   面板盖住 3D 主星球, 自检图验证的是 3D 层。
+            try {
+                if (evo.sceneObj && evo.sceneObj.scaleLevel === 3)
+                    evo.visible = false
+            } catch (e) { /* 保持面板可见, 不影响正常流程 */ }
             done = true
             console.log("[演化] 已打开: " + scripts[idx].id
                         + " 进度=" + evo.prog.toFixed(2)

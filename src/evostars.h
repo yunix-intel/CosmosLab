@@ -42,16 +42,22 @@ public:
     static QVector3D agnCenter()     { return QVector3D( 55.0f, 0.0f, 0.0f); }
     static QVector3D ismCenter()     { return QVector3D(0.0f, -45.0f, 20.0f); }
 
+    // ★ 演化主星位置 (v1.3): 演化视图中央, 三团环绕。
+    //   与相机默认目标 (-5,-15,8) 配合, 主星居中偏上。
+    static QVector3D heroPos() { return QVector3D(-5.0f, -8.0f, 8.0f); }
+
     // ★ 代表条目在团内的世界坐标 —— build() 与标签投影共用同一套公式,
     //   保证标签永远贴合粒子 (银河系旋臂标签同款做法, 见 sceneitem)。
     //   table: 0=恒星 1=AGN 2=ISM; index: 该表内序号。
     static QVector3D starPos(int table, int index);
 
+    // teff -> RGB (与 QML starCol() 同款分段, 线性空间近似)。
+    // 公开以便 SceneRenderer 的演化主星球复用同一套黑体色。
+    static QVector3D starColor(double teff);
+
     void render(const QMatrix4x4 &viewProj, float pointScale);
 
 private:
-    // teff -> RGB (与 QML starCol() 同款分段, 线性空间近似)
-    static QVector3D starColor(double teff);
 
     QOpenGLFunctions_3_3_Core *m_f = nullptr;
     QOpenGLShaderProgram *m_prog = nullptr;
