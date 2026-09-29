@@ -839,7 +839,8 @@ ApplicationWindow {
                     model: [
                         { t: "太阳系", v: 0 },
                         { t: "银河系", v: 1 },
-                        { t: "宇宙",   v: 2 }
+                        { t: "宇宙",   v: 2 },
+                        { t: "演化",   v: 3 }
                     ]
 
                     Rectangle {
@@ -2037,7 +2038,7 @@ ApplicationWindow {
     Item {
         id: galaxyLabelLayer
         anchors.fill: parent
-        // ★ 银河系 (1) 与宇宙 (2) 都要显示标注层。
+        // ★ 银河系 (1)、宇宙 (2)、演化 (3) 都要显示标注层。
         //   初版只写了 === 1, 于是宇宙视图里所有标注都不出现 ——
         //   而画面本身是正常的, 很容易误判成"投影算错了"。
         visible: scene.scaleLevel >= 1 && !root.stellarView
@@ -2062,6 +2063,8 @@ ApplicationWindow {
                          : modelData.kind === "supercluster" ? "#ffb4a2"
                          : modelData.kind === "void" ? "#8fa8c8"
                          : modelData.kind === "wall" ? "#d4a5ff"
+                         : modelData.kind === "star" ? "#bcd9ff"
+                         : modelData.kind === "galaxy" ? "#ffd9a0"
                          : "#c9d4e4"
                     border.width: 1
                     border.color: Qt.rgba(0, 0, 0, 0.8)
@@ -2203,7 +2206,9 @@ ApplicationWindow {
         Item {
             id: scaleBar
             // 阈值同样按尺度分派: 宇宙视图的数值天然大得多
-            visible: !root.stellarView
+            // ★ 演化视图 (3) 不显示比例尺: galaxyViewWidthLy 在此尺度下是
+            //   场景单位 (分类星团示意坐标), 不是光年, 显示会误导。
+            visible: !root.stellarView && scene.scaleLevel !== 3
                      && (scene.scaleLevel === 2
                          ? scene.galaxyViewWidthLy > 0.5
                          : scene.galaxyViewWidthLy > 100)
@@ -3671,6 +3676,11 @@ ApplicationWindow {
             const s = cardForStructByName(id)
             if (s && s.nameCn !== undefined)
                 return s
+            // ★ 演化视图 112 条目 (v1.3): 标签 id 直达 stellar/agn/ism
+            //   三表详情 (与恒星面板点击同路径 stellarAgnDetail)。
+            const e = stellarAgnDetail(id)
+            if (e && e.nameCn !== undefined)
+                return e
         }
 
         // 退路: 用显示名再试一次 (nameCn)

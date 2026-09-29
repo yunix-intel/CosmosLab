@@ -210,6 +210,10 @@ void SceneRenderer::initialize()
     // 宇宙大尺度结构
     m_cosmos.init(m_f);
 
+    // 演化视图 112 条目分类星团 (v1.3, CPU 生成一次即上传)
+    m_evoStars.init(m_f);
+    m_evoStars.build();
+
     m_ready = m_sky && m_planet && m_ring && m_orbit && m_atmo
            && m_sphere && m_quad;
 
@@ -423,6 +427,28 @@ void SceneRenderer::render(const ViewState &vs)
             return;
         m_postfx.renderBloom();
         // 银河系视图没有太阳屏幕位置, 光斑传不可见
+        m_postfx.composite(GLuint(qtFbo), 0.5f, 0.5f, false, timeSec);
+        return;
+    }
+
+    // =======================================================================
+    //  演化尺度 (v1.3): 星场底 + 112 条目分类星团 (单 draw call 点精灵)
+    //  不画轨道/行星/带/彗尾 —— 演化视图只呈现"有哪些天体、在哪类"。
+    //  Canvas 示意 (曲线/时间轴) 由 EvoOverlay 保留为第二层。
+    // =======================================================================
+    if (vs.scale == SceneScale::Evolution) {
+        const float halfFovE = float(vs.fov) * 0.5f * float(M_PI) / 180.0f;
+        const float pointScaleE =
+            float(m_h) * 0.5f / qMax(std::tan(halfFovE), 1e-4f);
+
+        m_f->glDisable(GL_DEPTH_TEST);
+        m_f->glDisable(GL_CULL_FACE);
+
+        m_evoStars.render(viewProj, pointScaleE);
+
+        if (!m_postfx.ready())
+            return;
+        m_postfx.renderBloom();
         m_postfx.composite(GLuint(qtFbo), 0.5f, 0.5f, false, timeSec);
         return;
     }

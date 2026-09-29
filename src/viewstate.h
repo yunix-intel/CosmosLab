@@ -24,6 +24,10 @@ enum class SceneScale
     SolarSystem = 0,   // 太阳系: 行星 / 轨道 / 卫星 / 小行星带 / 彗尾
     Galaxy      = 1,   // 银河系: 棒旋星系粒子模型
     Cosmos      = 2,   // 宇宙: 本星系群 → 星系团 → 超星系团 → 大尺度结构
+    // ★ 演化 (v1.3): 独立 3D 视图。复用太阳系画布 (星场底), 关闭轨道/
+    //   行星/带, 只画 EvoStars 粒子 (112 条目按类型上天球/排布)。
+    //   Canvas 示意保留为第二层 (细节曲线), 3D 为第一层 (空间呈现)。
+    Evolution   = 3,
 };
 
 struct ViewState

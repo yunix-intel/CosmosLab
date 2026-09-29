@@ -14,6 +14,7 @@
 #include "comet.h"
 #include "cosmos.h"
 #include "camera.h"
+#include "evostars.h"
 #include "galaxy.h"
 #include "postfx.h"
 #include "scene.h"
@@ -81,6 +82,7 @@ private:
     Belts  m_belts;                // 小行星带 / 柯伊伯带 / 特洛伊群
     CometRenderer m_comets;        // 彗尾 (离子尾 + 尘埃尾)
     Cosmos        m_cosmos;        // 宇宙大尺度结构
+    EvoStars      m_evoStars;      // 演化视图 112 条目分类星团 (v1.3)
 
     PostFX m_postfx;               // HDR + Bloom + ACES 后处理链
 

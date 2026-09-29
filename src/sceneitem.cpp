@@ -17,6 +17,7 @@
 #include "stellardata.h"
 #include "agndata.h"
 #include "ismdata.h"
+#include "evostars.h"   // 演化视图标签投影用 (starPos/团中心)
 #include "assetroot.h"
 #include "galaxyarms.h"
 #include "scenerenderer.h"
@@ -203,7 +204,7 @@ SolarScene::SolarScene(QQuickItem *parent)
     if (!distEnv.isEmpty())
         m_forcedDist = distEnv.toDouble();
 
-    // 测试用: SS_SCALE=<0|1|2> 直接进入指定尺度 (跳过 UI 交互)
+    // 测试用: SS_SCALE=<0|1|2|3> 直接进入指定尺度 (跳过 UI 交互)
     //
     // ★ 必须尊重实际数值。初版写成\"非零即银河系", 于是 SS_SCALE=2
     //   被静默当成 1 —— 想验证宇宙视图却渲染出了银河系, 而且因为
@@ -212,7 +213,13 @@ SolarScene::SolarScene(QQuickItem *parent)
     const QByteArray scaleEnv = qgetenv("SS_SCALE");
     if (!scaleEnv.isEmpty() && scaleEnv.toInt() != 0) {
         const int sv = scaleEnv.toInt();
-        if (sv >= 2) {
+        if (sv >= 3) {
+            m_scale     = SceneScale::Evolution;
+            m_camTarget = QVector3D(-5.0f, -15.0f, 8.0f);
+            m_camDist   = 170.0;
+            m_camTheta  = 35.0 * M_PI / 180.0;
+            m_camPhi    = 62.0 * M_PI / 180.0;
+        } else if (sv >= 2) {
             m_scale     = SceneScale::Cosmos;
             m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
             m_camDist   = 300.0;
@@ -410,6 +417,99 @@ void SolarScene::updateSunMark()
         m_galaxyLabels = labels;
         emit galaxyLabelsChanged();
         if (dirty)
+            emit sunMarkChanged();
+        return;
+    }
+
+    // ---- 演化尺度 (v1.3): 三团中心 + 15 代表标签 ----
+    //
+    //  ★ 代表制: 112 点全上屏会糊成标签墙。3 团中心 (可点 -> 恒星面板
+    //    对应选项卡? 不, 中心标签 id 为空, 仅作分区说明) + 15 代表星
+    //    (id 直达 stellar/agn/ism 三表详情, 复用 cardForMarker 第三顺位)。
+    //  ★ 世界坐标与 EvoStars::starPos() 同一套公式 —— 标签永远贴合粒子
+    //    (银河系旋臂标签同款做法)。
+    if (m_scale == SceneScale::Evolution) {
+        // 与 Galaxy 分支同一套球坐标约定
+        const double spE = std::sin(m_camPhi);
+        const QVector3D eyeE(
+            float(m_camDist * spE * std::sin(m_camTheta)),
+            float(m_camDist * std::cos(m_camPhi)),
+            float(m_camDist * spE * std::cos(m_camTheta)));
+        QVector3D upE(0.0f, 1.0f, 0.0f);
+        if (std::fabs(m_camPhi) < 1e-3 || std::fabs(m_camPhi - M_PI) < 1e-3)
+            upE = QVector3D(0.0f, 0.0f, 1.0f);
+        QMatrix4x4 viewE;
+        viewE.lookAt(eyeE, m_camTarget, upE);
+        QMatrix4x4 projE;
+        const double aspectE = qMax(1.0, double(width())) / qMax(1.0, double(height()));
+        projE.perspective(float(m_fov), float(aspectE), 1.0f, 10000.0f);
+        const QMatrix4x4 vpE = projE * viewE;
+        auto projectE = [&](const QVector3D &world, double &nx, double &ny) {
+            const QVector4D clip = vpE * QVector4D(world, 1.0f);
+            if (clip.w() <= 1e-6f)
+                return false;
+            const QVector3D ndc = clip.toVector3D() / clip.w();
+            nx = ndc.x() * 0.5 + 0.5;
+            ny = 0.5 - ndc.y() * 0.5;
+            return true;
+        };
+        QVariantList labels;
+        auto pushEvo = [&](const QVector3D &wp, const QString &text,
+                           const QString &sub, const QString &kind,
+                           const QString &id) {
+            double lx, ly;
+            if (projectE(wp, lx, ly) && lx > 0.02 && lx < 0.98
+                && ly > 0.02 && ly < 0.98) {
+                labels.append(QVariantMap{
+                    { "x", lx }, { "y", ly },
+                    { "text", text }, { "sub", sub },
+                    { "kind", kind }, { "id", id },
+                });
+            }
+        };
+        // 三团中心 (分区说明, id 为空不可点)
+        pushEvo(EvoStars::stellarCenter(), QStringLiteral("恒星 · 赫罗图星团"),
+                QStringLiteral("53"), QStringLiteral("core"), QString());
+        pushEvo(EvoStars::agnCenter(), QStringLiteral("AGN · 距离壳层"),
+                QStringLiteral("34"), QStringLiteral("core"), QString());
+        pushEvo(EvoStars::ismCenter(), QStringLiteral("星云星团展区"),
+                QStringLiteral("25"), QStringLiteral("core"), QString());
+        // 恒星代表: 织女(A0V锚点 idx3) / 参宿四(idx15) / 天狼B(idx26) /
+        //          蟹脉冲星(idx28) / 飞马51b(idx50) / GW170817(idx38)
+        const int sRep[] = {3, 15, 26, 28, 50, 38};
+        for (int idx : sRep) {
+            const StellarEntry &e = STELLAR_ENTRIES[idx];
+            pushEvo(EvoStars::starPos(0, idx), QString::fromUtf8(e.nameCn),
+                    QString::fromUtf8(e.spec), QStringLiteral("star"),
+                    QString::fromUtf8(e.id));
+        }
+        // AGN 代表: 3C273(idx2) / M82(idx19) / M101(idx21) /
+        //          触须星系(idx24) / 子弹团(idx12)
+        const int aRep[] = {2, 19, 21, 24, 12};
+        for (int idx : aRep) {
+            const AgnEntry &e = AGN_ENTRIES[idx];
+            pushEvo(EvoStars::starPos(1, idx), QString::fromUtf8(e.nameCn),
+                    QString::fromUtf8(e.catCn), QStringLiteral("galaxy"),
+                    QString::fromUtf8(e.id));
+        }
+        // ISM 代表: M42(idx0) / 马头(idx6) / M13(idx20) / 本地泡(idx15)
+        const int iRep[] = {0, 6, 20, 15};
+        for (int idx : iRep) {
+            const IsmEntry &e = ISM_ENTRIES[idx];
+            pushEvo(EvoStars::starPos(2, idx), QString::fromUtf8(e.nameCn),
+                    QString::fromUtf8(e.catCn), QStringLiteral("spur"),
+                    QString::fromUtf8(e.id));
+        }
+        bool dirtyE = false;
+        if (m_sunMarkOn) { m_sunMarkOn = false; dirtyE = true; }
+        m_galaxyLabels = labels;
+        // 视野宽度 (场景单位, 供比例尺): 目标平面可见高度
+        {
+            const double halfFovE = double(m_fov) * 0.5 * M_PI / 180.0;
+            m_galaxyViewWidthLy = 2.0 * m_camDist * std::tan(halfFovE) * aspectE;
+        }
+        emit galaxyLabelsChanged();
+        if (dirtyE)
             emit sunMarkChanged();
         return;
     }
@@ -660,7 +760,8 @@ void SolarScene::applyFocus()
     // 银河系尺度下, 太阳系的\"聚焦某天体\"逻辑完全不适用
     // (相机距离量级差 2e10 倍), 直接跳过。
     // 银河系与宇宙尺度下, "聚焦某个天体\"的逻辑都不适用
-    if (m_scale == SceneScale::Galaxy || m_scale == SceneScale::Cosmos)
+    if (m_scale == SceneScale::Galaxy || m_scale == SceneScale::Cosmos
+        || m_scale == SceneScale::Evolution)
         return;
 
     // overview 模式: 拉远看整个太阳系 (测试与「全景」按钮用)
@@ -983,14 +1084,16 @@ QString SolarScene::scaleName() const
     switch (m_scale) {
     case SceneScale::Cosmos: return QStringLiteral("宇宙");
     case SceneScale::Galaxy: return QStringLiteral("银河系");
+    case SceneScale::Evolution: return QStringLiteral("演化");
     default:                 return QStringLiteral("太阳系");
     }
 }
 
 void SolarScene::setScale(int s)
 {
-    // 三档映射: 0=太阳系 1=银河系 2=宇宙
-    const SceneScale ns = (s == 2) ? SceneScale::Cosmos
+    // 四档映射: 0=太阳系 1=银河系 2=宇宙 3=演化 (v1.3 独立 3D 视图)
+    const SceneScale ns = (s == 3) ? SceneScale::Evolution
+                        : (s == 2) ? SceneScale::Cosmos
                         : (s == 1) ? SceneScale::Galaxy
                                    : SceneScale::SolarSystem;
     if (m_scale == ns)
@@ -1011,6 +1114,12 @@ void SolarScene::setScale(int s)
         m_camTarget = QVector3D(0.0f, 0.0f, 0.0f);
         m_camDist   = 340.0;
         m_camTheta  = 40.0 * M_PI / 180.0;
+        m_camPhi    = 62.0 * M_PI / 180.0;
+    } else if (m_scale == SceneScale::Evolution) {
+        // 演化视图: 三团尽收 (恒星-55 / AGN+55 / ISM(0,-45,20)), dist 130
+        m_camTarget = QVector3D(-5.0f, -15.0f, 8.0f);
+        m_camDist   = 170.0;
+        m_camTheta  = 35.0 * M_PI / 180.0;
         m_camPhi    = 62.0 * M_PI / 180.0;
     } else {
         m_camTheta = 35.0 * M_PI / 180.0;
