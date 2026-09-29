@@ -17,3 +17,101 @@ qso273.jpg | https://commons.wikimedia.org/wiki/File%3AHST_Snaps_Optical_Jet_of_
 m51.jpg | https://commons.wikimedia.org/wiki/File%3AM51%2C_Whirlpool_Galaxy_%28noao1309a%29.jpg | CC BY 4.0 | a rel="nofollow" class="external text" href="https://noirlab.edu/public/images/noao1309a"M51, Whirlpool Galaxy/a
 cyga.jpg | https://commons.wikimedia.org/wiki/File:Cygnus_A_composite.jpg | Public domain | a rel="nofollow" class="external free" href="http://chandra.si.edu/photo/2015/iyl/iyl_cyga.jpg"http://chandra.si.edu/p
 cena.jpg | https://commons.wikimedia.org/wiki/File%3AThe_%E2%80%9Cmeal%E2%80%9D_of_Centaurus_A_%28eso0944b%29.jpg | CC BY 4.0 | table class="layouttemplate sourcetemplate" style="width:100%; clear:both; text-align:center; margin:0.5em auto; box-sizing: border-box; padding: 0; 
+
+# ---- 2026-09-29 补全: A类第三方真图14张(下载目视确认)+B/C类AI模拟76张 ----
+# 规则(用户确认): 先全网找权威图(NASA/ESA/Commons),实在没有才AI生成并标注
+m82.jpg | ESA/Hubble heic0604a Hubble Heritage ACS | CC-BY | M82雪茄星系: 侧向星系+红色氢喷流
+antennae.jpg | ESA/Hubble potw1345a WFC3 | CC-BY | 触须星系: 双核+潮汐尾
+m101.jpg | NASA PIA15630 GALEX+Spitzer+HST合成 | Public domain | 风车星系M101: 多波段合成伪彩
+m45refl.jpg | NASA PIA09262 Spitzer红外 | Public domain | 昴星团尘埃: 粉红尘埃+亮星
+milkyway.jpg | NASA PIA13932 Spitzer | Public domain | 银河系银心: 银心全景;银河系无整体可见光照片,此为红外实测
+bllac.jpg | Pan-STARRS DR1地面巡天 | Public domain | BL Lac: 点源,无形态,诚实标注
+ngc4258.jpg | NOAO地面实测 | CC-BY | M106: 倾斜旋涡星系
+m60ucd1.jpg | HST实测 | Public domain | M60-UCD1: 超致密矮星系本身即致密点源
+kepler186f.jpg | NASA艺术家概念图 | Public domain | 开普勒186f: 非实拍,系外行星无直接成像
+oj287.jpg | NASA双黑洞示意图 | Public domain | OJ 287: 艺术再现,非实拍
+ngc1068.jpg | NASA NuSTAR示意 | Public domain | NGC 1068: 隐藏核区结构图,非直接成像
+cmz.jpg | NASA Chandra+VLA马赛克 | Public domain | 银心分子区: X射线+射电伪彩
+m80.jpg | HST实测 | Public domain | M80球状星团: 球状星团实拍
+# B/C类AI模拟76张: B=恒星概念图(点光源无形态,按色温光谱型生成), C=深空示意(无权威图源)。详情卡均标注AI模拟示意
+aldebaran.jpg | AI生成(new-api-image) | AI模拟 | 毕宿五: 恒星概念图,非实拍
+alpha_cen_a.jpg | AI生成(new-api-image) | AI模拟 | 半人马座A: 恒星概念图,非实拍
+antares.jpg | AI生成(new-api-image) | AI模拟 | 心宿二: 恒星概念图,非实拍
+arcturus.jpg | AI生成(new-api-image) | AI模拟 | 大角: 恒星概念图,非实拍
+b1937.jpg | AI生成(new-api-image) | AI模拟 | PSR B1937+21: 恒星概念图,非实拍
+b1938.jpg | AI生成(new-api-image) | AI模拟 | 爱因斯坦环 B1938+666: 深空示意,非实拍
+barnard.jpg | AI生成(new-api-image) | AI模拟 | 巴纳德星: 恒星概念图,非实拍
+barnardloop.jpg | AI生成(new-api-image) | AI模拟 | 巴纳德环: 深空示意,非实拍
+betelgeuse.jpg | AI生成(new-api-image) | AI模拟 | 参宿四: 恒星概念图,非实拍
+bullet.jpg | AI生成(new-api-image) | AI模拟 | 子弹星系团: 深空示意,非实拍
+c279.jpg | AI生成(new-api-image) | AI模拟 | 3C 279: 深空示意,非实拍
+capella.jpg | AI生成(new-api-image) | AI模拟 | 五车二: 恒星概念图,非实拍
+cfa2.jpg | AI生成(new-api-image) | AI模拟 | CfA2 长城: 深空示意,非实拍
+coalsack.jpg | AI生成(new-api-image) | AI模拟 | 煤袋星云: 深空示意,非实拍
+coma.jpg | AI生成(new-api-image) | AI模拟 | 后发座星系团: 深空示意,非实拍
+crab_psr.jpg | AI生成(new-api-image) | AI模拟 | 蟹状星云脉冲星: 恒星概念图,非实拍
+cyg_x1.jpg | AI生成(new-api-image) | AI模拟 | 天鹅座X-1: 恒星概念图,非实拍
+delta_cep.jpg | AI生成(new-api-image) | AI模拟 | 仙王座德尔塔: 恒星概念图,非实拍
+deneb.jpg | AI生成(new-api-image) | AI模拟 | 天津四: 恒星概念图,非实拍
+draco.jpg | AI生成(new-api-image) | AI模拟 | 天龙座矮星系: 深空示意,非实拍
+eps_eri.jpg | AI生成(new-api-image) | AI模拟 | 天苑四: 恒星概念图,非实拍
+eri40b.jpg | AI生成(new-api-image) | AI模拟 | 波江座40B: 恒星概念图,非实拍
+eta_car.jpg | AI生成(new-api-image) | AI模拟 | 海山二: 恒星概念图,非实拍
+frb121102.jpg | AI生成(new-api-image) | AI模拟 | FRB 121102: 深空示意,非实拍
+frb20200120e.jpg | AI生成(new-api-image) | AI模拟 | FRB 20200120E: 深空示意,非实拍
+gamma_vel.jpg | AI生成(new-api-image) | AI模拟 | 臬司一: 恒星概念图,非实拍
+gl229b.jpg | AI生成(new-api-image) | AI模拟 | 格利泽 229B: 恒星概念图,非实拍
+grb080319b.jpg | AI生成(new-api-image) | AI模拟 | GRB 080319B: 深空示意,非实拍
+grb170817a.jpg | AI生成(new-api-image) | AI模拟 | GRB 170817A: 深空示意,非实拍
+gw150914.jpg | AI生成(new-api-image) | AI模拟 | GW150914: 恒星概念图,非实拍
+gw170817.jpg | AI生成(new-api-image) | AI模拟 | GW170817: 恒星概念图,非实拍
+hch_persei.jpg | AI生成(new-api-image) | AI模拟 | 英仙座双星团: 深空示意,非实拍
+hd209458b.jpg | AI生成(new-api-image) | AI模拟 | HD 209458b: 恒星概念图,非实拍
+hoag.jpg | AI生成(new-api-image) | AI模拟 | 霍格天体: 深空示意,非实拍
+hr8799.jpg | AI生成(new-api-image) | AI模拟 | HR 8799 bcde: 恒星概念图,非实拍
+j0740.jpg | AI生成(new-api-image) | AI模拟 | PSR J0740+6620: 恒星概念图,非实拍
+j1342.jpg | AI生成(new-api-image) | AI模拟 | ULAS J1342+0928: 深空示意,非实拍
+lmc_x1.jpg | AI生成(new-api-image) | AI模拟 | LMC X-1: 恒星概念图,非实拍
+localbubble.jpg | AI生成(new-api-image) | AI模拟 | 本地泡: 深空示意,非实拍
+mira.jpg | AI生成(new-api-image) | AI模拟 | 蒭藁增二: 恒星概念图,非实拍
+naos.jpg | AI生成(new-api-image) | AI模拟 | 船尾座Z: 恒星概念图,非实拍
+ngc3115.jpg | AI生成(new-api-image) | AI模拟 | 纺锤星系: 深空示意,非实拍
+ngc4151.jpg | AI生成(new-api-image) | AI模拟 | NGC 4151: 深空示意,非实拍
+ngc4650a.jpg | AI生成(new-api-image) | AI模拟 | NGC 4650A: 深空示意,非实拍
+peg51b.jpg | AI生成(new-api-image) | AI模拟 | 飞马座51b: 恒星概念图,非实拍
+polaris.jpg | AI生成(new-api-image) | AI模拟 | 北极星: 恒星概念图,非实拍
+procyon.jpg | AI生成(new-api-image) | AI模拟 | 南河三: 恒星概念图,非实拍
+proxima.jpg | AI生成(new-api-image) | AI模拟 | 比邻星: 恒星概念图,非实拍
+psr1919.jpg | AI生成(new-api-image) | AI模拟 | PSR B1919+21: 恒星概念图,非实拍
+rigel.jpg | AI生成(new-api-image) | AI模拟 | 参宿七: 恒星概念图,非实拍
+rr_lyr.jpg | AI生成(new-api-image) | AI模拟 | 天琴座RR: 恒星概念图,非实拍
+sco_cen.jpg | AI生成(new-api-image) | AI模拟 | 天蝎-半人马星协: 深空示意,非实拍
+sco_x1.jpg | AI生成(new-api-image) | AI模拟 | 天蝎座X-1: 恒星概念图,非实拍
+sculptor.jpg | AI生成(new-api-image) | AI模拟 | 玉夫座矮星系: 深空示意,非实拍
+sgr1806.jpg | AI生成(new-api-image) | AI模拟 | SGR 1806-20: 恒星概念图,非实拍
+shapley.jpg | AI生成(new-api-image) | AI模拟 | Shapley 超团: 深空示意,非实拍
+sirius_a.jpg | AI生成(new-api-image) | AI模拟 | 天狼星: 恒星概念图,非实拍
+sirius_b.jpg | AI生成(new-api-image) | AI模拟 | 天狼星B: 恒星概念图,非实拍
+sn1572.jpg | AI生成(new-api-image) | AI模拟 | 第谷超新星: 恒星概念图,非实拍
+sn1987a.jpg | AI生成(new-api-image) | AI模拟 | SN 1987A: 恒星概念图,非实拍
+sn1993j.jpg | AI生成(new-api-image) | AI模拟 | SN 1993J: 恒星概念图,非实拍
+sn1994i.jpg | AI生成(new-api-image) | AI模拟 | SN 1994I: 恒星概念图,非实拍
+sn2006gy.jpg | AI生成(new-api-image) | AI模拟 | SN 2006gy: 恒星概念图,非实拍
+sn2008d.jpg | AI生成(new-api-image) | AI模拟 | SN 2008D: 恒星概念图,非实拍
+sn2011fe.jpg | AI生成(new-api-image) | AI模拟 | SN 2011fe: 恒星概念图,非实拍
+spica.jpg | AI生成(new-api-image) | AI模拟 | 角宿一: 恒星概念图,非实拍
+sun.jpg | AI生成(new-api-image) | AI模拟 | 太阳: 恒星概念图,非实拍
+t_crb.jpg | AI生成(new-api-image) | AI模拟 | 北冕座T: 恒星概念图,非实拍
+tmc.jpg | AI生成(new-api-image) | AI模拟 | 金牛座分子云: 深空示意,非实拍
+trappist1.jpg | AI生成(new-api-image) | AI模拟 | TRAPPIST-1: 恒星概念图,非实拍
+txs0506.jpg | AI生成(new-api-image) | AI模拟 | TXS 0506+056: 深空示意,非实拍
+vanmaanen.jpg | AI生成(new-api-image) | AI模拟 | 范马南星: 恒星概念图,非实拍
+vega.jpg | AI生成(new-api-image) | AI模拟 | 织女星: 恒星概念图,非实拍
+vela_psr.jpg | AI生成(new-api-image) | AI模拟 | 船帆座脉冲星: 恒星概念图,非实拍
+wise0855.jpg | AI生成(new-api-image) | AI模拟 | WISE 0855-0714: 恒星概念图,非实拍
+wr104.jpg | AI生成(new-api-image) | AI模拟 | WR 104: 恒星概念图,非实拍
+a1689.jpg | AI生成(new-api-image) | AI模拟 | Abell 1689: 深空示意,非实拍
+ngc1300.jpg | AI生成(new-api-image) | AI模拟 | NGC 1300: 深空示意,非实拍
+sextansa.jpg | AI生成(new-api-image) | AI模拟 | 六分仪A: 深空示意,非实拍
+malin1.jpg | AI生成(new-api-image) | AI模拟 | Malin 1: 深空示意,非实拍
+hyades.jpg | AI生成(new-api-image) | AI模拟 | 毕星团: 深空示意,非实拍

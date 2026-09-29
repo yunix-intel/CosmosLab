@@ -13,6 +13,7 @@
 #include "galaxydata.h"
 #include "cosmos.h"
 #include "cosmosdata.h"
+#include "ai_sim_ids.h"   // AI模拟配图id集合 (photoKind用)
 #include "stellardata.h"
 #include "agndata.h"
 #include "ismdata.h"
@@ -1434,12 +1435,26 @@ QVariantList SolarScene::cosmosStructures() const
 // ---------------------------------------------------------------------------
 //  AI/实拍配图: assets/ai/<id>.jpg (真实照片, 版权见 SOURCES.txt)。
 //  stellar/agn/ism 详情卡共用。缺图返回空串, UI 走"暂无实景图"分支。
+//
+//  ★ 2026-09-29 全量补图 (122/122): 先全网找权威图 (NASA/ESA/Commons),
+//    实在没有才 AI 生成并标注。photoKind() 供 QML 区分标注:
+//      ""      无图 (暂无实景图)
+//      "photo" 真实/第三方图像
+//      "aisim" AI 模拟示意 (必须标注, 不得冒充实拍)
 // ---------------------------------------------------------------------------
 static QString aiPhotoPath(const QString &id)
 {
     const QString p =
         assetPath(QStringLiteral("ai/") + id + QStringLiteral(".jpg"));
     return QFile::exists(p) ? p : QString();
+}
+
+// 图片性质: "" 无图 / "photo" 真实图像 / "aisim" AI模拟示意
+static QString aiPhotoKind(const QString &id)
+{
+    if (aiPhotoPath(id).isEmpty())
+        return QString();
+    return isAiSimPhoto(id) ? QStringLiteral("aisim") : QStringLiteral("photo");
 }
 
 QVariantList SolarScene::stellarList() const
@@ -1523,6 +1538,7 @@ QVariantMap SolarScene::stellarDetail(const QString &id) const
     out["pop"]  = QString::fromUtf8(e->pop);
     // ★ 配图: assets/ai/<id>.jpg (真实照片)；缺图走"暂无实景图"分支
     out["photo"] = aiPhotoPath(id);
+    out["photoKind"] = aiPhotoKind(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
@@ -1560,6 +1576,7 @@ QVariantMap SolarScene::agnDetail(const QString &id) const
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
     out["photo"] = aiPhotoPath(id);
+    out["photoKind"] = aiPhotoKind(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }
@@ -1611,6 +1628,7 @@ QVariantMap SolarScene::ismDetail(const QString &id) const
     out["desc"] = QString::fromUtf8(e->desc);
     out["pop"]  = QString::fromUtf8(e->pop);
     out["photo"] = aiPhotoPath(id);
+    out["photoKind"] = aiPhotoKind(id);
     out["noPhotoWhy"] = QStringLiteral("该天体暂无单独的高质量观测图像。");
     return out;
 }

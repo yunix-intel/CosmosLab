@@ -2797,6 +2797,11 @@ ApplicationWindow {
                     }
                     text: {
                         const p = galaxyCard.detail.photo || ""
+                        const k = galaxyCard.detail.photoKind || ""
+                        // ★ 2026-09-29: AI模拟图必须标注, 不得冒充实拍。
+                        //   aisim -> "AI模拟示意"; photo -> 按目录区分来源。
+                        if (k === "aisim")
+                            return "AI 模拟示意 (非实拍 · 详见 assets/ai/SOURCES.txt)"
                         // ai/ 为本次补的真实照片 (NASA/ESA 公有领域或 CC-BY),
                         // tex/ 为 3D 球体 albedo 纹理复用, galaxy/ 为星系照片。
                         if (p.indexOf("/ai/") >= 0)
