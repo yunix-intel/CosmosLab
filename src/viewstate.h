@@ -61,7 +61,7 @@ struct ViewState
     int    sdssVisible = 0;
 
     // ---- 演化主星 (v1.3): HR 三剧本 (lowmass/midmass/massive) 在演化
-    //   视图中央的 3D 发光球。QML 侧每帧经 Q_INVOKABLE 推送当前解算值,
+    //   视图中央的 3D 发光球。QML 侧每帧经 Q_PROPERTY 推送当前解算值,
     //   render() 内直接取用 —— 跨线程用 double/float 纯数据, 无锁。
     //   script: 0=无 1=lowmass 2=midmass 3=massive
     int    evoScript = 0;
@@ -69,4 +69,20 @@ struct ViewState
     double evoLogL = 0.0;      // log10(L/Lsun)
     double evoRad = 1.0;       // Rsun
     double evoAge = 0.0;       // 当前物理时间 (剧本单位, 仅读数用)
+
+    // ---- 演化通用模拟量 (v1.3 A/B/C批): 非HR剧本的3D形态驱动 ----
+    //
+    //  ★ vizCode: 0=无 4=sn 5=merger 6=agn 7=binary
+    //             8=planet 9=protostar 10=remnant 11=cluster
+    //             12=cosmic 13=ism (与 evoScript 1~3 互斥, 同时只用其一)
+    //  ★ p1..p6 含义按 vizCode 分派 (见 sceneitem.h 的 evoSim 注释)。
+    //    QML 侧 pushSim() 与 pushStar() 并存: HR剧本调pushStar,
+    //    其余调pushSim, C++ 侧各自去重, 互不干扰。
+    int    evoViz = 0;
+    double evoP1 = 0.0;
+    double evoP2 = 0.0;
+    double evoP3 = 0.0;
+    double evoP4 = 0.0;
+    double evoP5 = 0.0;
+    double evoP6 = 0.0;
 };

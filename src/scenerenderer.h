@@ -55,6 +55,13 @@ private:
     //   复用 m_planet 管线 + m_sphere 网格, 无纹理纯黑体色自发光。
     void drawEvoStar(const ViewState &vs, const QMatrix4x4 &viewProj);
 
+    // ★ 演化通用模拟体 (v1.3 A/B/C批): 非HR剧本的3D形态, 由 vs.evoViz/p1..p6 驱动。
+    //   图元只有三种 (全复用现有管线, 零新着色器):
+    //     evoBall  发光球 (m_planet + m_sphere, 太阳同款自发光)
+    //     evoCone  锥/柱 (m_sphere Z拉伸, 喷流/外向流/灯塔/潮汐尾)
+    //     evoShell 光晕壳 (m_atmo 背面壳加法混合, 激波/引力波纹/包层)
+    void drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj);
+
     // 银河系尺度视图 (与太阳系完全独立的一套绘制流程)
     void renderGalaxy(const ViewState &vs, const QMatrix4x4 &viewProj, GLint targetFbo);
 

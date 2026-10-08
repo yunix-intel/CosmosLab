@@ -390,27 +390,70 @@ Rectangle {
     }
 
     // ---- 播放控制 ----
-    // ★ 演化主星推送 (v1.3): 每次进度变化把 trackAt() 解算值经
-    //   scene.pushEvoStar() 送往渲染线程, 3D 主星球实时跟随。
-    //   非 HR 剧本 (无 track) 传 script=0, 主星球隐藏。
-    function pushStar() {
+    // ★ 演化推送 (v1.3): 每次进度变化把解算值送往渲染线程, 3D 实时跟随。
+    //   HR 三剧本 (lowmass/midmass/massive) 走 evoStar (主星球);
+    //   其余 viz 走 evoSim [vizCode,p1..p6] (通用模拟体)。
+    //   两者互斥: pushEvo() 每次同时写两个属性, 非用者置零。
+    function pushStar() { pushEvo() }
+    function pushEvo() {
         try {
             if (!evo.sceneObj)
                 return
-            // ★ Q_PROPERTY 写入形式 (v1.3): scene.evoStar = [sid,teff,logL,rad,age]。
-            //   Q_INVOKABLE 新方法在 QML 侧解析缺席 (实测 undefined), 改走
-            //   本项目验证过的"唯一可靠跨线程机制" Q_PROPERTY + NOTIFY。
             const s = scripts[cur]
+            const t = tNow()
+            const n = prog
             const sid = s.id === "lowmass" ? 1
                       : s.id === "midmass" ? 2
                       : s.id === "massive" ? 3 : 0
-            if (sid === 0) {
-                evo.sceneObj.evoStar = [0, 5778, 0, 1, tNow()]
+            if (sid !== 0) {
+                const tr = trackAt(s.stages, t)
+                evo.sceneObj.evoStar = [sid, tr.teff, tr.logL, tr.rad, t]
+                evo.sceneObj.evoSim = [0, 0, 0, 0, 0, 0, 0]
                 return
             }
-            const tr = trackAt(s.stages, tNow())
-            evo.sceneObj.evoStar = [sid, tr.teff, tr.logL, tr.rad, tNow()]
-        } catch (e) { console.warn("[演化推送] pushStar 失败: " + e) }
+            // 非HR剧本: A批 (sn/merger/agn/binary) + B批 (planet/protostar/
+            //   remnant/cluster) + C批 (cosmic/ism), 全部 13 剧本覆盖。
+            let viz = 0, p2 = 0, p3 = 0
+            if (s.viz === "sn") {
+                viz = 4
+                const td = Math.min(t, 300)
+                p2 = snMag(td)
+                p3 = 0.05 * td
+            } else if (s.viz === "merger") {
+                viz = 5
+                p2 = 770 * (1 - n)
+            } else if (s.viz === "agn") {
+                viz = 6
+                p2 = 150 * Math.pow(n, 1.6)
+            } else if (s.viz === "binary") {
+                viz = 7
+                p2 = t
+            } else if (s.viz === "planet") {
+                viz = 8
+                p2 = t
+                p3 = Math.max(0, 1 - t / 5)
+            } else if (s.viz === "protostar") {
+                viz = 9
+                p2 = t
+                p3 = Math.max(0, 1 - t / 1.2)
+            } else if (s.viz === "remnant") {
+                viz = 10
+                p2 = t
+            } else if (s.viz === "cluster") {
+                viz = 11
+                p2 = t
+                p3 = Math.max(0.05, 1 - 0.55 * Math.log10(Math.max(t, 1)) / 4)
+            } else if (s.viz === "cosmic") {
+                viz = 12
+                // p2 = log10(t 秒): 温度史主线的对数时间轴
+                p2 = Math.log(Math.max(t, 1e-43)) / Math.LN10
+            } else if (s.viz === "ism") {
+                // ism 的 t 即站号 (0..10), p1=n 已等价归一化, 无需额外参数
+                viz = 13
+            }
+            evo.sceneObj.evoStar = [0, 5778, 0, 1, t]
+            evo.sceneObj.evoSim = [viz, n, p2, p3, 0, 0, 0]
+        } catch (e) { console.warn("[演化推送] pushEvo 失败: " + e) }
     }
     function setProg(v) {
         prog = Math.max(0, Math.min(1, v))

@@ -118,6 +118,13 @@ void SolarSceneRenderer::render()
     vs.evoLogL = m_snapshot.evoLogL;
     vs.evoRad = m_snapshot.evoRad;
     vs.evoAge = m_snapshot.evoAge;
+    vs.evoViz = m_snapshot.evoViz;
+    vs.evoP1 = m_snapshot.evoP1;
+    vs.evoP2 = m_snapshot.evoP2;
+    vs.evoP3 = m_snapshot.evoP3;
+    vs.evoP4 = m_snapshot.evoP4;
+    vs.evoP5 = m_snapshot.evoP5;
+    vs.evoP6 = m_snapshot.evoP6;
 
     m_renderer->render(vs);
 }
@@ -1373,6 +1380,38 @@ void SolarScene::pushEvoStar(const QVariantList &v)
     update();
 }
 
+// ---- 演化通用模拟量推送 (v1.3 A/B/C批): v = [vizCode,p1..p6] ----
+//
+//  ★ 长度不足 7 直接忽略。去重只比 vizCode + p1..p3 (高频变化量),
+//    p4..p6 为慢变量, 不参与去重 (避免浮点抖动导致每帧 update)。
+//  ★ 与 pushEvoStar 互斥由 QML 侧 pushEvo() 保证: HR剧本只调pushStar
+//    (此时 vizCode 置 0), 其余只调pushSim (此时 script 置 0)。
+void SolarScene::pushEvoSim(const QVariantList &v)
+{
+    if (v.size() < 7)
+        return;
+    const int viz = v[0].toInt();
+    const double p1 = v[1].toDouble();
+    const double p2 = v[2].toDouble();
+    const double p3 = v[3].toDouble();
+    const double p4 = v[4].toDouble();
+    const double p5 = v[5].toDouble();
+    const double p6 = v[6].toDouble();
+    if (viz == m_evoViz && qFuzzyCompare(p1 + 1.0, m_evoP1 + 1.0)
+        && qFuzzyCompare(p2 + 100.0, m_evoP2 + 100.0)
+        && qFuzzyCompare(p3 + 1.0, m_evoP3 + 1.0))
+        return;
+    m_evoViz = viz;
+    m_evoP1 = p1;
+    m_evoP2 = p2;
+    m_evoP3 = p3;
+    m_evoP4 = p4;
+    m_evoP5 = p5;
+    m_evoP6 = p6;
+    emit evoSimChanged();
+    update();
+}
+
 QVariantMap SolarScene::cosmosPerf() const
 {
     QVariantMap m;
@@ -1883,6 +1922,13 @@ ViewState SolarScene::takeSnapshot() const
     s.evoLogL = m_evoLogL;
     s.evoRad = m_evoRad;
     s.evoAge = m_evoAge;
+    s.evoViz = m_evoViz;
+    s.evoP1 = m_evoP1;
+    s.evoP2 = m_evoP2;
+    s.evoP3 = m_evoP3;
+    s.evoP4 = m_evoP4;
+    s.evoP5 = m_evoP5;
+    s.evoP6 = m_evoP6;
 
     // snap 是一次性标志: 取走即清除。
     // takeSnapshot 是 const 的, 故用 mutable 成员。

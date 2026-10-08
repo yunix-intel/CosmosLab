@@ -447,6 +447,8 @@ void SceneRenderer::render(const ViewState &vs)
         m_f->glEnable(GL_DEPTH_TEST);
         m_f->glDepthFunc(GL_LEQUAL);
         drawEvoStar(vs, viewProj);
+        // ★ A批通用模拟体 (sn/merger/agn/binary): 与主星球同深度策略。
+        drawEvoSim(vs, viewProj);
         m_evoStars.render(viewProj, pointScaleE);
 
         if (!m_postfx.ready())
@@ -976,4 +978,395 @@ void SceneRenderer::drawEvoStar(const ViewState &vs, const QMatrix4x4 &viewProj)
 
     m_sphere->draw();
     m_planet->release();
+}
+
+// ---------------------------------------------------------------------------
+//  演化通用模拟体 (v1.3 A/B/C批): 非HR剧本的3D形态
+//
+//  图元只有两种, 全复用 m_planet + m_sphere, 零新着色器:
+//    evoBall  发光球 (高倍环境项自发光, 无纹理纯色, 进 ACES + Bloom 带光晕)
+//    evoCone  锥/柱 (m_sphere Z向拉伸, 喷流/外向流/灯塔束)
+//
+//  ★ 为什么没有"光晕壳": 曾用 m_atmo 背面壳 (加法混合) 实现激波/包层,
+//    但实测在演化分支**无任何输出** (同一 m_atmo 在太阳系分支正常,
+//    几何/参数均验证无误, 根因未定位)。已全部改用 evoBall 大暗球近似:
+//    半径1.6x、低环境倍率 —— 视觉即光晕, 且零风险。
+//
+//  调用方 (Evolution 分支) 的 GL 状态: CULL_FACE 关 + DEPTH LEQUAL。
+//  evoBall/evoCone 均走 m_planet (opaque, 写深度), 兼容。
+// ---------------------------------------------------------------------------
+namespace {
+
+// 发光球: 中心 hp, 半径 r, 颜色 col(线性), 环境倍率 amb
+static void evoBall(QOpenGLShaderProgram *prog, QOpenGLFunctions_3_3_Core *f,
+                    Mesh *sphere, const QMatrix4x4 &viewProj,
+                    const QVector3D &eye, float projScale,
+                    const QVector3D &hp, float r, const QVector3D &col,
+                    float amb, float rim, const QVector3D &rimCol)
+{
+    prog->bind();
+    prog->setUniformValue("uViewProj", viewProj);
+    prog->setUniformValue("uCamPos", eye);
+    prog->setUniformValue("uSunPos", hp);
+    prog->setUniformValue("uNormalScale", 0.28f);
+    prog->setUniformValue("uProjScale", projScale);
+    prog->setUniformValue("uMinPixelR", 4.0f);
+    prog->setUniformValue("uBodyCenter", hp);
+    prog->setUniformValue("uBodyRadius", r);
+    prog->setUniformValue("uSunColor", QVector3D(1.0f, 0.93f, 0.76f));
+    prog->setUniformValue("uSunIntensity", 0.0f);
+    prog->setUniformValue("uAmbientColor", col);
+    prog->setUniformValue("uAmbientStrength", amb);
+    QMatrix4x4 m;
+    m.translate(hp);
+    m.scale(r);
+    prog->setUniformValue("uModel", m);
+    prog->setUniformValue("uHasTexture", 0.0f);
+    prog->setUniformValue("uHasNormalMap", 0.0f);
+    prog->setUniformValue("uHasNoData", 0.0f);
+    prog->setUniformValue("uBaseColor", col);
+    prog->setUniformValue("uNoDataColor", col);
+    prog->setUniformValue("uEmissive", 0.0f);
+    prog->setUniformValue("uAtmoRim", rim);
+    prog->setUniformValue("uAtmoColor", rimCol);
+    sphere->draw();
+    prog->release();
+    Q_UNUSED(f);
+}
+
+// 锥/柱: 中心 hp, 朝向 dir(单位), 长度 len, 半径 rad, 颜色 col
+// 用 m_sphere Z拉伸近似: 缩放 (rad, rad, len/2), 朝向经旋转对齐 +Z->dir。
+static void evoCone(QOpenGLShaderProgram *prog, QOpenGLFunctions_3_3_Core *f,
+                    Mesh *sphere, const QMatrix4x4 &viewProj,
+                    const QVector3D &eye, float projScale,
+                    const QVector3D &hp, const QVector3D &dir,
+                    float len, float rad, const QVector3D &col, float amb)
+{
+    QVector3D d = dir.normalized();
+    QMatrix4x4 m;
+    m.translate(hp + d * (len * 0.5f));
+    // +Z 对齐到 d
+    const QVector3D z(0.0f, 0.0f, 1.0f);
+    const float cosA = qBound(-1.0f, QVector3D::dotProduct(z, d), 1.0f);
+    if (cosA < 0.9999f) {
+        if (cosA < -0.9999f) {
+            m.rotate(180.0f, 1.0f, 0.0f, 0.0f);
+        } else {
+            const QVector3D ax = QVector3D::crossProduct(z, d).normalized();
+            m.rotate(qRadiansToDegrees(std::acos(cosA)), ax);
+        }
+    }
+    m.scale(rad, rad, len * 0.5f);
+    prog->bind();
+    prog->setUniformValue("uViewProj", viewProj);
+    prog->setUniformValue("uCamPos", eye);
+    prog->setUniformValue("uSunPos", hp);
+    prog->setUniformValue("uNormalScale", 0.28f);
+    prog->setUniformValue("uProjScale", projScale);
+    prog->setUniformValue("uMinPixelR", 0.0f);
+    prog->setUniformValue("uBodyCenter", hp);
+    prog->setUniformValue("uBodyRadius", rad);
+    prog->setUniformValue("uSunColor", QVector3D(1.0f, 0.93f, 0.76f));
+    prog->setUniformValue("uSunIntensity", 0.0f);
+    prog->setUniformValue("uAmbientColor", col);
+    prog->setUniformValue("uAmbientStrength", amb);
+    prog->setUniformValue("uModel", m);
+    prog->setUniformValue("uHasTexture", 0.0f);
+    prog->setUniformValue("uHasNormalMap", 0.0f);
+    prog->setUniformValue("uHasNoData", 0.0f);
+    prog->setUniformValue("uBaseColor", col);
+    prog->setUniformValue("uNoDataColor", col);
+    prog->setUniformValue("uEmissive", 0.0f);
+    prog->setUniformValue("uAtmoRim", 0.0f);
+    prog->setUniformValue("uAtmoColor", col);
+    sphere->draw();
+    prog->release();
+    Q_UNUSED(f);
+}
+
+} // namespace
+
+void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
+{
+    if (!m_planet || !m_sphere)
+        return;
+    const int viz = vs.evoViz;
+    if (viz < 4 || viz > 13)
+        return;
+    const float n = float(qBound(0.0, vs.evoP1, 1.0));
+
+    const float halfFov = float(vs.fov) * 0.5f * float(M_PI) / 180.0f;
+    const float projScale = float(m_h) / (2.0f * qMax(std::tan(halfFov), 1e-4f));
+    const QVector3D eye = m_camera.eye();
+    const QVector3D hp = EvoStars::heroPos();
+
+    switch (viz) {
+    // ---- A批 ----
+    case 4: { // sn: 单一光球 —— 半径随膨胀、颜色随降温、亮度随光变
+        //
+        //  ★ 为什么只有一个球 (2026-10-08 实测): 曾加"外层激波壳"作为
+        //    第二球, 但 evoBall 走 m_planet 为 opaque 管线 —— 外层大球
+        //    必然遮挡内层亮球, 画面只剩暗红外壳。发光体的**颜色/尺寸/
+        //    亮度本身**已足够表达: 早期小且白蓝、峰值大且橙白、
+        //    晚期膨胀转暗红 —— 与 Ia 型光变-颜色演化一致。
+        const float td = float(qMin(vs.evoP3 / 0.05, 300.0)); // 复原天数
+        const float phase = qBound(0.0f, td / 300.0f, 1.0f);
+        const float lum = 0.6f + 2.4f * float(std::exp(-n * 2.2)); // 峰值亮
+        const float rSn = 0.55f + 1.5f * std::sqrt(phase);          // v·t 膨胀
+        // 颜色: 峰值橙白 -> 后期暗红 (光球退入铁核, 颜色转红)
+        const float ck = qBound(0.0f, (phase - 0.15f) / 0.85f, 1.0f);
+        const QVector3D scol(1.0f, 0.88f - 0.42f * ck, 0.70f - 0.50f * ck);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, rSn, scol, lum, 0.5f, scol);
+        break;
+    }
+    case 5: { // merger: 双星系球间距收缩 + 近心点潮汐尾壳
+        const float sep = 14.0f * (1.0f - n); // 770kpc->0 映射
+        const QVector3D c1 = hp + QVector3D(-sep * 0.5f, 0, 0);
+        const QVector3D c2 = hp + QVector3D(sep * 0.5f, 0, 0);
+        const QVector3D gcol(0.75f, 0.82f, 0.95f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                c1, 2.2f, gcol, 1.4f, 0.2f, gcol);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                c2, 2.2f, gcol, 1.4f, 0.2f, gcol);
+        // 潮汐尾: 近心点 (n~0.5) 最强, 用横向锥近似
+        const float tail = float(std::exp(-std::pow((n - 0.5) / 0.16, 2)));
+        if (tail > 0.05f) {
+            evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                    c1, QVector3D(-1, 0.4f, 0), 8.0f * tail, 0.7f,
+                    QVector3D(0.6f, 0.75f, 1.0f), 0.9f);
+            evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                    c2, QVector3D(1, -0.4f, 0), 8.0f * tail, 0.7f,
+                    QVector3D(0.6f, 0.75f, 1.0f), 0.9f);
+        }
+        break;
+    }
+    case 6: { // agn: 中央黑球 + 双向喷流锥 + 瓣壳
+        const float jetLen = 2.0f + 10.0f * float(std::pow(n, 1.6)); // 0->150kpc
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, 0.9f, QVector3D(0.02f, 0.02f, 0.03f), 0.6f, 1.2f,
+                QVector3D(1.0f, 0.35f, 0.3f));
+        const QVector3D jcol(0.55f, 0.85f, 1.0f);
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, QVector3D(0, 1, 0.15f), jetLen, 0.5f, jcol, 1.6f);
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, QVector3D(0, -1, -0.15f), jetLen, 0.5f, jcol, 1.6f);
+        // ★ 瓣辉光: m_atmo 在演化分支无输出, 改用 m_planet 暗球近似 (同 sn 壳)。
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(0, jetLen * 0.8f, 0),
+                2.5f, QVector3D(0.6f, 0.7f, 1.0f), 0.25f, 0.4f,
+                QVector3D(0.6f, 0.7f, 1.0f));
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(0, -jetLen * 0.8f, 0),
+                2.5f, QVector3D(0.6f, 0.7f, 1.0f), 0.25f, 0.4f,
+                QVector3D(0.6f, 0.7f, 1.0f));
+        break;
+    }
+    case 7: { // binary: 双中子星旋进 —— 间距收缩 + 亮度随接近上升
+        //
+        //  ★ 同样去掉"波纹壳" (opaque 大球会遮住双星本体)。旋进过程用
+        //    **间距 + 亮度** 表达: 宽轨道时暗淡, 临近并合时紧贴且炽亮。
+        const float t = float(vs.evoP2); // log10(距并合年), 9->-7
+        const float f = qBound(0.0f, (9.0f - t) / 16.0f, 1.0f);
+        const float sep = 1.2f + 6.0f * float(std::pow(1.0f - f, 1.8));
+        const float glow = 1.2f + 2.2f * f;   // 引力波辐射增强 -> 更亮
+        const QVector3D ncol(0.82f, 0.88f, 1.0f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(-sep * 0.5f, 0, 0), 0.7f, ncol, glow, 0.4f, ncol);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(sep * 0.5f, 0, 0), 0.7f, ncol, glow, 0.4f, ncol);
+        // 并合瞬间 (f->1): 中心爆闪 (短伽马暴/千新星)
+        if (f > 0.92f) {
+            const float flash = (f - 0.92f) / 0.08f;
+            evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                    hp, 1.2f + 1.4f * flash,
+                    QVector3D(1.0f, 0.95f, 0.75f), 2.6f * flash, 0.6f,
+                    QVector3D(1.0f, 0.9f, 0.6f));
+        }
+        break;
+    }
+    // ---- B批 ----
+    case 8: { // planet: 中央恒星 + 原行星盘 (扁球) + 3 迁移行星球
+        const float t = float(vs.evoP2); // Myr 0..12
+        const float gas = float(vs.evoP3); // 气体余量 1->0
+        const QVector3D scol(1.0f, 0.93f, 0.75f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, 1.1f, scol, 2.4f, 0.4f, scol);
+        // 盘: Z压扁大球 (rxz=9, y=1.2+气体厚度), 随气体耗散变薄变暗
+        {
+            QMatrix4x4 dm;
+            dm.translate(hp);
+            dm.scale(9.0f, 0.8f + 1.6f * gas, 9.0f);
+            m_planet->bind();
+            m_planet->setUniformValue("uViewProj", viewProj);
+            m_planet->setUniformValue("uCamPos", eye);
+            m_planet->setUniformValue("uSunPos", hp);
+            m_planet->setUniformValue("uNormalScale", 0.28f);
+            m_planet->setUniformValue("uProjScale", projScale);
+            m_planet->setUniformValue("uMinPixelR", 0.0f);
+            m_planet->setUniformValue("uBodyCenter", hp);
+            m_planet->setUniformValue("uBodyRadius", 9.0f);
+            m_planet->setUniformValue("uSunColor", QVector3D(1.0f, 0.93f, 0.76f));
+            m_planet->setUniformValue("uSunIntensity", 0.0f);
+            const QVector3D dcol(0.55f, 0.62f, 0.78f);
+            m_planet->setUniformValue("uAmbientColor", dcol);
+            m_planet->setUniformValue("uAmbientStrength", 0.25f + 0.55f * gas);
+            m_planet->setUniformValue("uModel", dm);
+            m_planet->setUniformValue("uHasTexture", 0.0f);
+            m_planet->setUniformValue("uHasNormalMap", 0.0f);
+            m_planet->setUniformValue("uHasNoData", 0.0f);
+            m_planet->setUniformValue("uBaseColor", dcol);
+            m_planet->setUniformValue("uNoDataColor", dcol);
+            m_planet->setUniformValue("uEmissive", 0.0f);
+            m_planet->setUniformValue("uAtmoRim", 0.0f);
+            m_planet->setUniformValue("uAtmoColor", dcol);
+            m_sphere->draw();
+            m_planet->release();
+        }
+        // 三行星: 内岩质 (固定) / 气态巨行星 (迁移: 外->内) / 外冰巨星
+        //  ★ y 抬高到盘面之上 (1.6~2.0): 盘是不透明扁球, 行星球若与盘
+        //    共面会被盘自身遮挡 —— 抬高后"盘上运行的行星"清晰可见。
+        const float jx = 6.5f - n * 4.0f; // 迁移 inward
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(-4.5f, 1.8f, 1.5f), 0.45f,
+                QVector3D(1.0f, 0.6f, 0.45f), 1.6f, 0.2f,
+                QVector3D(1.0f, 0.6f, 0.45f));
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(jx, 1.6f, -1.0f), 0.9f,
+                QVector3D(0.9f, 0.72f, 0.42f), 1.8f, 0.25f,
+                QVector3D(0.9f, 0.72f, 0.42f));
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(7.5f, 2.0f, 1.0f), 0.6f,
+                QVector3D(0.62f, 0.8f, 1.0f), 1.6f, 0.2f,
+                QVector3D(0.62f, 0.8f, 1.0f));
+        break;
+    }
+    case 9: { // protostar: 包层主导 —— 暗包层球随耗散收缩 + 双极喷流穿出
+        //
+        //  ★ 0/I 类原恒星在光学上本就"看不见中心星": 包层主导。因此只画
+        //    包层 + 喷流 —— 与观测一致 (IRAS 源在光学/近红外深埋)。
+        //  ★ 喷流长度 = 包层半径 + 穿出量, 保证视觉上"穿出"。
+        const float env = float(vs.evoP3); // 包层余量 1->0
+        const float envR = 3.0f + 8.0f * env;      // 包层 11 -> 3
+        const float jetL = envR + 5.0f;            // 始终穿出包层
+        const float jetA = 0.4f + 1.4f * env;      // 包层厚时喷流最强
+        const QVector3D envCol(0.72f, 0.55f, 0.42f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, envR, envCol, 0.30f + 0.55f * env, 0.35f,
+                QVector3D(0.85f, 0.6f, 0.45f));
+        const QVector3D jcol(0.55f, 0.78f, 1.0f);
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, QVector3D(0, 1, 0.1f), jetL, 0.45f, jcol, jetA);
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, QVector3D(0, -1, -0.1f), jetL, 0.45f, jcol, jetA);
+        break;
+    }
+    case 10: { // remnant: 白矮星小球 + 脉冲星灯塔锥 (旋转)
+        const float t = float(vs.evoP2); // logyr 3..10
+        const float f = qBound(0.0f, (t - 3.0f) / 7.0f, 1.0f);
+        // 白矮星: 随冷却变暗变小
+        const float wdB = 2.0f * (1.0f - f * 0.75f);
+        const QVector3D wdcol(0.79f, 0.85f, 1.0f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(-4.0f, 0, 0), 0.55f, wdcol, wdB, 0.3f, wdcol);
+        // 脉冲星: 灯塔锥旋转 (方向随 tickN? 不, 用 p1 进度定相位, 确定性)
+        const float ang = n * 6.2831853f * 8.0f; // 转8圈示意自转减慢 (周期随f变长, 此处固定圈数)
+        const QVector3D beam(std::cos(ang), 0.25f, std::sin(ang));
+        const QVector3D psr(0.85f, 0.9f, 1.0f);
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(4.0f, 0, 0), 0.5f, psr, 2.0f, 0.4f, psr);
+        const float beamL = 9.0f * (1.0f - f * 0.6f); // 老年脉冲星熄火变短
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(4.0f, 0, 0), beam, beamL, 0.5f, psr, 1.4f);
+        evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(4.0f, 0, 0),
+                QVector3D(-beam.x(), -beam.y(), -beam.z()), beamL, 0.5f, psr, 1.4f);
+        break;
+    }
+    case 11: { // cluster: 束缚星数收缩粒子团 (确定性 Fibonacci 点, 半径随蒸发)
+        const float bound = float(vs.evoP3); // 束缚比 1->0.05
+        const int N = int(130 * bound);
+        // 复用点精灵太重, 用小球阵列示意 (<=130 球, 与行星球同管线, 可接受)
+        // 为省 draw call, 只画外层 40 个代表点
+        const int M = qMin(N, 40);
+        for (int i = 0; i < M; ++i) {
+            const float a = float(std::fmod(i * 2.39996, 6.28318530718));
+            const float rr = 5.5f * std::sqrt((i + 0.5f) / 40.0f) * (0.4f + 0.6f * bound);
+            const QVector3D pos = hp + QVector3D(std::cos(a) * rr, (i % 5 - 2) * 0.5f, std::sin(a) * rr);
+            const float b = 0.55f + 0.45f * float((i * 37) % 100) / 100.0f;
+            evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                    pos, 0.35f, QVector3D(b * 0.8f, b * 0.85f, b), 1.5f, 0.0f,
+                    QVector3D(b, b, b));
+        }
+        break;
+    }
+    // ---- C批 ----
+    case 12: { // cosmic: 宇宙热历史 —— 中央"可观测宇宙球"随温度变色 + 事件环
+        //
+        //  ★ 教学要点: 温度史是主线。p2 = log10(t/秒) (QML 传入)。
+        //    10^-43s(普朗克) 蓝白极热 -> 1s(核合成) 白热 -> 10^13s(复合)
+        //    橙红 -> 10^17s(今天) 深红暗淡。
+        //  ★ 颜色用黑体近似: 高温偏蓝白, 冷却转橙红, 今天近暗红。
+        const float lg = float(vs.evoP2); // log10(t秒): -43 .. 17.6
+        const float u = qBound(0.0f, (lg + 43.0f) / 60.6f, 1.0f); // 归一化
+        // 蓝白(0) -> 黄白(0.35) -> 橙(0.7) -> 暗红(1)
+        QVector3D ccol;
+        if (u < 0.35f) {
+            const float k = u / 0.35f;
+            ccol = QVector3D(0.75f + 0.25f * k, 0.85f + 0.12f * k, 1.0f - 0.12f * k);
+        } else if (u < 0.7f) {
+            const float k = (u - 0.35f) / 0.35f;
+            ccol = QVector3D(1.0f, 0.97f - 0.22f * k, 0.88f - 0.55f * k);
+        } else {
+            const float k = (u - 0.7f) / 0.3f;
+            ccol = QVector3D(1.0f - 0.45f * k, 0.75f - 0.45f * k, 0.33f - 0.20f * k);
+        }
+        // 主球: 半径代表可观测宇宙随时间的增长 (早期小, 今天大)
+        const float cosR = 1.2f + 5.0f * u;
+        const float cosAmb = 2.4f * (1.0f - 0.55f * u); // 早期极亮, 今天暗淡
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp, cosR, ccol, cosAmb, 0.4f, ccol);
+        // 事件环: 5 个关键节点 (普朗克/暴胀/核合成/复合/再电离) 沿 X 轴排开,
+        // 已过的节点点亮, 未到的暗。让"我们在时间轴的哪里"一目了然。
+        {
+            static const float kNode[5] = {0.0f, 0.18f, 0.72f, 0.86f, 0.95f};
+            for (int i = 0; i < 5; ++i) {
+                const float reached = (u >= kNode[i]) ? 1.0f : 0.18f;
+                const QVector3D pos = hp + QVector3D((i - 2) * 3.2f, -9.0f, 0.0f);
+                evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                        pos, 0.6f, ccol, 1.8f * reached, 0.25f * reached, ccol);
+            }
+        }
+        break;
+    }
+    case 13: { // ism: 星云认知链 —— 三色代表球 (发射红/反射蓝/暗黑) 轮流点亮
+        //
+        //  ★ p1 传当前站号 k (0..10) 的归一化值 k/10, 据此决定哪个球亮。
+        //  ★ 三种光的教学核心: 发射(红, 氢α) / 反射(蓝, 尘埃散射) /
+        //    暗(近黑, 遮光)。球的位置固定不跳, 只切换亮度, 便于对照。
+        const float k = n * 10.0f;
+        // 发射星云 (左): 红
+        const float emOn = (k < 3.5f || k > 7.5f) ? 1.0f : 0.22f;
+        // 反射星云 (中): 蓝
+        const float reOn = (k >= 3.5f && k < 6.0f) ? 1.0f : 0.22f;
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(-7.5f, 0.5f, 0.0f), 2.2f,
+                QVector3D(1.0f, 0.35f, 0.32f), 2.0f * emOn, 0.3f * emOn,
+                QVector3D(1.0f, 0.35f, 0.32f));
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(0.0f, 0.2f, 0.0f), 2.0f,
+                QVector3D(0.42f, 0.58f, 1.0f), 2.0f * reOn, 0.3f * reOn,
+                QVector3D(0.42f, 0.58f, 1.0f));
+        // 暗星云 (右): 近黑但**轮廓必须可见** —— 太黑等于没画, 教学上
+        //   "暗星云靠遮挡背景星光被认出"这一点需要观众先看见它。
+        const float dkOn = (k >= 6.0f && k <= 7.5f) ? 1.0f : 0.4f;
+        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
+                hp + QVector3D(7.5f, -0.4f, 0.0f), 2.4f,
+                QVector3D(0.20f, 0.21f, 0.26f), 0.9f + 0.7f * dkOn, 0.5f * dkOn,
+                QVector3D(0.42f, 0.46f, 0.55f));
+        break;
+    }
+    default:
+        break; // 全部 13 剧本已覆盖 (viz 4..13)
+    }
 }

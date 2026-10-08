@@ -166,6 +166,31 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(QVariantList evoStar WRITE pushEvoStar NOTIFY evoStarChanged)
     void pushEvoStar(const QVariantList &v);
 
+    // ---- 演化通用模拟量推送 (v1.3 A/B/C批, QML -> C++ 每帧) ----
+    //
+    //  ★ 与 evoStar 同款 Q_PROPERTY(WRITE) 通道, 写法:
+    //    scene.evoSim = [vizCode, p1, p2, p3, p4, p5, p6]
+    //  ★ vizCode: 0=无(隐藏) 4=sn 5=merger 6=agn 7=binary
+    //             8=planet 9=protostar 10=remnant 11=cluster
+    //             12=cosmic 13=ism
+    //  ★ p1..p6 含义按 vizCode 分派 (物理时间 t 由 QML 的 tNow() 换算
+    //    成无量纲进度 n=prog 传入, C++ 只做线性映射, 不重复时间公式):
+    //      sn:       p1=n(0..1), p2=光变星等M, p3=壳层半径(光天)
+    //      merger:   p1=n, p2=间距(kpc)
+    //      agn:      p1=n, p2=喷流长度(kpc)
+    //      binary:   p1=n, p2=log10(距并合年)
+    //      planet:   p1=n, p2=t(Myr), p3=气体余量0..1
+    //      protostar:p1=n, p2=t(Myr), p3=包层余量0..1
+    //      remnant:  p1=n, p2=t(logyr)
+    //      cluster:  p1=n, p2=t(Myr对数), p3=束缚比0..1
+    //      cosmic:   p1=n, p2=log10(t秒)
+    //      ism:      p1=当前站k(0..10)
+    //  ★ 与 evoStar 互斥: HR剧本调pushStar(置evoViz=0),
+    //    其余调pushSim(置evoScript=0) —— 由QML侧pushEvo()统一分派,
+    //    C++ 侧各自去重, render() 内按非零者绘制。
+    Q_PROPERTY(QVariantList evoSim WRITE pushEvoSim NOTIFY evoSimChanged)
+    void pushEvoSim(const QVariantList &v);
+
 public:
     explicit SolarScene(QQuickItem *parent = nullptr);
 
@@ -333,6 +358,7 @@ signals:
     void sunMarkChanged();
     void galaxyLabelsChanged();
     void evoStarChanged();
+    void evoSimChanged();
 
 private slots:
     void onTick();
@@ -398,6 +424,15 @@ private:
     mutable double m_evoLogL = 0.0;
     mutable double m_evoRad = 1.0;
     mutable double m_evoAge = 0.0;
+
+    // ---- 演化通用模拟量缓存 (v1.3 A/B/C批, QML 经 pushEvoSim 写入) ----
+    mutable int    m_evoViz = 0;
+    mutable double m_evoP1 = 0.0;
+    mutable double m_evoP2 = 0.0;
+    mutable double m_evoP3 = 0.0;
+    mutable double m_evoP4 = 0.0;
+    mutable double m_evoP5 = 0.0;
+    mutable double m_evoP6 = 0.0;
 
     // 渲染分辨率缩放。默认按屏幕 DPR 自适应:
     //   dpr >= 2 (高分辨率屏) -> 0.72  (像素太多, 降一点肉眼无感)
