@@ -983,17 +983,19 @@ void SceneRenderer::drawEvoStar(const ViewState &vs, const QMatrix4x4 &viewProj)
 // ---------------------------------------------------------------------------
 //  演化通用模拟体 (v1.3 A/B/C批): 非HR剧本的3D形态
 //
-//  图元只有两种, 全复用 m_planet + m_sphere, 零新着色器:
-//    evoBall  发光球 (高倍环境项自发光, 无纹理纯色, 进 ACES + Bloom 带光晕)
+//  图元三种, 全复用现有管线 + m_sphere, 零新着色器:
+//    evoBall  发光球 (m_planet 高倍环境项自发光, 无纹理纯色, ACES+Bloom 带光晕)
 //    evoCone  锥/柱 (m_sphere Z向拉伸, 喷流/外向流/灯塔束)
+//    evoShell 光晕壳 (m_atmo 背面壳加法混合, 激波/波纹/包层/瓣)
 //
-//  ★ 为什么没有"光晕壳": 曾用 m_atmo 背面壳 (加法混合) 实现激波/包层,
-//    但实测在演化分支**无任何输出** (同一 m_atmo 在太阳系分支正常,
-//    几何/参数均验证无误, 根因未定位)。已全部改用 evoBall 大暗球近似:
-//    半径1.6x、低环境倍率 —— 视觉即光晕, 且零风险。
+//  ★ 遮挡规则 (2026-10-08 实测): evoBall/evoCone 走 m_planet 是 opaque,
+//    "外层大球包内层小球"必然遮挡内层; 需要"不遮挡的包裹层"时**必须**
+//    用 evoShell (加法混合)。
+//  ★ 假阴性教训: evoShell 在小球 (屏上 <30px) 上曾"看起来没画" ——
+//    实为 fresnel 亮环不足 1px + 低透明度。参数要领: power 0.6~1.0
+//    (勿超 1.2), opacity ≥0.35。详见 evoShell 注释。
 //
 //  调用方 (Evolution 分支) 的 GL 状态: CULL_FACE 关 + DEPTH LEQUAL。
-//  evoBall/evoCone 均走 m_planet (opaque, 写深度), 兼容。
 // ---------------------------------------------------------------------------
 namespace {
 
@@ -1084,6 +1086,42 @@ static void evoCone(QOpenGLShaderProgram *prog, QOpenGLFunctions_3_3_Core *f,
     Q_UNUSED(f);
 }
 
+// 光晕壳: 中心 hp, 半径 r, 颜色 col, 不透明度 op, 菲涅耳指数 power
+//
+//  ★ 2026-10-08 复盘纠正 (重要教训): 此前判定"m_atmo 在演化分支无输出"
+//    是**误诊** —— 实验"换成 evoBall 可见"只证明了几何位置正确, 而
+//    m_atmo 其实一直在画, 只是: 演化视图的球在屏上仅 ~29px 直径时,
+//    pow(1-|N·V|, 2.0) 的 fresnel 亮环投影宽度不足 1 像素, 再乘
+//    opacity 0.3 + 抗锯齿稀释 → 肉眼完全不可见。**"太小看不见"被误读成
+//    "完全没画"** —— 与 Bash heredoc 吞反斜杠那类"假阴性"同宗。
+//    对策: 本函数默认 power 调低 (环带加宽) + 调用方给足 opacity。
+static void evoShell(QOpenGLShaderProgram *atmo, QOpenGLFunctions_3_3_Core *f,
+                      Mesh *sphere,
+                      const QMatrix4x4 &viewProj, const QVector3D &eye,
+                      const QVector3D &hp, float r,
+                      const QVector3D &col, float op, float power)
+{
+    f->glEnable(GL_BLEND);
+    f->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    f->glDisable(GL_CULL_FACE);
+    f->glDepthMask(GL_FALSE);
+    atmo->bind();
+    atmo->setUniformValue("uViewProj", viewProj);
+    atmo->setUniformValue("uCamPos", eye);
+    atmo->setUniformValue("uSunPos", hp);
+    QMatrix4x4 m;
+    m.translate(hp);
+    m.scale(r);
+    atmo->setUniformValue("uModel", m);
+    atmo->setUniformValue("uAtmoColor", col);
+    atmo->setUniformValue("uOpacity", op);
+    atmo->setUniformValue("uPower", power);
+    sphere->draw();
+    atmo->release();
+    f->glDepthMask(GL_TRUE);
+    f->glDisable(GL_BLEND);
+}
+
 } // namespace
 
 void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
@@ -1104,11 +1142,10 @@ void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
     // ---- A批 ----
     case 4: { // sn: 单一光球 —— 半径随膨胀、颜色随降温、亮度随光变
         //
-        //  ★ 为什么只有一个球 (2026-10-08 实测): 曾加"外层激波壳"作为
-        //    第二球, 但 evoBall 走 m_planet 为 opaque 管线 —— 外层大球
-        //    必然遮挡内层亮球, 画面只剩暗红外壳。发光体的**颜色/尺寸/
-        //    亮度本身**已足够表达: 早期小且白蓝、峰值大且橙白、
-        //    晚期膨胀转暗红 —— 与 Ia 型光变-颜色演化一致。
+        //  ★ 2026-10-08 复盘纠正: 此前判定"外层壳被 opaque 球遮挡"而删掉
+        //    激波壳 —— 部分对 (evoBall 大球确实遮挡), 但"m_atmo 完全无
+        //    输出"是误诊: fresnel 环在小球上不足 1px 是主因。现在外壳改回
+        //    **真 m_atmo 壳** (加法混合, 不遮挡) + 低 power 加宽环带。
         const float td = float(qMin(vs.evoP3 / 0.05, 300.0)); // 复原天数
         const float phase = qBound(0.0f, td / 300.0f, 1.0f);
         const float lum = 0.6f + 2.4f * float(std::exp(-n * 2.2)); // 峰值亮
@@ -1118,6 +1155,11 @@ void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
         const QVector3D scol(1.0f, 0.88f - 0.42f * ck, 0.70f - 0.50f * ck);
         evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
                 hp, rSn, scol, lum, 0.5f, scol);
+        // 激波壳: 半径 1.5x 光球, 宽环带 (power 0.6) + 高不透明度
+        if (m_atmo)
+            evoShell(m_atmo, m_f, m_sphere, viewProj, eye, hp,
+                     rSn * 1.5f, QVector3D(1.0f, 0.62f, 0.35f),
+                     0.55f, 0.6f);
         break;
     }
     case 5: { // merger: 双星系球间距收缩 + 近心点潮汐尾壳
@@ -1151,26 +1193,33 @@ void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
                 hp, QVector3D(0, 1, 0.15f), jetLen, 0.5f, jcol, 1.6f);
         evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
                 hp, QVector3D(0, -1, -0.15f), jetLen, 0.5f, jcol, 1.6f);
-        // ★ 瓣辉光: m_atmo 在演化分支无输出, 改用 m_planet 暗球近似 (同 sn 壳)。
-        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
-                hp + QVector3D(0, jetLen * 0.8f, 0),
-                2.5f, QVector3D(0.6f, 0.7f, 1.0f), 0.25f, 0.4f,
-                QVector3D(0.6f, 0.7f, 1.0f));
-        evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
-                hp + QVector3D(0, -jetLen * 0.8f, 0),
-                2.5f, QVector3D(0.6f, 0.7f, 1.0f), 0.25f, 0.4f,
-                QVector3D(0.6f, 0.7f, 1.0f));
+        // 瓣辉光: 真 m_atmo 壳 (加法混合不遮挡喷流), 喷流两端各一
+        if (m_atmo) {
+            evoShell(m_atmo, m_f, m_sphere, viewProj, eye,
+                     hp + QVector3D(0, jetLen * 0.8f, 0), 2.5f,
+                     QVector3D(0.6f, 0.7f, 1.0f), 0.35f, 0.8f);
+            evoShell(m_atmo, m_f, m_sphere, viewProj, eye,
+                     hp + QVector3D(0, -jetLen * 0.8f, 0), 2.5f,
+                     QVector3D(0.6f, 0.7f, 1.0f), 0.35f, 0.8f);
+        }
         break;
     }
-    case 7: { // binary: 双中子星旋进 —— 间距收缩 + 亮度随接近上升
+    case 7: { // binary: 双中子星旋进 —— 间距收缩 + 亮度上升 + 引力波纹壳
         //
-        //  ★ 同样去掉"波纹壳" (opaque 大球会遮住双星本体)。旋进过程用
-        //    **间距 + 亮度** 表达: 宽轨道时暗淡, 临近并合时紧贴且炽亮。
+        //  ★ 2026-10-08 复盘: 波纹壳曾因"看不见"被删, 实为 fresnel 环
+        //    太窄 (误诊修正, 见 evoShell 注释)。现用真 m_atmo 壳恢复,
+        //    宽环带参数 (power 1.0) + 适中不透明度。
         const float t = float(vs.evoP2); // log10(距并合年), 9->-7
         const float f = qBound(0.0f, (9.0f - t) / 16.0f, 1.0f);
         const float sep = 1.2f + 6.0f * float(std::pow(1.0f - f, 1.8));
         const float glow = 1.2f + 2.2f * f;   // 引力波辐射增强 -> 更亮
         const QVector3D ncol(0.82f, 0.88f, 1.0f);
+        // 引力波纹: 大壳随接近收缩变亮 (并合前最强)
+        if (m_atmo) {
+            const float wR = 2.0f + 6.0f * float(std::pow(1.0f - f, 1.2));
+            evoShell(m_atmo, m_f, m_sphere, viewProj, eye, hp, wR,
+                     QVector3D(0.55f, 0.85f, 0.7f), 0.18f + 0.30f * f, 1.0f);
+        }
         evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
                 hp + QVector3D(-sep * 0.5f, 0, 0), 0.7f, ncol, glow, 0.4f, ncol);
         evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
@@ -1241,19 +1290,25 @@ void SceneRenderer::drawEvoSim(const ViewState &vs, const QMatrix4x4 &viewProj)
                 QVector3D(0.62f, 0.8f, 1.0f));
         break;
     }
-    case 9: { // protostar: 包层主导 —— 暗包层球随耗散收缩 + 双极喷流穿出
+    case 9: { // protostar: 包层壳 (加法混合) + 中心原恒星 + 双极喷流穿出
         //
-        //  ★ 0/I 类原恒星在光学上本就"看不见中心星": 包层主导。因此只画
-        //    包层 + 喷流 —— 与观测一致 (IRAS 源在光学/近红外深埋)。
+        //  ★ 2026-10-08 复盘: 包层曾用 opaque 暗球 (遮挡中心星被迫删星球)。
+        //    现在壳改用真 m_atmo 加法混合 —— 既**不遮挡**中心星, 又自带
+        //    辉光质感, 中心原恒星可以画回来了。
         //  ★ 喷流长度 = 包层半径 + 穿出量, 保证视觉上"穿出"。
         const float env = float(vs.evoP3); // 包层余量 1->0
         const float envR = 3.0f + 8.0f * env;      // 包层 11 -> 3
         const float jetL = envR + 5.0f;            // 始终穿出包层
         const float jetA = 0.4f + 1.4f * env;      // 包层厚时喷流最强
-        const QVector3D envCol(0.72f, 0.55f, 0.42f);
+        // 中心原恒星 (光学深埋但示意可见 —— 教学上"星在茧里"需同时看到)
+        const QVector3D pcol(1.0f, 0.88f, 0.66f);
         evoBall(m_planet, m_f, m_sphere, viewProj, eye, projScale,
-                hp, envR, envCol, 0.30f + 0.55f * env, 0.35f,
-                QVector3D(0.85f, 0.6f, 0.45f));
+                hp, 0.8f, pcol, 2.0f, 0.4f, pcol);
+        // 包层壳: 大透明辉光, 随耗散收缩变淡
+        if (m_atmo)
+            evoShell(m_atmo, m_f, m_sphere, viewProj, eye, hp, envR,
+                     QVector3D(0.78f, 0.58f, 0.42f),
+                     0.22f + 0.30f * env, 1.0f);
         const QVector3D jcol(0.55f, 0.78f, 1.0f);
         evoCone(m_planet, m_f, m_sphere, viewProj, eye, projScale,
                 hp, QVector3D(0, 1, 0.1f), jetL, 0.45f, jcol, jetA);
