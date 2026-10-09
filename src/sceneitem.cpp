@@ -118,6 +118,9 @@ void SolarSceneRenderer::render()
     vs.evoLogL = m_snapshot.evoLogL;
     vs.evoRad = m_snapshot.evoRad;
     vs.evoAge = m_snapshot.evoAge;
+    // ★ v1.7: 漏了这行的话渲染侧永远拿默认值 1.0 (静态星图) ——
+    //   正是本文件注释预警过的"新增字段必须在这里补上"。
+    vs.evoTime = m_snapshot.evoTime;
     vs.evoViz = m_snapshot.evoViz;
     vs.evoP1 = m_snapshot.evoP1;
     vs.evoP2 = m_snapshot.evoP2;
@@ -195,6 +198,9 @@ SolarScene::SolarScene(QQuickItem *parent)
     // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
     if (qEnvironmentVariableIsSet("SS_EVO"))
         m_testEvo = QString::fromUtf8(qgetenv("SS_EVO"));
+    // ★ v1.7 测试用: SS_EVOT=<0..1> 设定演化演示时间轴 (抓帧验证)
+    if (qEnvironmentVariableIsSet("SS_EVOT"))
+        m_testEvoT = QString::fromUtf8(qgetenv("SS_EVOT"));
 
     // 测试用: SS_STELLAR=1 启动即显示恒星面板
     m_testStellar = qEnvironmentVariableIntValue("SS_STELLAR") > 0;
@@ -966,15 +972,108 @@ QString SolarScene::playNarration(const QString &narrId, bool usePop)
 //  多语种配音 (v1.1): <narrId>_<lang>.mp3, lang ∈ {zh, pop, yue, ja, en}。
 //  缺文件返回空串 + 置灰由 QML hasNarration 预判, 这里只警告不崩。
 // ---------------------------------------------------------------------------
+// ★ v1.5 双槽 (ssnarr0/ssnarr1) 工具: 别名常量 + 关闭/查询小工具。
+//   为什么双槽: 单槽切换音频必须 close+open 新文件 —— open 有解码器
+//   初始化延迟 (实测几十~几百 ms), 段与段之间"断一下" (用户报"没接上")。
+//   双槽: 播 A 时预开 B, A 播完直接 play B —— 无缝衔接。
+#ifdef Q_OS_WIN
+namespace {
+const wchar_t *kNarrAlias[2] = { L"ssnarr0", L"ssnarr1" };
+void mciClose(const wchar_t *alias)
+{
+    QString cmd = QStringLiteral("close %1").arg(QString::fromWCharArray(alias));
+    mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()), nullptr, 0, nullptr);
+}
+QString mciQuery(const wchar_t *alias, const wchar_t *what)
+{
+    QString cmd = QStringLiteral("status %1 %2")
+                      .arg(QString::fromWCharArray(alias),
+                           QString::fromWCharArray(what));
+    wchar_t buf[256] = {0};
+    mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()),
+                   buf, 255, nullptr);
+    return QString::fromWCharArray(buf).trimmed();
+}
+} // namespace
+#endif
+
 QString SolarScene::playNarrationLang(const QString &narrId, const QString &lang)
 {
     if (narrId.isEmpty()) {
+        // 停止: 关闭双槽, 状态归零
 #ifdef Q_OS_WIN
-        mciSendStringW(L"close ssnarr", nullptr, 0, nullptr);
+        mciClose(kNarrAlias[0]);
+        mciClose(kNarrAlias[1]);
 #endif
+        m_narrActive = -1;
+        m_narrFile[0].clear();
+        m_narrFile[1].clear();
         return QString();
     }
-    // ★ 白名单: 防路径穿越 (lang 来自 QML, 理论上可控, 但守一下不花钱)。
+    const QString path = narrResolve(narrId, lang);
+    if (path.isEmpty()) {
+        qWarning() << "[配音] 缺失:" << narrId << lang;
+        return QString();
+    }
+#ifdef Q_OS_WIN
+    // ① 预载命中: 某个槽已打开该文件 —— 直接 play, 无 open 延迟。
+    int hit = -1;
+    for (int i = 0; i < 2; ++i)
+        if (m_narrFile[i] == path)
+            hit = i;
+    if (hit >= 0) {
+        if (m_narrActive >= 0 && m_narrActive != hit) {
+            mciClose(kNarrAlias[m_narrActive]);
+            m_narrFile[m_narrActive].clear();
+        }
+        const QString cmd = QStringLiteral("play %1")
+                                .arg(QString::fromWCharArray(kNarrAlias[hit]));
+        mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()),
+                       nullptr, 0, nullptr);
+        m_narrActive = hit;
+        return path;
+    }
+    // ② 无预载: 用空闲槽 open + play (原实现路径, 有 open 延迟)。
+    const int slot = (m_narrActive == 0) ? 1 : 0;
+    if (m_narrActive >= 0) {
+        mciClose(kNarrAlias[m_narrActive]);
+        m_narrFile[m_narrActive].clear();
+    }
+    mciClose(kNarrAlias[slot]);
+    m_narrFile[slot].clear();
+    // ★ v1.6: 显式 type mpegvideo (默认设备选择偶有差异); 失败时兜底
+    //   重试不带 type (个别系统无 mpegvideo 设备)。
+    const QString cmd = QStringLiteral("open \"%1\" type mpegvideo alias %2")
+                            .arg(path, QString::fromWCharArray(kNarrAlias[slot]));
+    if (mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()),
+                       nullptr, 0, nullptr) != 0) {
+        const QString cmdB = QStringLiteral("open \"%1\" alias %2")
+                                 .arg(path, QString::fromWCharArray(kNarrAlias[slot]));
+        if (mciSendStringW(reinterpret_cast<const wchar_t *>(cmdB.utf16()),
+                           nullptr, 0, nullptr) != 0) {
+            qWarning() << "[配音] 打开失败:" << path;
+            return QString();
+        }
+    }
+    const QString cmd2 = QStringLiteral("play %1")
+                             .arg(QString::fromWCharArray(kNarrAlias[slot]));
+    mciSendStringW(reinterpret_cast<const wchar_t *>(cmd2.utf16()),
+                   nullptr, 0, nullptr);
+    m_narrFile[slot] = path;
+    m_narrActive = slot;
+#else
+    qWarning() << "[配音] 非 Windows 平台暂不支持本地播放";
+    return QString();
+#endif
+    return path;
+}
+
+// ★ v1.5: 唯一的解析点 (白名单 + 存在性), 播放/预载/置灰共用,
+//   避免三处白名单逻辑漂移。
+QString SolarScene::narrResolve(const QString &narrId, const QString &lang) const
+{
+    if (narrId.isEmpty())
+        return QString();
     QString suffix;
     if (lang == QLatin1String("pop"))
         suffix = QStringLiteral("_pop.mp3");
@@ -987,42 +1086,74 @@ QString SolarScene::playNarrationLang(const QString &narrId, const QString &lang
     else
         suffix = QStringLiteral("_pro.mp3");   // zh + 未知一律走专业版
     const QString path = assetPath(QStringLiteral("audio/") + narrId + suffix);
-    if (!QFile::exists(path)) {
-        qWarning() << "[配音] 缺失:" << path;
-        return QString();
-    }
+    return QFile::exists(path) ? path : QString();
+}
+
+void SolarScene::preloadNarration(const QString &narrId, const QString &lang)
+{
+    const QString path = narrResolve(narrId, lang);
+    if (path.isEmpty())
+        return;
 #ifdef Q_OS_WIN
-    mciSendStringW(L"close ssnarr", nullptr, 0, nullptr);
-    const QString cmd = QStringLiteral("open \"%1\" alias ssnarr").arg(path);
+    for (int i = 0; i < 2; ++i)
+        if (m_narrFile[i] == path)
+            return;   // 已在某个槽 (可能正在播) —— 不重复开
+    // 预开到非活动槽 (只 open 不 play; 播放命中时直接 play)。
+    const int slot = (m_narrActive == 0) ? 1 : 0;
+    mciClose(kNarrAlias[slot]);
+    m_narrFile[slot].clear();
+    const QString cmd = QStringLiteral("open \"%1\" type mpegvideo alias %2")
+                            .arg(path, QString::fromWCharArray(kNarrAlias[slot]));
     if (mciSendStringW(reinterpret_cast<const wchar_t *>(cmd.utf16()),
-                       nullptr, 0, nullptr) != 0) {
-        qWarning() << "[配音] 打开失败:" << path;
-        return QString();
-    }
-    mciSendStringW(L"play ssnarr", nullptr, 0, nullptr);
+                       nullptr, 0, nullptr) != 0)
+        return;   // 预载失败静默 (播放时走无预载兜底路径)
+    m_narrFile[slot] = path;
 #else
-    qWarning() << "[配音] 非 Windows 平台暂不支持本地播放";
-    return QString();
+    // 非 Windows: 无预载
 #endif
-    return path;
+}
+
+double SolarScene::narrPosMs()
+{
+#ifdef Q_OS_WIN
+    if (m_narrActive < 0)
+        return -1.0;
+    bool ok = false;
+    const double v = mciQuery(kNarrAlias[m_narrActive], L"position").toDouble(&ok);
+    return ok ? v : -1.0;
+#else
+    return -1.0;
+#endif
+}
+
+double SolarScene::narrLenMs()
+{
+#ifdef Q_OS_WIN
+    if (m_narrActive < 0)
+        return -1.0;
+    bool ok = false;
+    const double v = mciQuery(kNarrAlias[m_narrActive], L"length").toDouble(&ok);
+    return ok ? v : -1.0;
+#else
+    return -1.0;
+#endif
+}
+
+bool SolarScene::narrPlaying()
+{
+#ifdef Q_OS_WIN
+    if (m_narrActive < 0)
+        return false;
+    return mciQuery(kNarrAlias[m_narrActive], L"mode").toLower()
+           == QLatin1String("playing");
+#else
+    return false;
+#endif
 }
 
 bool SolarScene::hasNarration(const QString &narrId, const QString &lang) const
 {
-    if (narrId.isEmpty())
-        return false;
-    QString suffix;
-    if (lang == QLatin1String("pop"))
-        suffix = QStringLiteral("_pop.mp3");
-    else if (lang == QLatin1String("yue"))
-        suffix = QStringLiteral("_yue.mp3");
-    else if (lang == QLatin1String("ja"))
-        suffix = QStringLiteral("_ja.mp3");
-    else if (lang == QLatin1String("en"))
-        suffix = QStringLiteral("_en.mp3");
-    else
-        suffix = QStringLiteral("_pro.mp3");
-    return QFile::exists(assetPath(QStringLiteral("audio/") + narrId + suffix));
+    return !narrResolve(narrId, lang).isEmpty();
 }
 
 QString SolarScene::bootBgPath() const
@@ -1409,6 +1540,18 @@ void SolarScene::pushEvoSim(const QVariantList &v)
     m_evoP5 = p5;
     m_evoP6 = p6;
     emit evoSimChanged();
+    update();
+}
+
+// ★ v1.7 演化演示时间轴: QML 写入 0..1, 驱动 3D 星团"大爆炸→今天→未来"
+//   的动态演示。钳位 + 去重 (值真变了才 update, 避免每帧全 FBO 重绘)。
+void SolarScene::setEvoTime(double v)
+{
+    const double nv = qBound(0.0, v, 1.0);
+    if (qFuzzyCompare(nv + 1.0, m_evoTime + 1.0))
+        return;
+    m_evoTime = nv;
+    emit evoTimeChanged();
     update();
 }
 
@@ -1922,6 +2065,7 @@ ViewState SolarScene::takeSnapshot() const
     s.evoLogL = m_evoLogL;
     s.evoRad = m_evoRad;
     s.evoAge = m_evoAge;
+    s.evoTime = m_evoTime;
     s.evoViz = m_evoViz;
     s.evoP1 = m_evoP1;
     s.evoP2 = m_evoP2;

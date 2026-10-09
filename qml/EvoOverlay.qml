@@ -39,6 +39,28 @@ Rectangle {
     // 普通话音色: zh=男声(pro), pop=女声(pop)。仅普通话有效,
     // 其他语言只有一种音色 (粤=女, 日/英=男), 不给点不动的选项。
     property string zhVoice: "zh"
+
+    // ★ v1.5: 每幅示意图的一句话说明（"这幅图在说什么"）——
+    //   随当前剧本的 viz 类型自动切换, 显示在画布上方。
+    readonly property var vizTitles: ({
+        "hr": "恒星的一生 —— 赫罗图轨迹：横轴=表面温度（左热右冷），纵轴=光度；白点=当前时刻",
+        "sn": "超新星爆发 —— 光变曲线：亮度随时间先猛增、后缓慢衰减",
+        "merger": "星系并合 —— 两星系靠近、被引力拉出潮汐尾，最终合并为一个",
+        "agn": "活动星系核 —— 黑洞周围物质增多，两侧喷流越来越长",
+        "cosmic": "宇宙演化史 —— 从大爆炸到今天（底色示意宇宙温度变化）",
+        "planet": "行星形成 —— 尘埃盘里颗粒碰撞聚合长成行星，气体随时间散去",
+        "protostar": "恒星形成 —— 分子云塌缩成原恒星，两极喷出高速外向流",
+        "binary": "双星演化 —— 两星互绕越转越快直至并合；右图=引力波频率上升",
+        "remnant": "恒星残骸 —— 白矮星慢慢冷却变暗；脉冲星自转逐渐变慢",
+        "cluster": "星团演化 —— 成员星逐个耗尽燃料、离开主序带",
+        "ism": "星际介质循环 —— 分子云 → 恒星诞生 → 恒星死亡 → 物质回归"
+    })
+    readonly property string vizTitle: {
+        const ss = evo.scripts
+        if (!ss || ss.length <= evo.cur)
+            return ""
+        return evo.vizTitles[ss[evo.cur].viz] || ""
+    }
     function narrEffLang() {
         if (evo.narrLang !== "auto") {
             if (evo.narrLang === "zh")
@@ -73,6 +95,13 @@ Rectangle {
     property real speed: 1.0
     property bool logMode: true      // 仅当剧本 allowLog 时有效
     property real baseDur: 45.0      // 1x 全程秒数
+
+    // ★ v1.5 语音演出 (语音驱动播放): 播放时进度条跟着语音走,
+    //   一段播完自动切下一幕, 动画随进度联动 (用户诉求)。
+    property bool narrMode: false    // 语音演出模式 (区别于静默推进)
+    property int  narrI: -1          // 当前正在播语音的阶段索引 (-1=暂挂)
+    property real narrLen: 0         // 当前音频时长 ms (0=不可用)
+    property real narrStartMs: 0     // 本段起播时刻 (卡死兜底)
 
     // ---- 配色 (自包含, 与 Main.qml 主题一致) ----
     readonly property color tx: "#e8eef9"
@@ -460,7 +489,20 @@ Rectangle {
         pushStar()
         vizCv.requestPaint()
     }
-    function togglePlay() { playing = !playing }
+    // ★ v1.5: 播放/暂停 —— 有语音时进入"语音演出"(进度跟语音走、自动切下一幕、
+    //   动画联动), 无语音时退回静默推进 (原体验)。
+    function togglePlay() {
+        if (!playing) {
+            playing = true
+            if (narrOk()) {
+                narrMode = true
+                narrPlayStage(stageIndex())
+            }
+        } else {
+            playing = false
+            narrAbort()
+        }
+    }
     // ★ 停止配音: playNarration 传空 id 即停 (见 sceneitem.cpp)。
     //   sceneObj 为空时静默跳过, 绝不抛异常 —— 之前这里缺定义,
     //   点阶段按钮抛 ReferenceError, 后续 setProg 直接不执行。
@@ -470,9 +512,58 @@ Rectangle {
                 evo.sceneObj.playNarration("", false)
         } catch (e) { console.warn("[演化] 停配音失败: " + e) }
     }
+    // ★ v1.5: 中止语音演出 (关面板/切剧本/暂停时统一走这里)。
+    function narrAbort() {
+        narrMode = false
+        narrI = -1
+        narrLen = 0
+        stopNarr()
+    }
+    // ★ v1.5: 播放第 i 阶段的语音 —— 语音演出的核心状态机。
+    //   ① prog 先跳到本阶段起点; ② 播本段 + 预载下一段 (无缝衔接);
+    //   ③ 无音频阶段短暂停留后跳下一段 (演出不中断); ④ 全播完自动收尾。
+    function narrPlayStage(i) {
+        const s = scripts[cur]
+        if (!narrMode)
+            return
+        if (i >= s.stages.length || i < 0) {
+            // 全部播完: 收尾 (进度到终点, 停止)
+            narrAbort()
+            playing = false
+            setProg(1)
+            return
+        }
+        narrI = i
+        const st = s.stages[i]
+        setProg(Math.min(1, progOf(st.t) + 0.0005))
+        let ok = false
+        try {
+            ok = !!evo.sceneObj
+                 && evo.sceneObj.hasNarration(st.narr, narrEffLang())
+        } catch (e) { ok = false }
+        if (!ok) {
+            narrLen = 0
+            narrSkipTimer.restart()
+            return
+        }
+        let p = ""
+        try { p = evo.sceneObj.playNarrationLang(st.narr, narrEffLang()) } catch (e) { p = "" }
+        if (!p) {
+            narrLen = 0
+            narrSkipTimer.restart()
+            return
+        }
+        narrStartMs = Date.now()
+        try { narrLen = evo.sceneObj.narrLenMs() } catch (e) { narrLen = 0 }
+        // 预载下一段 —— 段间无缝 (修"没接上"的卡顿)
+        try {
+            if (i + 1 < s.stages.length)
+                evo.sceneObj.preloadNarration(s.stages[i + 1].narr, narrEffLang())
+        } catch (e) { /* 预载失败无妨, 播时自走兜底 */ }
+    }
     function selectScript(i) {
         cur = i; prog = 0; playing = false
-        stopNarr()
+        narrAbort()
         const s = scripts[i]
         logMode = s.useLog
         pushStar()
@@ -483,11 +574,61 @@ Rectangle {
         id: tick
         interval: 50; repeat: true; running: evo.playing && evo.visible
         onTriggered: {
-            let np = evo.prog + (0.05 / evo.baseDur) * evo.speed
-            if (np >= 1) { np = 1; evo.playing = false }
-            // ★ setProg 内已含 pushStar (3D 主星跟随), 此处不重复调。
-            evo.setProg(np)
+            if (evo.narrMode) {
+                // ★ v1.5 语音驱动: 进度 = 本阶段区间 × 音频播放进度;
+                //   播完自动进下一段 (narrPlayStage)。
+                if (evo.narrI < 0)
+                    return   // 拖动中暂挂
+                let pos = -1
+                try { pos = evo.sceneObj ? evo.sceneObj.narrPosMs() : -1 } catch (e) { pos = -1 }
+                const len = evo.narrLen
+                if (pos >= 0 && len > 50) {
+                    const s = scripts[evo.cur]
+                    const a = evo.progOf(s.stages[evo.narrI].t)
+                    const b = evo.narrI + 1 < s.stages.length
+                              ? evo.progOf(s.stages[evo.narrI + 1].t) : 1.0
+                    const frac = Math.max(0, Math.min(1, pos / len))
+                    evo.setProg(a + (b - a) * frac)
+                    // 播完判定: 到尾 或 (已播过半且状态不再 playing)
+                    let fin = frac >= 0.995
+                    if (!fin) {
+                        try {
+                            if (!evo.sceneObj.narrPlaying() && frac > 0.5)
+                                fin = true
+                        } catch (e) { /* 查询失败忽略 */ }
+                    }
+                    if (fin)
+                        evo.narrPlayStage(evo.narrI + 1)
+                } else if (pos >= 0 && Date.now() - evo.narrStartMs > 2500 && pos < 50) {
+                    // 起播 2.5 秒位置仍不走 —— 文件/设备异常, 跳过本段
+                    evo.narrPlayStage(evo.narrI + 1)
+                }
+            } else {
+                let np = evo.prog + (0.05 / evo.baseDur) * evo.speed
+                if (np >= 1) { np = 1; evo.playing = false }
+                // ★ setProg 内已含 pushStar (3D 主星跟随), 此处不重复调。
+                evo.setProg(np)
+            }
         }
+    }
+
+    // ★ v1.5: 无音频阶段的兜底跳段 (450ms 后自动进下一段, 演出不中断)。
+    Timer {
+        id: narrSkipTimer
+        interval: 450; repeat: false
+        onTriggered: {
+            if (evo.narrMode)
+                evo.narrPlayStage(evo.narrI + 1)
+        }
+    }
+
+    // ★ v1.4 动效驱动: 面板可见时持续重绘 (40ms ≈ 25fps)。
+    //   静止也有动效 —— 呼吸/流动/闪烁由各 drawX 里的时间相位驱动。
+    //   面板关闭即停 (running: evo.visible), 不浪费 CPU。
+    Timer {
+        id: animTick
+        interval: 40; repeat: true; running: evo.visible
+        onTriggered: vizCv.requestPaint()
     }
 
     // ---- 测试入口 SS_EVO=<scriptId>[:<prog01>] ----
@@ -504,6 +645,13 @@ Rectangle {
             evo.selectScript(idx)
             if (parts.length > 1) evo.setProg(parseFloat(parts[1]))
             else evo.setProg(0.5)
+            // ★ v1.5 测试: SS_EVO=<id>:<prog>:play —— 打开后自动开始语音演出
+            //   (验收"进度跟语音走/自动切下段"用, 语音无法人工点击的自检场景)。
+            if (parts.length > 2 && parts[2] === "play") {
+                evo.narrMode = true
+                evo.playing = true
+                evo.narrPlayStage(evo.stageIndex())
+            }
             evo.visible = true
             // ★ 自检模式且当前尺度为演化视图时, 自动隐藏面板 ——
             //   面板盖住 3D 主星球, 自检图验证的是 3D 层。
@@ -521,14 +669,14 @@ Rectangle {
     // 点背景关闭
     MouseArea {
         anchors.fill: parent
-        onClicked: { evo.playing = false; evo.stopNarr(); evo.visible = false }
+        onClicked: { evo.playing = false; evo.narrAbort(); evo.visible = false }
     }
 
     // ---- 主卡片 ----
     Rectangle {
         anchors.centerIn: parent
         width: Math.min(parent.width - 60, 980)
-        height: Math.min(parent.height - 60, 720)
+        height: Math.min(parent.height - 60, 850)
         radius: 12
         color: Qt.rgba(0.055, 0.078, 0.125, 0.98)
         border.width: 1
@@ -568,7 +716,7 @@ Rectangle {
                         anchors.fill: parent
                         anchors.margins: -8
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { evo.playing = false; evo.stopNarr(); evo.visible = false }
+                        onClicked: { evo.playing = false; evo.narrAbort(); evo.visible = false }
                     }
                 }
             }
@@ -606,11 +754,26 @@ Rectangle {
                 }
             }
 
+            // ---- v1.5 图标题: 这幅图在说什么 (随剧本自动更新) ----
+            Text {
+                Layout.fillWidth: true
+                Layout.leftMargin: 2
+                text: evo.vizTitle.length > 0 ? ("图 · " + evo.vizTitle) : ""
+                color: Qt.rgba(188 / 255, 217 / 255, 1.0, 0.92)
+                font.pixelSize: 13
+                font.family: "Microsoft YaHei"
+                elide: Text.ElideRight
+            }
+
             // ---- 可视化 ----
+            // ★ v1.4: 弹性高度 —— 占满卡片剩余空间 (窗口越大图越大),
+            //   最小 360px 保证形状/动效可见 (旧版固定 330 太小)。
             Canvas {
                 id: vizCv
                 Layout.fillWidth: true
-                Layout.preferredHeight: 330
+                Layout.fillHeight: true
+                Layout.minimumHeight: 360
+                Layout.preferredHeight: 500
                 renderStrategy: Canvas.Immediate
                 canvasSize: Qt.size(width * evo.dpr, height * evo.dpr)
                 onPaint: {
@@ -636,7 +799,20 @@ Rectangle {
                     Layout.fillWidth: true
                     from: 0; to: 1; stepSize: 0.001
                     value: evo.prog
-                    onMoved: evo.setProg(value)
+                    // ★ v1.5: 拖动时暂挂语音 (避免声画错位); 松手后从落点
+                    //   所在阶段恢复语音演出。
+                    onMoved: {
+                        if (evo.narrMode && evo.narrI >= 0) {
+                            evo.narrI = -1       // 暂挂哨兵 (tick 见此跳过)
+                            evo.stopNarr()
+                            evo.narrLen = 0
+                        }
+                        evo.setProg(value)
+                    }
+                    onPressedChanged: {
+                        if (!pressed && evo.narrMode && evo.narrI < 0)
+                            evo.narrPlayStage(evo.stageIndex())
+                    }
                 }
                 Text {
                     text: scripts[cur].stages[stageIndex()].label
@@ -824,10 +1000,11 @@ Rectangle {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     if (!evo.narrOk()) return
-                                    const st = scripts[cur].stages[stageIndex()]
-                                    if (evo.sceneObj)
-                                        evo.sceneObj.playNarrationLang(
-                                            st.narr, evo.narrEffLang())
+                                    // ★ v1.5: 启动完整"语音演出" ——
+                                    //   进度跟着语音走 + 播完自动切下一幕 + 动画联动。
+                                    evo.narrMode = true
+                                    evo.playing = true
+                                    evo.narrPlayStage(evo.stageIndex())
                                 }
                             }
                         }
@@ -922,15 +1099,154 @@ Rectangle {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                evo.playing = false
-                                evo.stopNarr()
-                                evo.setProg(evo.progOf(modelData.t))
+                                // ★ v1.5: 演出中跳段 = 从该段继续播 (语音/进度/动画
+                                //   同步切过去); 非演出中 = 原位定位 (原行为)。
+                                if (evo.narrMode) {
+                                    evo.setProg(evo.progOf(modelData.t))
+                                    evo.narrPlayStage(index)
+                                } else {
+                                    evo.playing = false
+                                    evo.stopNarr()
+                                    evo.setProg(evo.progOf(modelData.t))
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    // ========================================================================
+    //  v1.7 具象化绘图原语 (教学插画风) —— 让"图"看起来"像东西"。
+    //  用户在反馈里明确"图好抽象、不知道展示的什么"→ 全部 viz 由
+    //  "符号图"改为"具象画": 恒星画成发光球、星系画成旋涡盘、星云画成云团。
+    //  所有原语只依赖 Canvas 2D + 已有状态, 不新增依赖。
+    // ========================================================================
+
+    // 发光球: 真实球体感 (高光偏置 + 边缘色 + 外辉光)。rgb 传 "r,g,b"。
+    function drawGlowBall(ctx, x, y, r, rgb, glowMul) {
+        if (r <= 0.2) return
+        const gm = (glowMul === undefined) ? 1.7 : glowMul
+        const g0 = ctx.createRadialGradient(x, y, r * 0.45, x, y, r * gm)
+        g0.addColorStop(0, "rgba(" + rgb + ",0.38)")
+        g0.addColorStop(1, "rgba(" + rgb + ",0)")
+        ctx.fillStyle = g0
+        ctx.beginPath(); ctx.arc(x, y, r * gm, 0, 6.2832); ctx.fill()
+        const g1 = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.12, x, y, r)
+        g1.addColorStop(0, "rgba(255,255,255,0.96)")
+        g1.addColorStop(0.42, "rgba(" + rgb + ",0.95)")
+        g1.addColorStop(1, "rgba(" + rgb + ",0.70)")
+        ctx.fillStyle = g1
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
+    }
+
+    // "#rrggbb" -> "r,g,b" (供 drawGlowBall 使用)
+    function hex2rgb(h) {
+        const v = parseInt(String(h).slice(1), 16)
+        return ((v >> 16) & 255) + "," + ((v >> 8) & 255) + "," + (v & 255)
+    }
+
+    // 旋涡星系: 核球 + 两条对数螺旋臂 + 盘面辉光。rot 旋转, squash 视倾角。
+    function drawSpiralGalaxy(ctx, x, y, R, rot, squash, alpha) {
+        const al = (alpha === undefined) ? 1.0 : alpha
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(1, squash)
+        ctx.rotate(rot)
+        const g0 = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.30)
+        g0.addColorStop(0, "rgba(255,244,214," + (0.50 * al).toFixed(2) + ")")
+        g0.addColorStop(0.45, "rgba(180,200,255," + (0.18 * al).toFixed(2) + ")")
+        g0.addColorStop(1, "rgba(120,150,255,0)")
+        ctx.fillStyle = g0
+        ctx.beginPath(); ctx.arc(0, 0, R * 1.30, 0, 6.2832); ctx.fill()
+        for (let a = 0; a < 2; ++a) {
+            ctx.beginPath()
+            const ph0 = a * Math.PI
+            for (let i = 0; i <= 40; ++i) {
+                const th = i / 40 * 3.6
+                const rr = R * (0.20 + 0.72 * th / 3.6)
+                const px = Math.cos(ph0 + th) * rr
+                const py = Math.sin(ph0 + th) * rr
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+            }
+            ctx.strokeStyle = "rgba(200,220,255," + (0.48 * al).toFixed(2) + ")"
+            ctx.lineWidth = Math.max(2, R * 0.10)
+            ctx.stroke()
+        }
+        const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.32)
+        g1.addColorStop(0, "rgba(255,250,230," + al.toFixed(2) + ")")
+        g1.addColorStop(1, "rgba(255,240,210,0)")
+        ctx.fillStyle = g1
+        ctx.beginPath(); ctx.arc(0, 0, R * 0.32, 0, 6.2832); ctx.fill()
+        ctx.restore()
+    }
+
+    // 云团: 多层重叠径向渐变 (星云/分子云), phase 驱动呼吸。
+    function drawCloud(ctx, x, y, R, rgb, alpha, phase) {
+        const N = 7
+        for (let i = 0; i < N; ++i) {
+            const a = (i * 2.39996) % 6.2832
+            const rr = R * (0.42 + 0.45 * ((i * 0.618) % 1))
+            const ex = x + Math.cos(a) * R * 0.40
+            const ey = y + Math.sin(a) * R * 0.28
+            const br = alpha * (0.72 + 0.28 * Math.sin(phase + i * 1.3))
+            const g = ctx.createRadialGradient(ex, ey, 1, ex, ey, rr)
+            g.addColorStop(0, "rgba(" + rgb + "," + Math.max(0, br).toFixed(2) + ")")
+            g.addColorStop(1, "rgba(" + rgb + ",0)")
+            ctx.fillStyle = g
+            ctx.beginPath(); ctx.arc(ex, ey, rr, 0, 6.2832); ctx.fill()
+        }
+    }
+
+    // 星芒闪光: 爆发/并合/大爆炸瞬间 (放射光芒 + 亮核)。
+    function drawFlash(ctx, x, y, R, alpha, nRays) {
+        if (alpha <= 0.02) return
+        const rays = nRays || 8
+        for (let i = 0; i < rays; ++i) {
+            const a = i / rays * 6.2832
+            const L = R * (i % 2 === 0 ? 1.0 : 0.55)
+            const g = ctx.createLinearGradient(x, y, x + Math.cos(a) * L, y + Math.sin(a) * L)
+            g.addColorStop(0, "rgba(255,248,220," + (0.8 * alpha).toFixed(2) + ")")
+            g.addColorStop(1, "rgba(255,220,160,0)")
+            ctx.strokeStyle = g
+            ctx.lineWidth = 2.5
+            ctx.beginPath(); ctx.moveTo(x, y)
+            ctx.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); ctx.stroke()
+        }
+        const g1 = ctx.createRadialGradient(x, y, 0, x, y, R * 0.5)
+        g1.addColorStop(0, "rgba(255,255,250," + Math.min(1, alpha).toFixed(2) + ")")
+        g1.addColorStop(1, "rgba(255,240,200,0)")
+        ctx.fillStyle = g1
+        ctx.beginPath(); ctx.arc(x, y, R * 0.5, 0, 6.2832); ctx.fill()
+    }
+
+    // 黑洞: 视界黑盘 + 吸积盘 (倾斜椭圆环, 前弧压在视界上)。
+    function drawBlackHole(ctx, x, y, R) {
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(1, 0.34)
+        const gd = ctx.createRadialGradient(0, 0, R * 0.9, 0, 0, R * 2.7)
+        gd.addColorStop(0, "rgba(255,190,110,0)")
+        gd.addColorStop(0.35, "rgba(255,190,110,0.75)")
+        gd.addColorStop(0.72, "rgba(255,120,60,0.32)")
+        gd.addColorStop(1, "rgba(255,90,50,0)")
+        ctx.fillStyle = gd
+        ctx.beginPath(); ctx.arc(0, 0, R * 2.7, 0, 6.2832); ctx.fill()
+        ctx.restore()
+        ctx.fillStyle = "#05060a"
+        ctx.beginPath(); ctx.arc(x, y, R, 0, 6.2832); ctx.fill()
+        ctx.strokeStyle = "rgba(255,205,135,0.85)"
+        ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(x, y, R, 0, 6.2832); ctx.stroke()
+        // 前弧 (吸积盘下半段, 视觉上处于视界前方)
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.scale(1, 0.34)
+        ctx.strokeStyle = "rgba(255,215,160,0.9)"
+        ctx.lineWidth = 3
+        ctx.beginPath(); ctx.arc(0, 0, R * 1.75, 0.15, Math.PI - 0.15); ctx.stroke()
+        ctx.restore()
     }
 
     // ========================================================================
@@ -972,6 +1288,24 @@ Rectangle {
         for (let g = -4; g <= 6; g += 2) {
             ctx.beginPath(); ctx.moveTo(mx, Y(g)); ctx.lineTo(mx + pw, Y(g)); ctx.stroke()
         }
+        // ★ v1.4 主序带示意: 教学锚点 —— 让"赫罗图"一眼可辨。
+        //   主序: 高温高光 (左上) → 低温低光 (右下), 带宽约 ±0.8 dex。
+        ctx.fillStyle = "rgba(150,190,255,0.05)"
+        ctx.beginPath()
+        ctx.moveTo(X(30000), Y(4.6)); ctx.lineTo(X(2900), Y(-2.2))
+        ctx.lineTo(X(2400), Y(-3.8)); ctx.lineTo(X(26000), Y(3.0))
+        ctx.closePath(); ctx.fill()
+        ctx.setLineDash([4, 5])
+        ctx.strokeStyle = "rgba(150,190,255,0.35)"
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(X(30000), Y(4.6)); ctx.lineTo(X(2900), Y(-2.2)); ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(X(26000), Y(3.0)); ctx.lineTo(X(2400), Y(-3.8)); ctx.stroke()
+        ctx.setLineDash([])
+        ctx.fillStyle = "rgba(150,190,255,0.5)"
+        ctx.font = "10px 'Microsoft YaHei'"
+        ctx.fillText("主序带", mx + 10, Y(-3.4))
         // 全轨迹 (暗) + 已走过 (亮)
         ctx.lineWidth = 1.5
         ctx.strokeStyle = "rgba(150,180,220,0.30)"
@@ -994,19 +1328,40 @@ Rectangle {
         }
         const cx = X(tr.teff), cy = Y(tr.logL)
         ctx.lineTo(cx, cy); ctx.stroke()
+        // ★ v1.7 具象: 阶段节点 —— 已走过的站=绿色发光点, 未到=暗环
+        for (let i = 0; i < s.stages.length; ++i) {
+            const p = s.stages[i].track
+            const x = X(p.teff), y = Y(p.logL)
+            const hit = s.stages[i].t <= t
+            if (hit) {
+                drawGlowBall(ctx, x, y, 3.2, "150,230,180", 2.6)
+            } else {
+                ctx.strokeStyle = "rgba(130,150,180,0.4)"
+                ctx.lineWidth = 1
+                ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 6.2832); ctx.stroke()
+            }
+        }
+        // ★ v1.4 游标涟漪脉冲: 静止时也有动感 (每 1.25s 扩散一环)。
+        const tp = Date.now() / 1000
+        const rip = (tp * 0.8) % 1
+        ctx.strokeStyle = "rgba(126,226,138," + (0.78 - 0.62 * rip).toFixed(2) + ")"
+        ctx.lineWidth = 1.8
+        ctx.beginPath(); ctx.arc(cx, cy, 5 + 18 * rip, 0, 6.2832); ctx.stroke()
         ctx.fillStyle = "#ffffff"
-        ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.2832); ctx.fill()
+        ctx.beginPath(); ctx.arc(cx, cy, 4 + 1.2 * Math.sin(tp * 4), 0, 6.2832); ctx.fill()
         ctx.fillStyle = "rgba(160,180,205,0.9)"
         ctx.font = "11px 'Microsoft YaHei'"
         ctx.fillText("赫罗图 (示意)", mx, H - 12)
         ctx.fillText("Teff→", mx + pw - 44, H - 12)
-        // 右: 恒星圆
+        // 右: 恒星圆 (呼吸: 半径 ±3.5%)
         const rx = mx + pw + (W - mx - pw) / 2
         const ry = H / 2 - 10
-        const rr = tr.rad <= 0 ? 3 : 8 + 46 * Math.log10(1 + tr.rad) / Math.log10(301)
+        const breath = 1 + 0.05 * Math.sin(tp * 2.1)
+        const rr = tr.rad <= 0 ? 3
+                 : (8 + 46 * Math.log10(1 + tr.rad) / Math.log10(301)) * breath
         if (tr.rad > 0) {
-            ctx.fillStyle = starCol(tr.teff)
-            ctx.beginPath(); ctx.arc(rx, ry, Math.min(rr, 90), 0, 6.2832); ctx.fill()
+            // ★ v1.7 具象: 恒星由"实心圆"改为"发光球" (高光+边缘+外辉光)
+            drawGlowBall(ctx, rx, ry, Math.min(rr, 92), hex2rgb(starCol(tr.teff)), 1.55)
         } else {
             ctx.fillStyle = "#000000"
             ctx.beginPath(); ctx.arc(rx, ry, 14, 0, 6.2832); ctx.fill()
@@ -1050,8 +1405,14 @@ Rectangle {
         }
         ctx.stroke()
         const px = X(Math.min(t, 300)), py = Y(snMag(Math.min(t, 300)))
+        // ★ v1.4 游标涟漪脉冲
+        const tp = Date.now() / 1000
+        const rip = (tp * 0.8) % 1
+        ctx.strokeStyle = "rgba(126,226,138," + (0.78 - 0.62 * rip).toFixed(2) + ")"
+        ctx.lineWidth = 1.8
+        ctx.beginPath(); ctx.arc(px, py, 5 + 18 * rip, 0, 6.2832); ctx.stroke()
         ctx.fillStyle = "#ffffff"
-        ctx.beginPath(); ctx.arc(px, py, 4, 0, 6.2832); ctx.fill()
+        ctx.beginPath(); ctx.arc(px, py, 4 + 1.2 * Math.sin(tp * 4), 0, 6.2832); ctx.fill()
         ctx.fillStyle = "rgba(160,180,205,0.9)"
         ctx.font = "11px 'Microsoft YaHei'"
         ctx.fillText("Ⅰa 光变 (M)", mx, H - 12)
@@ -1062,13 +1423,26 @@ Rectangle {
         const ltDay = 0.05 * Math.min(t, 300)   // v=15000 km/s 换算光天
         // ★ 视觉半径放大: 真实 3 光天在示意画布上只有几个像素,
         //   用 8x 系数让壳层在 60 天时约 30px 可见。读数仍给真实换算值。
-        const rr = 8 + Math.min(ltDay, 15) * 8
+        const rr = (8 + Math.min(ltDay, 15) * 8) * (1 + 0.06 * Math.sin(Date.now() / 1000 * 2.6))
+        // ★ v1.7 具象: 爆发闪光 (早期最强, 随时间衰减) —— "炸开"的那一刻
+        const burst = Math.max(0, 1 - t / 40)
+        drawFlash(ctx, rx, ry, rr * 2.2, burst * 0.85, 10)
         const grd = ctx.createRadialGradient(rx, ry, 2, rx, ry, rr)
-        grd.addColorStop(0, "rgba(255,220,160,0.95)")
-        grd.addColorStop(0.5, "rgba(255,150,80,0.45)")
-        grd.addColorStop(1, "rgba(255,120,60,0.05)")
+        grd.addColorStop(0, "rgba(255,236,190,0.98)")
+        grd.addColorStop(0.42, "rgba(255,160,90,0.5)")
+        grd.addColorStop(1, "rgba(255,120,60,0.04)")
         ctx.fillStyle = grd
         ctx.beginPath(); ctx.arc(rx, ry, rr, 0, 6.2832); ctx.fill()
+        // ★ v1.7 具象: 多层膨胀壳 ("洋葱"式结构感)
+        for (let k = 1; k <= 3; ++k) {
+            ctx.strokeStyle = "rgba(255,180,120," + (0.30 - 0.07 * k).toFixed(2) + ")"
+            ctx.lineWidth = 1.5
+            ctx.beginPath(); ctx.arc(rx, ry, rr * (0.45 + 0.2 * k), 0, 6.2832); ctx.stroke()
+        }
+        // ★ v1.4 膨胀前缘: 外圈脉动激波环 (示意持续外扩)
+        ctx.strokeStyle = "rgba(255,180,120,0.35)"
+        ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(rx, ry, rr * (1.04 + 0.05 * Math.sin(Date.now() / 1000 * 1.8)), 0, 6.2832); ctx.stroke()
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "12px 'Microsoft YaHei'"
         ctx.fillText("M=" + snMag(Math.min(t, 300)).toFixed(1)
@@ -1082,14 +1456,17 @@ Rectangle {
                    + 0.7 * Math.exp(-Math.pow((n - 0.75) / 0.12, 2))
         const cx = W / 2, cy = H / 2 - 8
         const dx = 40 + (1 - n) * (W * 0.32)
-        function galaxy(x, squeeze) {
-            ctx.fillStyle = "rgba(150,190,255,0.85)"
-            ctx.beginPath(); ctx.ellipse(x, cy, 46, 46 * squeeze, 0, 0, 6.2832); ctx.fill()
-            ctx.fillStyle = "rgba(255,240,210,0.95)"
-            ctx.beginPath(); ctx.ellipse(x, cy, 14, 14 * squeeze, 0, 0, 6.2832); ctx.fill()
+        // ★ v1.4 呼吸: 星系盘面轻微涨缩 (整体 ±4%)
+        const gb = 1 + 0.04 * Math.sin(Date.now() / 1000 * 2.0)
+        // ★ v1.7 具象: 旋涡星系 (核球+螺旋臂), 随并合相互旋进 ——
+        //   用户选"具象化插画风", 椭圆→带旋臂的星系。
+        function galaxy(x, squeeze, rot) {
+            drawSpiralGalaxy(ctx, x, cy, 46 * gb, rot, squeeze, 1.0)
         }
-        // 潮汐尾 (近心点前后)
-        ctx.strokeStyle = "rgba(150,200,255," + (0.15 + 0.6 * Math.min(tail, 1)).toFixed(2) + ")"
+        // 潮汐尾 (近心点前后; 透明度微波动)
+        const twk = 1 + 0.12 * Math.sin(Date.now() / 1000 * 1.6)
+        ctx.strokeStyle = "rgba(150,200,255,"
+                          + ((0.15 + 0.6 * Math.min(tail, 1)) * twk).toFixed(2) + ")"
         ctx.lineWidth = 5
         ctx.beginPath()
         ctx.moveTo(cx - dx - 40, cy - 10)
@@ -1099,7 +1476,10 @@ Rectangle {
         ctx.moveTo(cx + dx + 40, cy + 10)
         ctx.quadraticCurveTo(cx + dx + 120, cy + 90 * tail + 20, cx + dx + 170, cy + 110 * tail + 10)
         ctx.stroke()
-        galaxy(cx - dx, 0.55); galaxy(cx + dx, 0.55)
+        galaxy(cx - dx, 0.55, 0.4 + n * 1.4)
+        galaxy(cx + dx, 0.55, -0.7 - n * 1.8)
+        // ★ v1.7: 并合瞬间 (n→1) 中心闪光
+        drawFlash(ctx, cx, cy, 70, Math.max(0, (n - 0.82) / 0.18) * 0.9, 8)
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "12px 'Microsoft YaHei'"
         ctx.fillText("间距约" + sep.toFixed(0) + " kpc", 24, H - 34)
@@ -1114,22 +1494,33 @@ Rectangle {
         const jet = 150 * Math.pow(n, 1.6)
         const cx = W / 2, cy = H / 2 - 6
         const px = Math.min(W * 0.42, 30 + jet * 1.1)
-        // 瓣
-        ctx.fillStyle = "rgba(150,170,255,0.25)"
-        ctx.beginPath(); ctx.ellipse(cx - px, cy, 46, 26, 0, 0, 6.2832); ctx.fill()
-        ctx.beginPath(); ctx.ellipse(cx + px, cy, 46, 26, 0, 0, 6.2832); ctx.fill()
-        // 喷流
-        ctx.strokeStyle = "rgba(140,220,255,0.9)"
-        ctx.lineWidth = 3
+        // ★ v1.4: 瓣呼吸 + 喷流流动虚线 (物质外流的方向感)
+        const tp = Date.now() / 1000
+        const lb = 1 + 0.045 * Math.sin(tp * 2.4)
+        // ★ v1.7 具象: 瓣 → 云团状辐射区 (多层渐隐, 呼吸)
+        drawCloud(ctx, cx - px, cy, 58, "150,170,255", 0.32 * lb, tp * 1.2)
+        drawCloud(ctx, cx + px, cy, 58, "150,170,255", 0.32 * lb, tp * 1.5 + 2)
+        // ★ v1.7 具象: 喷流 → 宽光晕 + 流动亮芯
+        function jetBeam(x1) {
+            const g = ctx.createLinearGradient(cx, cy, x1, cy)
+            g.addColorStop(0, "rgba(180,235,255,0.5)")
+            g.addColorStop(0.75, "rgba(150,225,255,0.22)")
+            g.addColorStop(1, "rgba(140,220,255,0)")
+            ctx.strokeStyle = g
+            ctx.lineWidth = 13
+            ctx.beginPath(); ctx.moveTo(cx + (x1 > cx ? 10 : -10), cy); ctx.lineTo(x1, cy); ctx.stroke()
+        }
+        jetBeam(cx - px); jetBeam(cx + px)
+        // 亮芯 (流动虚线)
+        ctx.strokeStyle = "rgba(200,240,255,0.95)"
+        ctx.lineWidth = 2.5
+        ctx.setLineDash([7, 6])
+        ctx.lineDashOffset = -(tp * 55) % 13
         ctx.beginPath(); ctx.moveTo(cx - 8, cy); ctx.lineTo(cx - px, cy); ctx.stroke()
         ctx.beginPath(); ctx.moveTo(cx + 8, cy); ctx.lineTo(cx + px, cy); ctx.stroke()
-        // 核 + 盘
-        ctx.fillStyle = "rgba(255,240,210,0.9)"
-        ctx.beginPath(); ctx.ellipse(cx, cy, 30, 10, 0, 0, 6.2832); ctx.fill()
-        ctx.fillStyle = "#000000"
-        ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 6.2832); ctx.fill()
-        ctx.strokeStyle = "#ff9a9a"
-        ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 6.2832); ctx.stroke()
+        ctx.setLineDash([])
+        // ★ v1.7 具象: 核 → 黑洞 (视界 + 吸积盘 + 前弧)
+        drawBlackHole(ctx, cx, cy, 8)
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "12px Consolas, monospace"
         // ★ 读数行避免 "~" 与 "·" 同 Consolas 混排 CJK ——
@@ -1160,6 +1551,18 @@ Rectangle {
         grd.addColorStop(1, "rgba(120,180,255,0.18)")
         ctx.fillStyle = grd
         ctx.fillRect(mx, my - 34, pw, 96)
+        // ★ v1.7 具象: "宇宙随时间点亮" —— 星点按时间轴位置依次亮起,
+        //   大爆炸处画初始闪光 (从空无一物到繁星满天的直观表达)。
+        const tXl = X(Math.max(t, s.tMin))
+        drawFlash(ctx, mx + 6, my + 6, 30, 0.5, 8)
+        for (let i = 0; i < 46; ++i) {
+            const fx = mx + 8 + ((i * 0.618034) % 1) * (pw - 16)
+            const fy = my - 22 + ((i * 0.7548776667) % 1) * 80
+            const lit = fx <= tXl
+            const b = lit ? 205 : 70
+            ctx.fillStyle = "rgba(" + b + "," + b + "," + (b + 45) + "," + (lit ? 0.9 : 0.22) + ")"
+            ctx.fillRect(fx, fy, lit ? 2 : 1.2, lit ? 2 : 1.2)
+        }
         // 事件 ticks (标签奇偶错行, 避免早期密集事件重叠)
         ctx.font = "10px 'Microsoft YaHei'"
         for (let i = 0; i < s.stages.length; ++i) {
@@ -1172,10 +1575,15 @@ Rectangle {
             const ly = (i % 2 === 0) ? my + 60 : my + 76
             ctx.fillText(s.stages[i].label, Math.min(x - 24, mx + pw - 90), ly)
         }
-        // 当前 marker
+        // 当前 marker (★ v1.4 涟漪脉冲)
         const nx = X(Math.max(t, s.tMin))
+        const tp = Date.now() / 1000
+        const rip = (tp * 0.7) % 1
+        ctx.strokeStyle = "rgba(255,255,255," + (0.55 - 0.45 * rip).toFixed(2) + ")"
+        ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.arc(nx, my + 6, 6 + 16 * rip, 0, 6.2832); ctx.stroke()
         ctx.fillStyle = "#ffffff"
-        ctx.beginPath(); ctx.arc(nx, my + 6, 5, 0, 6.2832); ctx.fill()
+        ctx.beginPath(); ctx.arc(nx, my + 6, 5 + 1.0 * Math.sin(tp * 4), 0, 6.2832); ctx.fill()
         const st = s.stages[stageIndex()]
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "13px Consolas, monospace"
@@ -1194,16 +1602,33 @@ Rectangle {
         const gas = Math.max(0, 1 - t / 5)   // 气体 5 Myr 散去
         ctx.fillStyle = "rgba(150,170,220," + (0.10 + 0.25 * gas).toFixed(2) + ")"
         ctx.beginPath(); ctx.ellipse(cx, cy, W * 0.42, 26 + 30 * gas, 0, 0, 6.2832); ctx.fill()
-        // 恒星
-        ctx.fillStyle = "#ffedbe"
-        ctx.beginPath(); ctx.arc(cx, cy, 12, 0, 6.2832); ctx.fill()
+        // ★ v1.7 具象: 盘面同心环纹 (盘隙纹理感)
+        for (let k = 1; k <= 5; ++k) {
+            const fr = k / 5
+            ctx.strokeStyle = "rgba(150,175,225," + (0.08 + 0.05 * k).toFixed(2) + ")"
+            ctx.lineWidth = 1.2
+            ctx.beginPath(); ctx.ellipse(cx, cy, W * 0.42 * fr, (26 + 30 * gas) * fr, 0, 0, 6.2832); ctx.stroke()
+        }
+        // ★ v1.4 盘内尘埃流动 (椭圆轨道环绕, 静置可见)
+        const tp2 = Date.now() / 1000
+        for (let i = 0; i < 14; ++i) {
+            const aa = tp2 * 0.45 + i * 2.39996
+            const fr = 0.35 + 0.65 * ((i * 0.618) % 1)
+            const ex = cx + Math.cos(aa) * W * 0.42 * fr
+            const ey = cy + Math.sin(aa) * (26 + 30 * gas) * fr
+            ctx.fillStyle = "rgba(190,210,255,0.4)"
+            ctx.fillRect(ex - 1, ey - 1, 2.4, 2.4)
+        }
+        // ★ v1.7 具象: 中心恒星 (发光球, 光晕照亮盘面)
+        drawGlowBall(ctx, cx, cy, 12, "255,225,160", 2.6)
         // 三颗行星: 内岩质 / 气态巨行星(迁移) / 外冰巨星
         const g1 = Math.min(1, Math.max(0, (t - 3) / 3))
         const g2 = Math.min(1, Math.max(0, (t - 1) / 4))
         const jx = cx + (W * 0.30 - n * W * 0.16) * (t > 5 ? 1 : 1) // 迁移 inward 示意
         function planet(x, r, col) {
-            ctx.fillStyle = col
-            ctx.beginPath(); ctx.arc(x, cy - 4, Math.max(2, r), 0, 6.2832); ctx.fill()
+            const pr = Math.max(2, r)
+            // ★ v1.7 具象: 行星球体 (高光偏置 + 柔光晕)
+            drawGlowBall(ctx, x, cy - 4, pr, hex2rgb(col), 1.9)
         }
         planet(cx - W * 0.22, 2 + 3 * g1, "#ff9a7a")
         planet(jx - W * 0.05, 3 + 7 * g2, "#e8b96a")
@@ -1225,21 +1650,46 @@ Rectangle {
     function drawProtostar(ctx, W, H, n, t) {
         const cx = W / 2, cy = H / 2 - 6
         const env = Math.max(0, 1 - t / 1.2)   // 包层约 1 Myr 散去
-        const er = 20 + 120 * env
+        // ★ v1.4: 包层呼吸 (±4%)
+        const er = (20 + 120 * env) * (1 + 0.04 * Math.sin(Date.now() / 1000 * 2.5))
+        const tp0 = Date.now() / 1000
+        // ★ v1.7 具象: 分子云包层 → 多层云团 (外暗紫云 + 内暖云)
+        drawCloud(ctx, cx, cy, er * 1.1, "150,120,180", 0.10 + 0.22 * env, tp0)
         const grd = ctx.createRadialGradient(cx, cy, 4, cx, cy, er)
         grd.addColorStop(0, "rgba(255,230,180,0.9)")
-        grd.addColorStop(0.4, "rgba(200,150,110," + (0.15 + 0.4 * env).toFixed(2) + ")")
-        grd.addColorStop(1, "rgba(120,100,90,0.03)")
+        grd.addColorStop(0.4, "rgba(230,170,120," + (0.15 + 0.4 * env).toFixed(2) + ")")
+        grd.addColorStop(1, "rgba(150,120,110,0.03)")
         ctx.fillStyle = grd
         ctx.beginPath(); ctx.arc(cx, cy, er, 0, 6.2832); ctx.fill()
         // 双极外向流: 强度随包层耗散而减弱 (Ⅱ/Ⅲ 类只剩残余),
         // 长度钳在画布内 —— 否则早期会顶穿上下边, 像一条"贯穿线"。
         const jetFrac = Math.min(1, t / 0.5) * (0.15 + 0.85 * env)
         const jet = Math.min(H * 0.38, 30 + 130 * jetFrac)
-        ctx.strokeStyle = "rgba(140,200,255," + (0.15 + 0.55 * jetFrac).toFixed(2) + ")"
-        ctx.lineWidth = 4
-        ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy - 8 - jet); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(cx, cy + 8); ctx.lineTo(cx, cy + 8 + jet); ctx.stroke()
+        // ★ v1.7 具象: 双极外向流 → 锥形光束 (宽而淡, 渐隐末端)
+        function jetCone(dir) {
+            const y0 = cy + 8 * dir
+            const y1 = cy + (8 + jet) * dir
+            const g = ctx.createLinearGradient(0, y0, 0, y1)
+            g.addColorStop(0, "rgba(140,200,255," + (0.70 * jetFrac).toFixed(2) + ")")
+            g.addColorStop(0.7, "rgba(140,200,255," + (0.22 * jetFrac).toFixed(2) + ")")
+            g.addColorStop(1, "rgba(140,200,255,0)")
+            ctx.fillStyle = g
+            ctx.beginPath()
+            ctx.moveTo(cx - 5, y0); ctx.lineTo(cx + 5, y0)
+            ctx.lineTo(cx + 15, y1); ctx.lineTo(cx - 15, y1)
+            ctx.closePath(); ctx.fill()
+        }
+        jetCone(-1); jetCone(1)
+        // 流动亮芯 (虚线)
+        ctx.strokeStyle = "rgba(200,235,255," + (0.20 + 0.6 * jetFrac).toFixed(2) + ")"
+        ctx.lineWidth = 2
+        ctx.setLineDash([9, 7])
+        ctx.lineDashOffset = -(Date.now() / 1000 * 40) % 16
+        ctx.beginPath(); ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy - 8 - jet); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(cx, cy + 10); ctx.lineTo(cx, cy + 8 + jet); ctx.stroke()
+        ctx.setLineDash([])
+        // ★ v1.7 具象: 原恒星核 (暖红色发光球)
+        drawGlowBall(ctx, cx, cy, 9, "255,190,130", 2.4)
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "12px 'Microsoft YaHei'"
         ctx.fillText("包层余量约" + (env * 100).toFixed(0) + "%", 24, H - 34)
@@ -1251,10 +1701,26 @@ Rectangle {
     function drawBinary(ctx, W, H, n, t) {
         // t 为 log10(距并合年); 分离示意加速收缩 + 啁啾正弦
         const cx = W * 0.28, cy = H / 2 - 10
+        const tp = Date.now() / 1000
         const sep = 12 + 90 * Math.pow(Math.max(0, (t + 7) / 16), 1.8)
-        ctx.fillStyle = "#cad8ff"
-        ctx.beginPath(); ctx.arc(cx - sep / 2, cy, 9, 0, 6.2832); ctx.fill()
-        ctx.beginPath(); ctx.arc(cx + sep / 2, cy, 9, 0, 6.2832); ctx.fill()
+        // ★ v1.4: 双星绕质心缓慢互绕 (斜视椭圆) + 每星辉光
+        const orb = tp * 0.7
+        const ox1 = cx - Math.cos(orb) * sep / 2, oy1 = cy - Math.sin(orb) * sep * 0.22
+        const ox2 = cx + Math.cos(orb) * sep / 2, oy2 = cy + Math.sin(orb) * sep * 0.22
+        // ★ v1.7 具象: 两颗不同色发光球 (黄白+蓝白) + 轨道拖尾星尘 + 并合闪光
+        function bstar(x, y, rgb) {
+            drawGlowBall(ctx, x, y, 9, rgb, 2.4)
+        }
+        for (let k = 1; k <= 7; ++k) {
+            const aa = orb - k * 0.13
+            const tx = cx - Math.cos(aa) * sep / 2
+            const ty = cy - Math.sin(aa) * sep * 0.22
+            ctx.fillStyle = "rgba(160,200,255," + (0.30 - k * 0.035).toFixed(2) + ")"
+            ctx.beginPath(); ctx.arc(tx, ty, 2.2, 0, 6.2832); ctx.fill()
+        }
+        bstar(ox1, oy1, "255,225,160")
+        bstar(ox2, oy2, "190,215,255")
+        drawFlash(ctx, cx, cy, 66, Math.max(0, 1 - Math.abs(t + 7) / 1.2) * 0.95, 10)
         ctx.strokeStyle = "rgba(150,180,255,0.35)"
         ctx.beginPath(); ctx.ellipse(cx, cy, sep / 2 + 8, (sep / 2 + 8) * 0.6, 0, 0, 6.2832); ctx.stroke()
         // 右: 啁啾波 (频率随 n 增高)
@@ -1266,7 +1732,8 @@ Rectangle {
             const f = i / 200
             const fr = 2 + 26 * Math.pow(f * (0.2 + 0.8 * n), 1.5)
             const x = mx + f * pw
-            const y = my + ph / 2 + Math.sin(f * fr * 6.2832) * ph * 0.32 * (0.3 + 0.7 * f)
+            // ★ v1.4: +tp*7 相位 —— 波形行进 (啁啾"传播"的方向感)
+            const y = my + ph / 2 + Math.sin(f * fr * 6.2832 + tp * 7) * ph * 0.32 * (0.3 + 0.7 * f)
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
         }
         ctx.stroke()
@@ -1291,17 +1758,37 @@ Rectangle {
         panel(24, "白矮星冷却 (L–年龄)")
         panel(24 + lw + 24, "脉冲星自转减慢 (P–年龄)")
         // WD: logL  -1.5 → -4.5 over logyr 6→10 (示意直线)
+        const tp = Date.now() / 1000
         const wdx = 24 + (t - 3) / 7 * lw
         const wdL = -1.5 - (t - 6) / 4 * 3.0
-        ctx.fillStyle = "#cad8ff"
-        ctx.beginPath(); ctx.arc(Math.min(wdx, 24 + lw - 4), 60 + ((-1.0 - wdL) / 4.5) * (H - 140), 5, 0, 6.2832); ctx.fill()
+        // ★ v1.7 具象: 白矮星 (从亮白大球 → 暗红小球, 随冷却缩小变暗)
+        const fade = Math.max(0, Math.min(1, 1 - (t - 3) / 7))
+        const wdR = 4 + 9 * fade
+        drawGlowBall(ctx, Math.min(wdx, 24 + lw - 4),
+                     60 + ((-1.0 - wdL) / 4.5) * (H - 140), wdR,
+                     fade > 0.5 ? "220,235,255" : "235,170,140", 2.2 + fade)
         ctx.strokeStyle = "rgba(160,180,220,0.5)"
         ctx.beginPath(); ctx.moveTo(28, 70); ctx.lineTo(24 + lw - 4, H - 80); ctx.stroke()
         // Pulsar: P 0.033 → 数秒 (log)
         const logP = -1.48 + (t - 3) / 7 * 2.0
         const pxx = 24 + lw + 24 + (t - 3) / 7 * lw
-        ctx.fillStyle = "#7ee28a"
-        ctx.beginPath(); ctx.arc(Math.min(pxx, 24 + 2 * lw + 20), 60 + ((logP + 1.6) / 2.4) * (H - 140), 5, 0, 6.2832); ctx.fill()
+        // ★ v1.7 具象: 脉冲星 (蓝白小球 + 旋转光锥双束, 随年龄变慢)
+        const pxc = Math.min(pxx, 24 + 2 * lw + 20)
+        const pyc = 60 + ((logP + 1.6) / 2.4) * (H - 140)
+        const spin = tp * (0.9 + 5.0 * Math.max(0, Math.min(1, 1 - (t - 3) / 7)))
+        for (let s2 = 0; s2 < 2; ++s2) {
+            const ang = spin + s2 * Math.PI
+            const dx2 = Math.cos(ang), dy2 = Math.sin(ang)
+            const L2 = 40
+            const g2 = ctx.createLinearGradient(pxc, pyc, pxc + dx2 * L2, pyc + dy2 * L2)
+            g2.addColorStop(0, "rgba(150,255,220,0.85)")
+            g2.addColorStop(1, "rgba(150,255,220,0)")
+            ctx.strokeStyle = g2
+            ctx.lineWidth = 7
+            ctx.beginPath(); ctx.moveTo(pxc, pyc)
+            ctx.lineTo(pxc + dx2 * L2, pyc + dy2 * L2); ctx.stroke()
+        }
+        drawGlowBall(ctx, pxc, pyc, 5, "160,255,230", 2.6)
         ctx.fillStyle = "rgba(220,232,255,0.95)"
         ctx.font = "12px 'Microsoft YaHei'"
         ctx.fillText("白矮星光度10的" + wdL.toFixed(1) + "次方太阳 · 脉冲星周期"
@@ -1318,14 +1805,28 @@ Rectangle {
         const cx = W / 2, cy = H / 2 - 8
         const R = 40 + rh * 12
         const N = Math.round(130 * bound)
+        // ★ v1.4: 星点闪烁 (每颗相位独立, 静置也有"活的星团"感)
+        const tp = Date.now() / 1000
         for (let i = 0; i < N; ++i) {
             const a = (i * 2.39996) % 6.2832
             const r = R * Math.sqrt(((i * 0.618034) % 1))
             const x = cx + Math.cos(a) * r
             const y = cy + Math.sin(a) * r * 0.8
-            const b = 120 + ((i * 37) % 100)
-            ctx.fillStyle = "rgba(" + b + "," + (b + 20) + ",255,0.8)"
-            ctx.fillRect(x, y, 2, 2)
+            const b = 140 + ((i * 37) % 90) + 45 * Math.sin(tp * 3 + i * 1.7)
+            // ★ v1.7 具象: 三色星 (1/4 红巨星, 其余蓝白), 零星大星带辉光
+            const red = (i % 4 === 0)
+            const col = red
+                ? "rgba(" + b.toFixed(0) + "," + (b * 0.55).toFixed(0) + "," + (b * 0.45).toFixed(0) + ",0.9)"
+                : "rgba(" + b.toFixed(0) + "," + (b + 20).toFixed(0) + ",255,0.85)"
+            ctx.fillStyle = col
+            ctx.beginPath(); ctx.arc(x, y, (i % 7 === 0) ? 1.9 : 1.2, 0, 6.2832); ctx.fill()
+            if (i % 11 === 0) {
+                const g = ctx.createRadialGradient(x, y, 0, x, y, 7)
+                g.addColorStop(0, "rgba(220,235,255,0.45)")
+                g.addColorStop(1, "rgba(220,235,255,0)")
+                ctx.fillStyle = g
+                ctx.beginPath(); ctx.arc(x, y, 7, 0, 6.2832); ctx.fill()
+            }
         }
         ctx.strokeStyle = "rgba(150,180,255,0.4)"
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.stroke()
@@ -1343,24 +1844,32 @@ Rectangle {
         //   当前站高亮, 其余压暗 —— "认三种光"的视觉锚点。
         const k = stageIndex()
         const cx = W / 2, cy = H / 2 - 8
-        // 背景星场
+        // 背景星场 (★ v1.4: 独立相位闪烁)
+        const tp = Date.now() / 1000
         for (let i = 0; i < 90; ++i) {
             const a = (i * 2.39996) % 6.2832
             const r = 60 + ((i * 0.618034) % 1) * (Math.min(W, H) * 0.38)
             const b = 100 + ((i * 37) % 120)
-            ctx.fillStyle = "rgba(" + b + "," + b + "," + b + ",0.35)"
+            const tw = 0.26 + 0.22 * Math.sin(tp * 4 + i * 2.1)
+            ctx.fillStyle = "rgba(" + b + "," + b + "," + b + "," + tw.toFixed(2) + ")"
             ctx.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, 1.5, 1.5)
         }
-        // 三团: 发射(红) / 反射(蓝) / 暗(黑幕+描边)
-        const cols = [["255,120,120", "发射 H II"], ["140,180,255", "反射 散射"], ["20,22,30", "暗 剪影"]]
+        // ★ v1.7 具象: 三团由"实心椭圆"改为"云团" ——
+        //   发射=红云 / 反射=蓝云 / 暗=深色剪影云 (带微光边)。
+        const cols = [["255,120,120", "发射 H II"], ["140,180,255", "反射 散射"], ["48,44,64", "暗 剪影"]]
         for (let j = 0; j < 3; ++j) {
             const x = cx + (j - 1) * 130
             const on = (k <= 2 && j === k) || (k > 2)  // 前3站逐一点亮, 之后全亮
-            ctx.fillStyle = "rgba(" + cols[j][0] + "," + (on ? "0.55" : "0.14") + ")"
-            ctx.beginPath(); ctx.ellipse(x, cy, 52, 40, 0, 0, 6.2832); ctx.fill()
-            ctx.strokeStyle = on ? "rgba(255,255,255,0.5)" : "rgba(160,180,205,0.25)"
-            ctx.lineWidth = on ? 2 : 1
-            ctx.beginPath(); ctx.ellipse(x, cy, 52, 40, 0, 0, 6.2832); ctx.stroke()
+            const brt = (on ? 0.50 : 0.12) + 0.06 * Math.sin(tp * 2.2 + j)  // ★ 呼吸
+            if (j === 2) {
+                // 暗云: 深色云团 + 微光剪影边 (星空前的"墨迹")
+                drawCloud(ctx, x, cy, 62, "34,32,48", 0.9 * (on ? 1 : 0.55), tp)
+                ctx.strokeStyle = on ? "rgba(190,200,235,0.45)" : "rgba(140,150,180,0.18)"
+                ctx.lineWidth = on ? 2 : 1
+                ctx.beginPath(); ctx.ellipse(x, cy, 56, 42, 0, 0, 6.2832); ctx.stroke()
+            } else {
+                drawCloud(ctx, x, cy, 68, cols[j][0], brt * 1.6, tp + j * 2.1)
+            }
             ctx.fillStyle = on ? "rgba(220,232,255,0.95)" : "rgba(160,180,205,0.5)"
             ctx.font = "11px 'Microsoft YaHei'"
             ctx.fillText(cols[j][1], x - 30, cy + 58)

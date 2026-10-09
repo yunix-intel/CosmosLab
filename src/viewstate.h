@@ -69,6 +69,9 @@ struct ViewState
     double evoLogL = 0.0;      // log10(L/Lsun)
     double evoRad = 1.0;       // Rsun
     double evoAge = 0.0;       // 当前物理时间 (剧本单位, 仅读数用)
+    // ★ v1.7 演化演示时间轴 (0..1): 大爆炸(0) → 现在(0.92) → 未来(1)。
+    //   驱动 3D 星团扩散/点亮/变暗 —— "动态演示宇宙出生到未来"。
+    double evoTime = 1.0;
 
     // ---- 演化通用模拟量 (v1.3 A/B/C批): 非HR剧本的3D形态驱动 ----
     //

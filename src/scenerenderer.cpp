@@ -449,7 +449,10 @@ void SceneRenderer::render(const ViewState &vs)
         drawEvoStar(vs, viewProj);
         // ★ A批通用模拟体 (sn/merger/agn/binary): 与主星球同深度策略。
         drawEvoSim(vs, viewProj);
-        m_evoStars.render(viewProj, pointScaleE);
+        // ★ v1.4: 传相机位置 (深度雾) 与时间 (呼吸闪烁)。
+        // ★ v1.7: 传演化演示时间 (0..1) —— 大爆炸 → 今天 → 未来。
+        m_evoStars.render(viewProj, pointScaleE, m_camera.eye(), timeSec,
+                          float(vs.evoTime));
 
         if (!m_postfx.ready())
             return;

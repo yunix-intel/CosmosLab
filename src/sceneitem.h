@@ -109,6 +109,8 @@ class SolarScene : public QQuickFramebufferObject
     Q_PROPERTY(bool    testHubble READ testHubble CONSTANT)
     // 测试用: SS_EVO=<scriptId>[:<prog01]> 启动即打开演化播放器并定位
     Q_PROPERTY(QString testEvo READ testEvo CONSTANT)
+    // ★ v1.7 测试用: SS_EVOT=<0..1> 设定演化演示时间轴位置 (抓帧验证)
+    Q_PROPERTY(QString testEvoT READ testEvoT CONSTANT)
     // 测试用: SS_STELLAR=1 启动即显示恒星面板
     Q_PROPERTY(bool testStellar READ testStellar CONSTANT)
     // 测试用: SS_POP=1 启动即科普版 (proMode=false)
@@ -190,6 +192,13 @@ class SolarScene : public QQuickFramebufferObject
     //    C++ 侧各自去重, render() 内按非零者绘制。
     Q_PROPERTY(QVariantList evoSim WRITE pushEvoSim NOTIFY evoSimChanged)
     void pushEvoSim(const QVariantList &v);
+
+    // ★ v1.7 演化演示时间轴 (0..1): QML 写入 —— 驱动 3D 星团
+    //   "大爆炸 → 今天 → 未来"的动态演示 (星点扩散 / 按类型点亮 / 未来变暗)。
+    //   0 = 星点聚于中心奇点, 0.92 = 现在, 1 = 未来。
+    Q_PROPERTY(double evoTime READ evoTime WRITE setEvoTime NOTIFY evoTimeChanged)
+    void setEvoTime(double v);
+    double evoTime() const { return m_evoTime; }
 
 public:
     explicit SolarScene(QQuickItem *parent = nullptr);
@@ -293,6 +302,16 @@ public:
     Q_INVOKABLE QString playNarration(const QString &narrId, bool usePop);
     Q_INVOKABLE QString playNarrationLang(const QString &narrId, const QString &lang);
     Q_INVOKABLE bool hasNarration(const QString &narrId, const QString &lang) const;
+    // ★ v1.5 语音演出支持 (双槽交替预载, 消除段间开文件延迟):
+    //   preloadNarration 把下一段音频预开到空闲槽 (只 open 不 play);
+    //   playNarrationLang 命中预载时直接 play —— 段间无缝衔接 (修卡顿)。
+    //   narrPosMs/narrLenMs/narrPlaying 供 QML 把进度条与音频播放位置同步
+    //   (语音驱动进度: 播放时进度跟着语音走, 播完自动切下一阶段)。
+    //   均容错: 无活动槽/查询失败返回 -1/false, 绝不抛异常。
+    Q_INVOKABLE void preloadNarration(const QString &narrId, const QString &lang);
+    Q_INVOKABLE double narrPosMs();
+    Q_INVOKABLE double narrLenMs();
+    Q_INVOKABLE bool narrPlaying();
 
     // ---- 开机背景图 (AI 生成深空 splash, assets/ai/boot_bg.jpg) ----
     //   QML 的 Image 读不到 qrc 外的相对路径, 这里给绝对路径。
@@ -313,6 +332,7 @@ public:
     QString testMarker() const { return m_testMarker; }
     bool testHubble() const { return m_testHubble; }
     QString testEvo() const { return m_testEvo; }
+    QString testEvoT() const { return m_testEvoT; }
     bool testStellar() const { return m_testStellar; }
     bool testPop() const { return m_testPop; }
 
@@ -359,12 +379,16 @@ signals:
     void galaxyLabelsChanged();
     void evoStarChanged();
     void evoSimChanged();
+    void evoTimeChanged();
 
 private slots:
     void onTick();
 
 private:
     void applyFocus();
+    // ★ v1.5: narrId+lang -> 音频文件绝对路径 (不存在返回空串)。
+    //   播放/预载/存在性检查共用同一套解析, 避免三处白名单漂移。
+    QString narrResolve(const QString &narrId, const QString &lang) const;
     // 把太阳的银盘坐标投影到屏幕, 更新 sunMark* 属性
     void updateSunMark();
 
@@ -387,6 +411,12 @@ private:
     QString m_testMarker;          // 测试用: 模拟点击的标签 (SS_MARKER)
     bool    m_testHubble = false;  // 测试用: 启动即开哈勃图 (SS_HUBBLE)
     QString m_testEvo;             // 测试用: SS_EVO=<id>[:<prog>] 开演化播放器
+    QString m_testEvoT;            // 测试用: SS_EVOT=<0..1> 演化演示时间轴
+    // ★ v1.5 配音双槽 (WinMM 别名 ssnarr0/ssnarr1 交替):
+    //   m_narrActive = 正在播的槽 (-1=无); m_narrFile 记各槽已打开的文件,
+    //   预载命中时直接 play (省 open 延迟)。非 Windows 平台不用。
+    int     m_narrActive = -1;
+    QString m_narrFile[2];
     bool    m_testStellar = false; // 测试用: SS_STELLAR=1 显示恒星面板
     bool    m_testPop = false;     // 测试用: SS_POP=1 启动即科普版
     bool    m_showBelts = true;
@@ -424,6 +454,8 @@ private:
     mutable double m_evoLogL = 0.0;
     mutable double m_evoRad = 1.0;
     mutable double m_evoAge = 0.0;
+    // ★ v1.7 演化演示时间轴 (0..1, 见属性注释)
+    mutable double m_evoTime = 1.0;
 
     // ---- 演化通用模拟量缓存 (v1.3 A/B/C批, QML 经 pushEvoSim 写入) ----
     mutable int    m_evoViz = 0;

@@ -798,7 +798,7 @@ ApplicationWindow {
                                   : Qt.rgba(1, 1, 1, 0.08)
                     Text {
                         anchors.centerIn: parent
-                        text: "演化"
+                        text: "剧本"
                         color: evoOverlay.visible ? "#bcd9ff" : root.cTextDim
                         font.pixelSize: 11
                         font.bold: evoOverlay.visible
@@ -2035,6 +2035,21 @@ ApplicationWindow {
     //    太阳所在的猎户支严格说不是主旋臂, 而是一条次级结构。
     //    把它标成主旋臂是常见的科普错误。
     // ========================================================================
+    // ---- 早期宇宙炽热底色 (v1.7) ----
+    // 大爆炸→核合成期间画面"橙红热的", 随时间淡出 —— 宇宙从热到冷的直观意象。
+    Rectangle {
+        anchors.fill: parent
+        visible: scene.scaleLevel === 3 && !root.stellarView && scene.evoTime < 0.5
+        opacity: Math.max(0, 1 - scene.evoTime / 0.48) * 0.5
+        gradient: Gradient {
+            GradientStop { position: 0.0;  color: "#431506" }
+            GradientStop { position: 0.55; color: "#2a1006" }
+            GradientStop { position: 1.0;  color: "#0d0a08" }
+        }
+        // ★ 不加 z (默认 0) —— 只盖住 3D 场景 (声明更早的同级子级)。
+        //   若设 z>0 会盖掉说明卡/时间轴 (它们所在容器 z 默认 0)。
+    }
+
     Item {
         id: galaxyLabelLayer
         anchors.fill: parent
@@ -2042,6 +2057,9 @@ ApplicationWindow {
         //   初版只写了 === 1, 于是宇宙视图里所有标注都不出现 ——
         //   而画面本身是正常的, 很容易误判成"投影算错了"。
         visible: scene.scaleLevel >= 1 && !root.stellarView
+        // ★ v1.7 注意: "标签随演示淡入"的 opacity **不能**放在本容器上 ——
+        //   说明卡/时间轴等 UI 也是本容器的后代, 会被一起级联隐藏。
+        //   见下方 delegate 内的逐标签 opacity。
         z: 5
 
         Repeater {
@@ -2049,6 +2067,11 @@ ApplicationWindow {
 
             delegate: Item {
                 required property var modelData
+                // ★ v1.7: 标签随"天体出现时间"淡入 (演化演示 0.45→0.57);
+                //   银河系/宇宙视图恒 1。逐标签生效, 不影响同容器的其他 UI。
+                opacity: (scene.scaleLevel === 3)
+                         ? Math.max(0, Math.min(1, (scene.evoTime - 0.45) / 0.12))
+                         : 1.0
                 x: modelData.x * root.width
                 y: modelData.y * root.height
                 visible: x > 30 && x < root.width - 30
@@ -2198,6 +2221,370 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+
+        // ---- 演化视图说明卡 (v1.5) ----
+        // ★ 为什么需要: 演化视图是"112 个天体的类型地图", 但没有说明时
+        //   用户看不懂星点是什么、为什么分三群、形状代表什么。
+        //   左上角常驻说明 + 形状图例, 让"这是什么"一眼可读。
+        Rectangle {
+            id: evoGuide
+            visible: scene.scaleLevel === 3 && !root.stellarView
+            anchors.left: parent.left
+            anchors.leftMargin: 16
+            anchors.top: parent.top
+            anchors.topMargin: 72
+            width: 272
+            radius: 10
+            color: Qt.rgba(0.05, 0.08, 0.12, 0.82)
+            border.width: 1
+            border.color: Qt.rgba(0.37, 0.66, 1.0, 0.28)
+            z: 300
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 7
+
+                Text {
+                    text: "演化视图 · 天体类型地图"
+                    color: "#bcd9ff"
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.family: root.sansFont
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: Qt.rgba(200 / 255, 215 / 255, 235 / 255, 0.88)
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    lineHeight: 1.3
+                    text: "每个光点 = 一个天体（共 112 个）\n" +
+                          "· 左 群：恒星 —— 按赫罗图排布\n" +
+                          "· 右 群：星系与黑洞 —— 按距离排布\n" +
+                          "· 下 群：星云 —— 按类型分组"
+                }
+                // 形状图例: 左侧 Canvas 画 6 个形状, 右侧对应文字
+                Row {
+                    spacing: 9
+                    Canvas {
+                        id: evoLegendCv
+                        width: 30
+                        height: 132
+                        renderStrategy: Canvas.Immediate
+                        onPaint: {
+                            const ctx = getContext("2d")
+                            ctx.reset()
+                            function shape(kind, cx, cy) {
+                                if (kind === 1) {          // 星芒
+                                    ctx.strokeStyle = "#dfe9ff"
+                                    ctx.lineWidth = 1.2
+                                    ctx.beginPath(); ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy); ctx.stroke()
+                                    ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8); ctx.stroke()
+                                    ctx.fillStyle = "#ffffff"
+                                    ctx.beginPath(); ctx.arc(cx, cy, 2.2, 0, 6.2832); ctx.fill()
+                                } else if (kind === 2) {   // 环
+                                    ctx.strokeStyle = "#8fd0ff"
+                                    ctx.lineWidth = 2
+                                    ctx.beginPath(); ctx.arc(cx, cy, 6, 0, 6.2832); ctx.stroke()
+                                    ctx.fillStyle = "rgba(255,255,255,0.7)"
+                                    ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, 6.2832); ctx.fill()
+                                } else if (kind === 3) {   // 喷流
+                                    ctx.strokeStyle = "#9be3ff"
+                                    ctx.lineWidth = 2
+                                    ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8); ctx.stroke()
+                                    ctx.fillStyle = "#ffffff"
+                                    ctx.beginPath(); ctx.arc(cx, cy, 2, 0, 6.2832); ctx.fill()
+                                } else if (kind === 4) {   // 双瓣
+                                    ctx.fillStyle = "#ffb08a"
+                                    ctx.beginPath(); ctx.arc(cx - 5, cy, 3.6, 0, 6.2832); ctx.fill()
+                                    ctx.beginPath(); ctx.arc(cx + 5, cy, 3.6, 0, 6.2832); ctx.fill()
+                                } else if (kind === 5) {   // 团簇
+                                    ctx.fillStyle = "#c9b3ff"
+                                    const px = [0, -5, 5, -4, 4]
+                                    const py = [0, -4, -3, 4, 5]
+                                    for (let k = 0; k < 5; ++k) {
+                                        ctx.beginPath(); ctx.arc(cx + px[k], cy + py[k], 1.8, 0, 6.2832); ctx.fill()
+                                    }
+                                } else {                    // 光点
+                                    const g = ctx.createRadialGradient(cx, cy, 0.5, cx, cy, 7)
+                                    g.addColorStop(0, "rgba(255,255,255,0.95)")
+                                    g.addColorStop(1, "rgba(160,190,255,0)")
+                                    ctx.fillStyle = g
+                                    ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 6.2832); ctx.fill()
+                                }
+                            }
+                            for (let i = 0; i < 6; ++i)
+                                shape(i, 15, 11 + i * 22)
+                        }
+                    }
+                    Column {
+                        spacing: 0
+                        Repeater {
+                            model: [
+                                "星芒：高光度恒星 · 类星体",
+                                "圆环：超新星遗迹 · 行星状星云",
+                                "喷流：耀变体",
+                                "双瓣：射电星系",
+                                "团簇：星团 · 星系团",
+                                "光点：主序星 · 普通星系"
+                            ]
+                            Text {
+                                required property string modelData
+                                width: evoGuide.width - 24 - 39
+                                height: 22
+                                verticalAlignment: Text.AlignVCenter
+                                text: modelData
+                                color: Qt.rgba(205 / 255, 220 / 255, 240 / 255, 0.85)
+                                font.pixelSize: 11
+                                font.family: root.sansFont
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: Qt.rgba(170 / 255, 190 / 255, 215 / 255, 0.75)
+                    font.pixelSize: 11
+                    font.family: root.sansFont
+                    text: "拖动旋转视角 · 滚轮缩放 · 点击名字查看详情"
+                }
+            }
+        }
+
+        // ---- 演化演示时间轴 (v1.7) ----
+        // ★ 用户诉求: "演化视图当然要是动态演示宇宙出生到未来的整个过程,
+        //   而不仅仅是拖动"。进入演化尺度自动从"大爆炸"演示到"未来",
+        //   可随时拖动/暂停/重播。scene.evoTime (0..1) 驱动 3D 星团的
+        //   扩散、依次点亮与未来变暗 (见 evostars 顶点着色器)。
+        Item {
+            id: evoTl
+            visible: scene.scaleLevel === 3 && !root.stellarView
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 26
+            width: 680
+            height: 78
+            z: 300
+
+            property bool playing: false
+            property bool autoStarted: false
+
+            // 首次进入演化尺度自动开演一次 (约 32 秒走完全程);
+            // 测试钩子 SS_EVOT 优先 (直接定位到设定时刻, 不自动播)。
+            function kick() {
+                if (!visible || autoStarted)
+                    return
+                autoStarted = true
+                if (scene.testEvoT === "") {
+                    scene.evoTime = 0
+                    playing = true
+                } else {
+                    scene.evoTime = Math.max(0, Math.min(1, parseFloat(scene.testEvoT)))
+                }
+            }
+            onVisibleChanged: {
+                if (visible) kick()
+                else playing = false
+            }
+            Component.onCompleted: kick()
+
+            Timer {
+                interval: 40; repeat: true; running: evoTl.visible && evoTl.playing
+                onTriggered: {
+                    let nt = scene.evoTime + 0.04 / 32
+                    if (nt >= 1) { nt = 1; evoTl.playing = false }
+                    scene.evoTime = nt
+                }
+            }
+
+            function phaseName(v) {
+                if (v < 0.05) return "大爆炸 · 奇点"
+                if (v < 0.12) return "暴胀 · 瞬时膨胀"
+                if (v < 0.25) return "粒子时代"
+                if (v < 0.38) return "太初核合成"
+                if (v < 0.48) return "复合 · 光开始远行"
+                if (v < 0.62) return "第一批恒星与星系"
+                if (v < 0.78) return "星系成团"
+                if (v < 0.88) return "太阳系形成"
+                if (v < 0.92) return "现在 · 138亿年"
+                return "未来 · 加速膨胀"
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 12
+                color: Qt.rgba(0.05, 0.08, 0.12, 0.86)
+                border.width: 1
+                border.color: Qt.rgba(0.37, 0.66, 1.0, 0.30)
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 5
+
+                    Row {
+                        width: parent.width
+                        spacing: 8
+                        Text {
+                            text: "宇宙演化演示"
+                            color: "#bcd9ff"
+                            font.pixelSize: 13
+                            font.bold: true
+                            font.family: root.sansFont
+                        }
+                        Text {
+                            text: "· " + evoTl.phaseName(scene.evoTime)
+                            color: "#e8eef9"
+                            font.pixelSize: 13
+                            font.family: root.sansFont
+                        }
+                        Item {
+                            width: Math.max(0, evoTl.width - 20 - 84 - 230 - 64 - 16)
+                            height: 1
+                        }
+                        Rectangle {
+                            width: 64; height: 24; radius: 6
+                            color: tlMa.containsMouse ? Qt.rgba(0.37, 0.66, 1.0, 0.30)
+                                                      : Qt.rgba(1, 1, 1, 0.06)
+                            border.width: 1
+                            border.color: Qt.rgba(0.5, 0.7, 1.0, 0.4)
+                            Text {
+                                anchors.centerIn: parent
+                                text: evoTl.playing ? "❚❚ 暂停"
+                                     : (scene.evoTime >= 0.999 ? "↻ 重播" : "▶ 继续")
+                                color: "#d7e6ff"
+                                font.pixelSize: 11
+                                font.family: root.sansFont
+                            }
+                            MouseArea {
+                                id: tlMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (evoTl.playing) {
+                                        evoTl.playing = false
+                                    } else {
+                                        if (scene.evoTime >= 0.999)
+                                            scene.evoTime = 0
+                                        evoTl.playing = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // 时间轴滑条 (可拖/可点)
+                    Item {
+                        width: parent.width
+                        height: 18
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            height: 4
+                            radius: 2
+                            color: Qt.rgba(1, 1, 1, 0.10)
+                        }
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width * scene.evoTime
+                            height: 4
+                            radius: 2
+                            color: Qt.rgba(0.37, 0.66, 1.0, 0.75)
+                        }
+                        // "现在"标记 (92%)
+                        Rectangle {
+                            x: parent.width * 0.92 - 1
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 2; height: 11
+                            color: Qt.rgba(255, 205, 112, 0.9)
+                        }
+                        // 当前时刻手柄
+                        Rectangle {
+                            x: parent.width * scene.evoTime - 7
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 14; height: 14; radius: 7
+                            color: "#bcd9ff"
+                            border.width: 2
+                            border.color: "#5ea9ff"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onPressed: (m) => {
+                                evoTl.playing = false
+                                scene.evoTime = Math.max(0, Math.min(1, m.x / width))
+                            }
+                            onPositionChanged: (m) => {
+                                if (m.buttons & Qt.LeftButton)
+                                    scene.evoTime = Math.max(0, Math.min(1, m.x / width))
+                            }
+                        }
+                    }
+                    // 刻度标注
+                    Row {
+                        width: parent.width
+                        Text {
+                            text: "大爆炸"
+                            color: Qt.rgba(160 / 255, 180 / 255, 205 / 255, 0.8)
+                            font.pixelSize: 10
+                            font.family: root.sansFont
+                        }
+                        Item { width: Math.max(0, parent.width - 60 - 40 - 40 - 30); height: 1 }
+                        Text {
+                            text: "现在"
+                            color: Qt.rgba(1.0, 205 / 255, 112 / 255, 0.85)
+                            font.pixelSize: 10
+                            font.family: root.sansFont
+                        }
+                        Item { width: 36; height: 1 }
+                        Text {
+                            text: "未来"
+                            color: Qt.rgba(160 / 255, 180 / 255, 205 / 255, 0.8)
+                            font.pixelSize: 10
+                            font.family: root.sansFont
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- 大爆炸闪光 (v1.7): 三层柔和光晕 (0 → 0.12 淡出) ----
+        //   早先单层实心圆太"硬", 改多层递减半径, 更像辉光。
+        Repeater {
+            model: [
+                { rr: 640, oo: 0.20 },
+                { rr: 430, oo: 0.30 },
+                { rr: 215, oo: 0.48 }
+            ]
+            delegate: Rectangle {
+                required property var modelData
+                anchors.centerIn: parent
+                width: Math.max(1, modelData.rr * (1 - scene.evoTime / 0.12))
+                height: width
+                radius: width / 2
+                visible: scene.scaleLevel === 3 && !root.stellarView
+                         && scene.evoTime < 0.12
+                opacity: Math.max(0, 1 - scene.evoTime / 0.12) * modelData.oo
+                color: "#fff6e0"
+                z: 250
+            }
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.max(1, 760 * (1 - scene.evoTime / 0.16))
+            height: width
+            radius: width / 2
+            visible: scene.scaleLevel === 3 && !root.stellarView
+                     && scene.evoTime < 0.16
+            opacity: Math.max(0, 1 - scene.evoTime / 0.16) * 0.5
+            color: "transparent"
+            border.width: 3
+            border.color: "#ffd9a0"
+            z: 249
         }
 
         // ---- 光年比例尺 (底部居中) ----

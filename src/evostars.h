@@ -55,7 +55,10 @@ public:
     // 公开以便 SceneRenderer 的演化主星球复用同一套黑体色。
     static QVector3D starColor(double teff);
 
-    void render(const QMatrix4x4 &viewProj, float pointScale);
+    // v1.4: 增加 eye (深度雾) 与 timeSec (呼吸闪烁) —— 立体感与生命力。
+    // v1.7: 增加 evoT (0..1 演化演示) —— 星点从中心扩散/依次点亮/未来变暗。
+    void render(const QMatrix4x4 &viewProj, float pointScale,
+                const QVector3D &eye, float timeSec, float evoT);
 
 private:
 
