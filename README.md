@@ -4,14 +4,14 @@
 
 ## 下载（推荐：开箱即用）
 
-- **直接用**：[Release v1.2](https://github.com/yunix-intel/CosmosLab/releases/tag/v1.2) 下载 `CosmosLab-v1.2-win64.zip`，解压双击 `cosmoslab.exe`（含全部资源与 390 条五语种配音）。
+- **直接用**：[Release v1.4](https://github.com/yunix-intel/CosmosLab/releases/tag/v1.4) 下载 `CosmosLab-v1.4-win64.zip`，解压双击 `cosmoslab.exe`（含全部资源与 390 条五语种配音）。
 - **从源码构建**：`git clone https://github.com/yunix-intel/CosmosLab.git`，再按需下载下方资源包，**在仓库根目录解压**（包内路径已是 `assets/...`，解压即对齐）：
 
 | 资源包 | 内容 | 说明 |
 |---|---|---|
-| `CosmosLab-v1.2-assets-textures.zip` | 贴图（tex/galaxy，58MB） | 缺失时对应天体显示占位提示，不崩 |
-| `CosmosLab-v1.2-assets-audio.zip` | 配音 390 条·五语种（27MB） | 缺失时播放按钮置灰，不崩 |
-| `CosmosLab-v1.2-assets-data.zip` | lss/sn/evo 数据（2.4MB） | `assets/lss` 已在仓内，覆盖无妨 |
+| `CosmosLab-v1.4-assets-textures.zip` | 贴图（tex/galaxy，110MB） | 缺失时对应天体显示占位提示，不崩 |
+| `CosmosLab-v1.4-assets-audio.zip` | 配音 390 条·五语种（31MB，CBR） | 缺失时播放按钮置灰，不崩 |
+| `CosmosLab-v1.4-assets-data.zip` | lss/sn/evo 数据（2.3MB） | `assets/lss` 已在仓内，覆盖无妨 |
 
 ## 运行
 
@@ -33,7 +33,7 @@ cmake --build build -j4
 | 银河系 | Reid 2019 四臂 + 折点，13.5 万粒子，太阳位置标注 |
 | 宇宙 | 24 万粒子（SDSS 实测 17 万），对数/真实比例映射开关 |
 | 恒星 | B.1/B.2/B.5 共 112 条：恒星全链 53 + AGN/星系 34 + 星云/星团 25，精准/通俗双说明 |
-| 演化 | 13 条剧本：恒星三链/超新星/并合/AGN/宇宙热历史/行星形成/恒星形成/双星/残骸/星团/星际介质与星团；拖动 + 0.5–8x 播放 |
+| 演化 | 13 条剧本：恒星三链/超新星/并合/AGN/宇宙热历史/行星形成/恒星形成/双星/残骸/星团/星际介质与星团；拖动 + 0.5–8x 播放；**宇宙史时间轴演示**（大爆炸→今天→未来约 32 秒，星点依次点亮，可拖动/暂停/重播） |
 
 叠加层：哈勃图（Pantheon+ 1701 颗，Ωm/ΩΛ 滑块 + χ²）、红移工具、详情卡（精准/通俗切换）。
 
